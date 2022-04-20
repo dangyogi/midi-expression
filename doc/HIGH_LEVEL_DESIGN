@@ -1,0 +1,60 @@
+Two programs:
+    - synth has MIDI in, and ALSA sound out
+      - takes adjustments as MIDI control (or SysEx?) messages
+    - expression has MIDI in (from expression board), MIDI file in (notes), MIDI file out
+      (optional, modified notes as played), MIDI out (to synth)
+    - python packages:
+      - alsa-midi (only ALSA MIDI, not JACK)
+      - python-rtmidi (cross-platform, includes both ALSA and JACK on Linux)
+        - https://spotlightkid.github.io/python-rtmidi/index.html
+      - simpleaudio (for sound output, maybe too simple?)
+      - pyaudio (for sound output, probably ALSA only??)
+
+
+Timing:
+    - MIDI timing:
+      - Clock Pulse: 24 clock pulses/quarter note.
+        - at 4/4 time with 1 measure/sec, that's 96/sec
+      - MIDI Beat: 1 beat/16th note (4/quarter note).
+        - at 4/4 time with 1 measure/sec, that's 16/sec
+    - Internal time segments are defined as an integer multiple of MIDI Clock Pulses.  The
+      multiple may depend on the overall tempo.
+
+Orchestration: one instance for the whole program
+    - listens for all MIDI commands until the Nth MIDI Clock Pulse (end of the internal
+      time segment), and sends them to the instruments.
+    - add_instrument(channel#, instrument)
+      (multiple instruments allowed per channel?  -- initially no)
+    - drop_instrument(channel#)
+    - add_MIDI_in(MIDI_in)
+    - drop_MIDI_in(MIDI_in)
+    - 
+
+MIDI_In: 
+
+Instrument:
+    - manufacturer_id
+    - model_id
+    - channel
+    - note_off(key, velocity)  # simply passed on to the Note
+    - note_on(key, velocity)   # creates a Note object to play the note (once and then die)
+    - aftertouch(key, touch)   # simply passed on to the Note
+    - control_change(control_num, value)
+    - program_change(program_num)
+    - channel_pressure(pressure_value)
+    - pitch_bend(range)        # simply passed on to all active Notes
+    - sustain(on/off)          # stored, and passed on to all active Notes
+    - note_finished(note)      # called by the note when it's done
+    - fill_segment(segment)    # simply passed on to all active Notes
+
+Note: created by note_on to Instrument.
+    - instrument
+    - key                      # MIDI note number
+    - note_off(velocity)       # starts the Release phase (unless sustain pedal is down)
+    - aftertouch(touch)        # ignored after note_off
+    - pitch_bend(cents)        # cents is + or -.  Not cumulative.  Ignored after note_off.
+    - sustain(on/off)
+    - fill_segment(segment)
+
+Sound Segment:
+    - just a numpy array, starting at all zeros.

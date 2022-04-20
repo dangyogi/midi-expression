@@ -1,0 +1,198 @@
+MIDI:
+    - up to 16 channels per cable.
+    - SmartScore can produce MIDI files from scanned sheet music.
+    - MUSIC-N programming language (1950's)
+    - MIDI transmitted at 31.25 kbit/s, 1 stop bit
+      - first bit identifies whether the byte is a status (command) byte (1) or 
+        data byte (0).
+        - command bytes are split in half.  The most significant hex digit (minus the
+          command bit) is the command code (0-7), the least significant hex digit is
+          the MIDI channel (0-15).
+          - command codes and parameters (all commands, except SysEx, have 1 or 2 params):
+            - 0x80 Note Off: key, velocity
+            - 0x90 Note On: key, velocity  # also serves as Note Off when velocity == 0!!
+            - 0xA0 Aftertouch: key, touch
+            - 0xB0 Continuous controller (control change): control#, control value
+              - control#:  * - equip must respond to comply with General MIDI level 1
+                - 0x00 bank select
+                - 0x01 *modulation
+                - 0x02 breath control
+                - 0x04 foot controller
+                - 0x05 portamento time
+                - 0x06 data entry
+                - 0x07 *channel volume
+                - 0x08 balance
+                - 0x0A *pan
+                - 0x0B *expression controller
+                - 0x0C effect control 1
+                - 0x0D effect control 2
+                - 0x10 general purpose controller #1
+                - 0x11 general purpose controller #2
+                - 0x12 general purpose controller #3
+                - 0x13 general purpose controller #4
+                - 0x20 to 0x3F seems to be a repeat of 0x00 to 0x1F
+                - 0x40 *systain pedal on/off, <=63 off; >= 64 on
+                - 0x41 portamento on/off, <=63 off; >= 64 on
+                - 0x42 sustenuto on/off, <=63 off; >= 64 on
+                - 0x43 soft pedal on/off, <=63 off; >= 64 on
+                - 0x44 legato footswitch on/off, <=63 off; >= 64 on
+                - 0x45 hold 2 on/off, <=63 off; >= 64 on
+                - 0x46 sound controller 1 (Sound Variation)
+                - 0x47 sound controller 2 (Timbre)
+                - 0x48 sound controller 3 (Release Time)
+                - 0x49 sound controller 4 (Attack Time)
+                - 0x4A sound controller 5 (Brightness)
+                - 0x4B sound controller 6
+                - 0x4C sound controller 7
+                - 0x4D sound controller 8
+                - 0x4E sound controller 9
+                - 0x4F sound controller 10
+                - 0x5B reverb
+                - 0x5D chorus
+                - 0x60 data entry +1, N/A
+                - 0x61 data entry -1, N/A
+                - 0x62 non-registered parameter number LSB, lsb
+                - 0x63 non-registered parameter number MSB, msb
+                - 0x64 *registered parameter number LSB, lsb
+                - 0x65 *registered parameter number MSB, msb
+                - 0x78 all sound off (value always 0)
+                - 0x79 *reset all controllers (value always 0)
+                - 0x7A local control on/off, 0=off, 127=on
+                       # off means only respond to MIDI, not data played directly on the
+                       # device
+                - 0x7B *all notes off (value always 0) immediate!
+                - 0x7C omni mode off (+ all notes off), (value always 0)
+                - 0x7D omni mode on (+ all notes off), (value always 0)
+                - 0x7E mono mode on (poly off, + all notes off),
+                       num channels (omni off)
+                       or 0 (omni on) if #channels == num voices in receiver
+                - 0x7F poly mode on (mono=off, + all notes off), (value always 0)
+            - 0xC0 Patch change (program change): program#
+            - 0xD0 Channel Pressure: pressure value
+            - 0xE0 Pitch Bend, lsb (7 bits, sometimes not used == always 0), msb (7 bits)
+              - 8192 means no bend
+              - lower numbers bend down, higher numbers bend up
+              - range of pitch bend often 2 semitones, for example, C could be bent as low
+                as Bb or as high as D.
+                - but this range is often a setable parameter.
+            - System Common:
+              - 0xF0 System Exclusive, manuf_id, model_id, variable #params (up to 0xF7)
+              - 0xF1 MIDI Time Code Quarter Frame (Sys Common)
+              - 0xF2 Song Position Pointer (Sys Common) 14-bit register that holds the
+                     number of MIDI beats (1 beat == 6 clocks) since the start of the
+                     song.
+              - 0xF3 Song Select (Sys Common)
+              - 0xF4 <undefined>
+              - 0xF5 <undefined>
+              - 0xF6 Tune Request (Sys Common) analog synths to tune their oscillators
+              - 0xF7 (end of system exclusive message)
+            - System Real-Time:
+              - 0xF8 Timing Clock (Sys Realtime) sent 24 times/quarter note
+              - 0xF9 <undefined>
+              - 0xFA Start (Sys Realtime) will be followed by Timing Clocks
+              - 0xFB Continue (Sys Realtime) after Stop
+              - 0xFC Stop (Sys Realtime)
+              - 0xFD <undefined>
+              - 0xFE Active Sensing (Sys Realtime) check for heart-beat each 300ms (max)
+              - 0xFF System Reset (Sys Realtime) used sparingly, not sent on power-up!
+      - channels are numbered 1-16, but binary codes are 0-15.
+      - omni on/off.  Respond to all channels or not.
+      - monophonic vs. polyphonic.  Monophonic implies that a new "note-on" command implies
+        the termination of the previous note.
+      - 5 types of messages:
+        - Channel Voice 0x8x - 0xEx
+        - Channel Mode 0xBx
+        - System Common 0xF0 - 0xF7
+        - System Real-Time 0xF8 - 0xFF
+        - System Exclusive (SysEx) 0xF0 -- exclusive to one device
+      - Time/Clock syncronization:
+        - MIDI beat == a 16th note.
+        - MIDI clock pulse == 24 pulses/quarter note
+        - clock (decimal 248, hex 0xF8)
+        - start (decimal 250, hex 0xFA)
+        - continue (decimal 251, hex 0xFB)
+        - stop (decimal 252, hex 0xFC)
+        - location info can be specified using MIDI Song Position Pointer (SPP), which is
+          at 14 bit number for the number of MIDI beats since the start of the song.  At
+          4/4 time, this would be a max of 1000 measures.  At 1 sec/measure, that would be
+          16 minutes.  This is a status byte of 242 (0xF2) followed by two 7-bit data bytes
+          (least significant byte first) forming the 14-bit number.
+      - General MIDI (GM) defines a standard set of 128 sounds (instruments) arranged into
+        16 families of 8 related instruments.
+        - MIDI channel 10 is reserved for percussion
+        - GM-compliant devices must offer 24-note polyphony.
+        - fixes middle C as MIDI note 60
+        - GM devices required to respond to velocity, aftertouch and pitch bend.
+        - must support certain controller numbers, such as for sustain pedal, and
+          Registered Parameter Numbers.
+        - Also a simplifed GM Lite
+    - MIDI tuning standard (MTS) allows alternate tunings (other than equal temperament).
+      - Allows microtunings that can be loaded from a bank of up to 128 patches, and allows
+        real-time adjustment of note pitches.
+    - MIDI Time Code (MTC) implements SysEx messages that have been developed specifically
+      for timing purposes, and is able to translate to/from the SMPTE time code standard.
+    - Timestamping is built into Linux ALSA Sequencer.  (Lets you timestamp a note to be
+      played in the future, to avoid jitter).
+    - MIDI Polyphonic Expression (MPE) enables pitch bend, and other dimensions of
+      expressive control, to be adjusted continuously for individual notes.  It works by
+      assigning each note its own MIDI channel.
+    - MIDI 2.0 presented in Jan 2020.  Still not released.
+      - MIDI Capability Inquiry (MIDI-CI)
+
+
+ALSA:
+    - aplaymidi (installed)
+    - playmidi doesn't look so good on first glance...  (not installed)
+    - pmidi looks the same as aplaymidi?  (not installed)
+    - arecordmidi (installed)
+    - aconnect (installed)
+    - aplay (installed)
+      - aplay -l # to see if ALSA is running
+    - looks like I have the HDA Intel PCH sound card
+    - Python libraries
+      - simpleaudio is a bit too simple (and doesn't work without Pulse Audio)
+      - pyaudio works without Pulse Audio (and makes more sense that way).  Looks like
+        you'd have to use the callback method, which might get a bit strange since the
+        callback is called immediately and has nearly the whole buffer_duration to return
+        more results.
+      - pyalsaaudio
+
+
+Pulse Audio:
+    - pasuspender (installed) to suspend pulse during the execution of your program.
+    - pactl (installed)
+      - pactl list # to see if pulse is running
+
+
+JACK:
+    - apps can run as separate apps, or as JACK "plugins".
+
+    Audio interface:
+        - all audio data is represented as 32 bit floating point values.
+
+
+    MIDI interface:
+
+
+Raspberry Pi 3 Model B+:
+    - https://www.raspberrypi.com/documentation
+    - 1.4GHz 64-bit quad-core processor
+    - dual-band (2.4GHz and 5GHz) wireless LAN (IEEE 802.11.b/g/n/ac
+    - Bluetooth 4.2/BLE
+    - gigabit Ethernet, w/Power-over-Ethernet support (requires separate PoE HAT)
+    - needs high-quality 2.5A micro USB power supply.
+    - 1GB RAM
+    - 40-pin GPIO header
+    - HDMI
+    - 4 USB 2.0 ports
+    - CSI camera port for connecting a Raspberry Pi camera
+    - DSI display port for connecting a Raspberry Pi touchscreen display
+    - 4-pole stereo output and composite video port
+
+    - Raspberry Pi OS:
+      - use apt to install packages
+      - with OS version Buster or earlier: omxplayer to play audio and/or video files
+        (doesn't use ALSA for audio!)
+        - omxplayer foobar.mp3
+        - omxplayer -o local foobar.mp3  # to force to headphone jack
+      - starting with Bullseye version: use vlc

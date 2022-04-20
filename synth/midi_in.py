@@ -1,0 +1,151 @@
+# midi_in.py
+
+r'''
+midi_in = Midi_in()
+
+Then, for each time segment, call Target_time.set_target_time(target_time, gen_time)
+then midi_in.process_until(callback).  Callback takes the MIDI message as a list of numbers
+for each byte in the message.
+
+Target_time is defined in utils.py.
+'''
+
+import time
+
+import rtmidi
+import rtmidi.midiutil
+
+from .utils import Largest_value_calculator, Actor, Target_time
+
+
+#def sig_handler(signum, stackframe):
+#    print("sig_handler caught", signum, "at", time.perf_counter())
+#    Midiin.cancel_callback()
+
+
+class Midi_in(Actor):
+    process_until_overhead = 0.0005         # sec, reported as not quite 0.0003
+
+    def __init__(self):
+        super().__init__(Target_time)
+        self.midiin, self.port_name = rtmidi.midiutil.open_midiinput(
+                                        port=None,          # default None
+                                        api=0,              # default 0
+                                        use_virtual=True,   # default False
+                                        interactive=False,  # default True
+                                        client_name="synth_client",
+                                        port_name="synth port")
+
+        # ignore_types(sysex=True, timing=True, active_sense=True)  # defaults
+        self.midiin.ignore_types(sysex=False)
+
+        print("current_api", self.midiin.get_current_api())
+        print("port_count", self.midiin.get_port_count())
+        print("ports", self.midiin.get_ports())
+        print("port open", self.midiin.is_port_open())
+        # self.midiin.set_client_name("synth client name")
+        # self.midiin.set_port_name("synth port name")
+        # self.midiin.open_port(port_num, "port name")
+        # self.midiin.open_virtual_port("port name")
+
+        #signal.signal(signal.SIGALRM, sig_handler)
+        self.largest_process_time = Largest_value_calculator("Midi_in.largest_process_time")
+        self.process_time_overruns = 0
+        self.total_process_time_over = 0
+        self.in_callback = False
+        self.num_waits_for_callback = 0
+
+    def report(self):
+        self.largest_process_time.report(1e3, "msec")
+        print(f"Midi_in: {self.process_time_overruns} process_until time overruns", end='')
+        if self.process_time_overruns:
+            print(f", avg "
+                  f"{self.total_process_time_over / self.process_time_overruns * 1e3} msec")
+        else:
+            print()
+        print(f"Midi_in: {self.num_waits_for_callback} waits for callback to complete")
+
+    def close(self):
+        self.midiin.close_port()
+
+    def recalc(self):
+        # FIX: reset sleep time in process_until...
+        print("Midi_in got recalc call...  Not yet implemented.  Ignored!")
+
+    def process_until(self, callback):
+        self.midiin.set_callback(self.call_callback, callback)
+        now = time.perf_counter()
+        #signal.setitimer(signal.ITIMER_REAL, target_time - now)  # raises SIGALRM
+        time.sleep(Target_time.target_time - now
+                     - self.process_until_overhead
+                     - self.largest_process_time.get_largest_value())
+        self.midiin.cancel_callback()
+        if self.in_callback:
+            print("Midi_in: process_until sleep terminated during callback")
+            self.num_waits_for_callback += 1
+            while self.in_callback:
+                time.sleep(0.001)
+        time_over = time.perf_counter() - Target_time.target_time
+        if time_over > 0:
+            self.process_time_overruns += 1
+            self.total_process_time_over += time_over
+            #print("process_until ran over target time by", time_over * 1e3,
+            #      "msec with largest_process_time",
+            #      self.largest_process_time.get_largest_value())
+
+    def call_callback(self, message, callback):
+        assert not self.in_callback, "Midi_in: call_callback called while still running!"
+        self.in_callback = True
+        start_time = time.perf_counter()
+        midi_message, delta_time = message
+        callback(midi_message)
+        self.in_callback = False
+        self.largest_process_time.add(time.perf_counter() - start_time)
+
+
+
+
+if __name__ == "__main__":
+    from .utils import Target_time
+
+    print("api_from_env", rtmidi.midiutil.get_api_from_environment())
+    print("API_UNSPECIFIED", rtmidi.API_UNSPECIFIED)
+    print("API_LINUX_ALSA", rtmidi.API_LINUX_ALSA)
+    print("API_UNIX_JACK", rtmidi.API_UNIX_JACK)
+    print("API_RTMIDI_DUMMY", rtmidi.API_RTMIDI_DUMMY)
+    print("compiled_apis", rtmidi.get_compiled_api())
+    print("version", rtmidi.get_rtmidi_version())
+    #print("avail_ports", rtmidi.midiutil.list_available_ports())   # needs midiio module
+    print("avail_input_ports", rtmidi.midiutil.list_input_ports())
+    print("avail_output_ports", rtmidi.midiutil.list_output_ports())
+
+    midiin = Midi_in()
+
+    def callback(message):
+        print("callback got", hex(message[0]), message[1:])
+
+    for _ in range(15*20):
+        start_time = time.perf_counter()
+        #print("starting at",  - start_time)
+        Target_time.set_target_time(start_time + 0.050, 0.001)
+        midiin.process_until(callback)
+    print("done calling process_until")
+    time.sleep(5)
+    print("exiting")
+    midiin.close()
+
+    if False:
+        valid_signals = signal.valid_signals()
+        print("valid signals", valid_signals)
+
+        def sig_handler(signum, stackframe):
+            print("sig_handler caught", signum, "at", time.perf_counter() - start_time)
+
+        signal.signal(signal.SIGALRM, sig_handler)
+
+        #signal.siginterrupt(signal.SIGPROF, True)
+        start_time = time.perf_counter()
+        signal.setitimer(signal.ITIMER_REAL, 0.050)  # raises SIGALRM
+        time.sleep(2)
+        signal.setitimer(signal.ITIMER_REAL, 0.050)  # raises SIGALRM
+        time.sleep(1)

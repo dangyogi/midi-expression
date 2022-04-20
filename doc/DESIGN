@@ -1,0 +1,120 @@
+Time:
+    - The entire system operates under a fixed sample rate with a fixed delta_t.
+    - The time is divided into fixed length segments.
+      - Each segment is created with a fixed set of parameters.
+      - All segments are the same duration (e.g., 735 samples, or 16.66... msec (60
+        segments/sec) at a sample rate of 44100).
+      - All sound generation is done in whole segments.  These segments are played one
+        after another.
+      - The time aspect of a segment is represented by an array of delta_t's of the number
+        of samples in a segment.  These are applied to freq with
+        np.cumsum(freq_in_Hz(freq) * times) to produce the phase at each moment in time.
+        The freq may be a single number or an array of time -> freq.  Example:
+           np.sin(np.cumsum(freq_in_Hz(freqs) * time_segment) * (2 * np.pi))
+
+Amplitudes:
+    - Two types:
+      - sound_ampl: 16 bit signed ints, ready for the sound card.
+      - ampl_scale: percentage (-1 to 1).  The direct output of the sin function!
+      - The idea is to combine various ampl_scales and then apply a final volume to get the
+        sound_ampl.
+
+Amplitude samples:
+
+    - Sound: Time_to_sound_ampl (time -> sound_ampl):
+        - Amplitude values are 16 bit signed ints.
+        - Sounds from different sources can be added to each other to play them at the same
+          time.
+        - Sounds can be volume adjusted (by multiplying by an ampl_scale).
+        - Types:
+          - Constant (to set volume for ampl_scale)
+          - Time based (time -> sound_ampl)
+            - These are what ultimately get sent to the computer's sound card.
+        - Methods:
+          - play(opt volume:ampl_scale)
+          - together_with(other Sounds)
+          - extend(with other Sounds)
+          - scale_by(ampl_scale)
+
+    - Ampl_scale (time -> ampl_scale) can be applied to a Sound by multiplication.
+      They may also be combined (compounded) with multiplication.  These can be used, e.g.,
+      for ADSR envelopes.
+        - Types:
+          Constant (not time-based)
+            - Can be used for sustain
+          Time based
+            - Prefix (e.g., attack-decay)
+              - When applied to Sound, S, doesn't have to match length.  Will truncate
+                itself if S is shorter.  Will leave ampl values untouched if S is longer.
+            - Suffix (e.g. release)
+              - Time -> ampl_scale for duration of release.
+              - This can be added to the end of a Sound or Ampl_scale.  Starts with the
+                last sample.
+            - Repeat (tremolo)
+              - Time -> ampl_scale that is repeated over and over as many times as
+                necessary.
+
+        - Methods:
+          - to_sound(volume)
+          - scale_by(ampl_scale)
+          - scale(Sound or ampl_scale)
+
+    - Freq_to_ampl envelopes (freq -> ampl_scale).  These can be used for filters.
+      - These would have a base freq added to them before applying them to a set of freqs.
+
+Frequencies:
+    - Uses log frequencies that are added to multiply the underlying freq in Hz.  These are
+      log base 2**(1/12) so that a value of "1" represents one semitone (and "12"
+      represents and octave).  Also a change of 1 cent directly maps to a change of 0.01 on
+      these log frequencies.  There are 9 octaves (ranging from C0 to B9), so 108 (9*12)
+      notes total.  With 100 cents/note, that would be 10,800 different freq values down
+      to the cent.
+
+    - Two kinds:
+      - Constant frequency (doesn't change, or evolve, with time).
+
+      - Time_to_freq envelopes (maps time -> freq).
+        - Used for a freq slide (glissando), or vibrato.
+        - Can be combined through addition.
+        - Applied to a single base frequency with addition.
+        - Same sample rate and number of samples as Amplitude time envelopes.
+        - These implicitly define a duration, while a constant freq does not.
+
+Sound_template:
+    - Is a sequence of freq & ampl.
+      - How to set a base freq?
+      - Each freq in the sequence can be a single freq, or a time_to_freq envelope.
+      - Each ampl in the sequence can be a single ampl, or a time_to_ampl envelope.
+      - Can be combined by adding the ampls for the same freq.
+    - Can be converted into a sound by supplying a base freq, duration and volume.
+
+An example: Harmonics
+
+    - A harmonic would be an example of a sound template.
+    - Does everything in the freq envelope have the harmonic generated for it, or just the
+      base freq, or can the harmonic be applied to certain selected freq envelopes?
+    - Also has an amplitude adjustment.  Seems like this could be any amplitude envelope.
+
+Cycle:
+    - Cycles define a single sound cycle.  These cycles are repeated at a given rate (freq
+      in Hz) to produce a Sound.
+    - Cycles are driven by a cycle value, which is the percentage of one cycle (0-1).
+      Cycle values greater than 1 are automatically truncated to just the fractional part.
+    - The Cycle, given a cycle value, will generate the amplitude at that point in the
+      cycle.  They can be given an array of cycle values to produce an Amplitude Envelope.
+    - The cycle value for each sample time is generated by the following formula:
+      - np.cumsum(freq_in_Hz(freq_envelope) * Delta_t)
+    - Should be able to get a fourier transform on these to convert to a set of freqs/ampls.
+      - Seems like these need to operate with freqs/ampls so that filters can work with
+        them!
+
+Note:
+    - Represents the expression of a single note.  This extends from "Note ON" to the end
+      of the "release" phase after "Note OFF".
+    - This generally starts and ends in the middle of a segment, and has a duration
+      spanning several segments.
+    - All of the notes sounding during a segment are given the chance to add their Sound
+      samples to that segment before that segment is played.
+    - Thus, it takes several "fill_segment" calls to the note for it to generate all its
+      Sound samples.  The note needs to remember the time offset from the start of the note
+      (T0) to the start of each segment to avoid phase problems between segments.
