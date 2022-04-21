@@ -11,6 +11,7 @@ Target_time is defined in utils.py.
 '''
 
 import time
+from queue import SimpleQueue, Empty
 
 import rtmidi
 import rtmidi.midiutil
@@ -24,7 +25,7 @@ from .utils import Largest_value_calculator, Actor, Target_time
 
 
 class Midi_in(Actor):
-    process_until_overhead = 0.0005         # sec, reported as not quite 0.0003
+    process_until_overhead = 0.0008         # sec, reported as not quite 0.0003
 
     def __init__(self):
         super().__init__(Target_time)
@@ -49,58 +50,58 @@ class Midi_in(Actor):
         # self.midiin.open_virtual_port("port name")
 
         #signal.signal(signal.SIGALRM, sig_handler)
-        self.largest_process_time = Largest_value_calculator("Midi_in.largest_process_time")
+        self.largest_callback_time = \
+          Largest_value_calculator("Midi_in.largest_callback_time")
         self.process_time_overruns = 0
         self.total_process_time_over = 0
         self.in_callback = False
-        self.num_waits_for_callback = 0
+        self.queue = SimpleQueue()
+        self.midiin.set_callback(self.queue.put, True)
 
     def report(self):
-        self.largest_process_time.report(1e3, "msec")
+        self.largest_callback_time.report(1e3, "msec")
         print(f"Midi_in: {self.process_time_overruns} process_until time overruns", end='')
         if self.process_time_overruns:
             print(f", avg "
                   f"{self.total_process_time_over / self.process_time_overruns * 1e3} msec")
         else:
             print()
-        print(f"Midi_in: {self.num_waits_for_callback} waits for callback to complete")
 
     def close(self):
         self.midiin.close_port()
 
     def recalc(self):
-        # FIX: reset sleep time in process_until...
-        print("Midi_in got recalc call...  Not yet implemented.  Ignored!")
+        #print("Midi_in got recalc call...  Not yet implemented.  Ignored!")
+        self.target_time = Target_time.target_time - self.process_until_overhead
 
     def process_until(self, callback):
-        self.midiin.set_callback(self.call_callback, callback)
-        now = time.perf_counter()
-        #signal.setitimer(signal.ITIMER_REAL, target_time - now)  # raises SIGALRM
-        time.sleep(Target_time.target_time - now
-                     - self.process_until_overhead
-                     - self.largest_process_time.get_largest_value())
-        self.midiin.cancel_callback()
-        if self.in_callback:
-            print("Midi_in: process_until sleep terminated during callback")
-            self.num_waits_for_callback += 1
-            while self.in_callback:
-                time.sleep(0.001)
-        time_over = time.perf_counter() - Target_time.target_time
+        self.recalc()
+        time_left = self.target_time - time.perf_counter() \
+                      - self.largest_callback_time.get_largest_value()
+        try:
+            while time_left > 0:
+                #signal.setitimer(signal.ITIMER_REAL, target_time - now)  # raises SIGALRM
+                message, delta_time = self.queue.get(timeout=time_left)
+
+                assert not self.in_callback, "Midi_in: callback called while still running!"
+                self.in_callback = True
+                start_time = time.perf_counter()
+                callback(message)
+                self.in_callback = False
+                now = time.perf_counter()
+                self.largest_callback_time.add(now - start_time)
+
+                time_left = self.target_time - now \
+                              - self.largest_callback_time.get_largest_value()
+        except Empty:
+            pass
+        time_over = time.perf_counter() - self.target_time
         if time_over > 0:
             self.process_time_overruns += 1
             self.total_process_time_over += time_over
             #print("process_until ran over target time by", time_over * 1e3,
-            #      "msec with largest_process_time",
-            #      self.largest_process_time.get_largest_value())
-
-    def call_callback(self, message, callback):
-        assert not self.in_callback, "Midi_in: call_callback called while still running!"
-        self.in_callback = True
-        start_time = time.perf_counter()
-        midi_message, delta_time = message
-        callback(midi_message)
-        self.in_callback = False
-        self.largest_process_time.add(time.perf_counter() - start_time)
+            #      "msec with largest_callback_time",
+            #      self.largest_callback_time.get_largest_value())
 
 
 

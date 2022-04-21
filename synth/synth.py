@@ -73,6 +73,7 @@ class Synth(Var):
     def process_MIDI(self, message):
         r'''Processes a MIDI message.  This is a list of numbers...
         '''
+        #print("synth.process_MIDI", message)
         command, rest = message[0], message[1:]
         #print("synth.process_MIDI", hex(command), rest)
         first_nibble = command & 0xF0
