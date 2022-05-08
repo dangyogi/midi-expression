@@ -10,22 +10,25 @@ For Instruments:
       - first hex digit: major/minor bit, 1 for minor, 0 for major
       - second hex digit: 15 choices for num flats/sharps, flats -, sharps +
     - 0x15: <unused>
-    - 0x6D: tuning system; 2 bit type, 5 bit offset
-      - types:
-        0 - Equal temperament, no parameter
-            - parameter ignored
-            - tonic ignored
-        1 - Well tempered
-            - parameter ignored
-            - tonic used
-        2 - Just intonation
-            - parameter ignored
-            - tonic used
-        3 - Meantone
-            - parameter is offset as percent of 5.375 cents (0 is pythagorean tuning)
-            - tonic used
-    - 0x6E: tonic for tuning system (one of 21 "my notes" in octave)
-    - 0x0000: tune
+    - 0x6D: <unused>
+    - 0x6E: <unused>
+    - 0x0000: tuning system
+      - course is: 2 bit type, 5 bit offset
+        - types:
+          0 - Equal temperament, no parameter
+              - parameter ignored
+              - tonic ignored
+          1 - Well tempered
+              - parameter ignored
+              - tonic used
+          2 - Just intonation
+              - parameter ignored
+              - tonic used
+          3 - Meantone
+              - parameter is offset as percent of 5.375 cents (0 is pythagorean tuning)
+              - tonic used
+      - fine is: tonic (one of 21 "my notes" in octave)
+    - 0x0001: tune
       - course is:
         - first bit (MSB): absolute(0)/match(1)
           5 bits: note in octave to tune (one of 21 "my notes")
@@ -58,6 +61,7 @@ For Harmonics (19 settings/harmonic * 10 harmonics):
     - 0x3F: ampl_offset_10
 
     - 0x50: harmonic_focus; specifies which harmonic the following messages apply to:
+      - value 0x7F disables
 
     - 0x66: freq_scalefn
     - 0x67: freq_type (0=ramp, 1=vibrato)

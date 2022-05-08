@@ -6,7 +6,7 @@ import math
 from itertools import repeat
 
 from .channel import Var, Actor
-from .utils import Num_harmonics
+from .utils import Num_harmonics, two_byte_value
 from .tuning_systems import freq_to_Hz
 
 
@@ -148,7 +148,7 @@ class Instrument(Actor):
     def __init__(self, name, synth, volume=None, tuning_system=None, key_signature=None):
         super().__init__(synth, name=name)
         self.synth = synth
-        self.harmonics = []     # indexed by harmonic number
+        self.harmonics = []     # indexed by harmonic number - 1
         if volume is None:
             self.volume_from_synth = True
             self.volume = self.synth.volume
@@ -178,6 +178,75 @@ class Instrument(Actor):
         self.num_patch_changes = 0
         self.num_channel_pressures = 0
         self.num_pitch_bends = 0
+        self.harmonic_focus = 0x7F
+        self.non_registered_param_LSB = 0x7F
+        self.non_registered_param_MSB = 0
+        self.data_entry_course = None
+        self.data_entry_fine = None
+
+        self.control_numbers = {
+            # General MIDI level 1 (some, not all that are required):
+            0x40: self.sustain,
+            0x79: self.reset_all_controllers,
+            0x7B: self.all_notes_off,
+
+            # My control changes:
+            0x14: self.set_key_signature,
+
+            0x62: self.set_non_registered_param_LSB,    # value of 0x7F disables
+            0x63: self.set_non_registered_param_MSB,    # value of 0x7F disables
+            0x06: self.set_data_entry_course,
+            0x26: self.set_data_entry_fine,
+
+            # The rest of these are forwarded to Harmonic:
+            0x16: self.set_freq_offset,
+            0x17: self.set_freq_offset,
+            0x18: self.set_freq_offset,
+            0x19: self.set_freq_offset,
+            0x1A: self.set_freq_offset,
+            0x1B: self.set_freq_offset,
+            0x1C: self.set_freq_offset,
+            0x1D: self.set_freq_offset,
+            0x1E: self.set_freq_offset,
+            0x1F: self.set_freq_offset,
+
+            0x36: self.set_ampl_offset,
+            0x37: self.set_ampl_offset,
+            0x38: self.set_ampl_offset,
+            0x39: self.set_ampl_offset,
+            0x3A: self.set_ampl_offset,
+            0x3B: self.set_ampl_offset,
+            0x3C: self.set_ampl_offset,
+            0x3D: self.set_ampl_offset,
+            0x3E: self.set_ampl_offset,
+            0x3F: self.set_ampl_offset,
+
+            0x50: self.set_harmonic_focus,              # value of 0x7F disables
+
+            0x66: self.forward_to_harmonic,
+            0x67: self.forward_to_harmonic,
+            0x68: self.forward_to_harmonic,
+            0x69: self.forward_to_harmonic,
+            0x6A: self.forward_to_harmonic,
+
+            0x51: self.forward_to_harmonic,
+            0x52: self.forward_to_harmonic,
+            0x53: self.forward_to_harmonic,
+            0x54: self.forward_to_harmonic,
+            0x55: self.forward_to_harmonic,
+            0x56: self.forward_to_harmonic,
+            0x57: self.forward_to_harmonic,
+            0x58: self.forward_to_harmonic,
+            0x59: self.forward_to_harmonic,
+            0x5A: self.forward_to_harmonic,
+            0x6B: self.forward_to_harmonic,
+            0x6C: self.forward_to_harmonic,
+        }
+
+        self.non_registered_parameters = {
+            0x0000: self.set_tuning_system,
+            0x0001: self.tune,
+        }
 
     def report(self):
         print(self.name, "got:")
@@ -268,8 +337,106 @@ class Instrument(Actor):
             print(f"aftertouch: note {midi_note=} not playing!")
 
     def control_change(self, control_number, value):    # 0xB0
-        print("control change", hex(control_number), value)
+        if control_number not in self.control_numbers:
+            print("unknown control change:", hex(control_number), value)
+        else:
+            self.control_numbers[control_number](control_number, value)
         self.num_control_changes += 1
+
+    def sustain(self, control_number, value):
+        r'''value <= 63 off; >= 64 on.
+        '''
+        pass
+
+    def reset_all_controllers(self, control_number, value):
+        r'''value always 0.
+        '''
+        pass
+
+    def all_notes_off(self, control_number, value):
+        r'''value always 0.
+        '''
+        pass
+
+    def set_key_signature(self, control_number, value):
+        pass
+
+    def set_non_registered_param_LSB(self, control_number, value):
+        r'''value of 0x7F disables.
+        '''
+        self.non_registered_param_LSB = value
+        if value == 0x7F:
+            self.data_entry_course = None
+            self.data_entry_fine = None
+
+    def set_non_registered_param_MSB(self, control_number, value):
+        r'''value of 0x7F disables.
+        '''
+        self.non_registered_param_MSB = value
+        if value == 0x7F:
+            self.data_entry_course = None
+            self.data_entry_fine = None
+
+        self.non_registered_param_LSB = None
+        self.non_registered_param_MSB = 0
+
+    def set_data_entry_course(self, control_number, value):
+        if self.non_registered_param_LSB != 0x7F and \
+           self.non_registered_param_MSB != 0x7F:
+            self.data_entry_course = value
+            if self.data_entry_fine is not None:
+                self.call_non_registered_param()
+
+    def set_data_entry_fine(self, control_number, value):
+        if self.non_registered_param_LSB != 0x7F and \
+           self.non_registered_param_MSB != 0x7F:
+            self.data_entry_fine = value
+            if self.data_entry_course is not None:
+                self.call_non_registered_param()
+
+    def call_non_registered_param(self):
+        key = two_byte_value(self.non_registered_param_MSB, self.non_registered_param_LSB)
+        if key in self.non_registered_parameters:
+            self.non_registered_parameters[key](
+              two_byte_value(self.data_entry_course, self.data_entry_fine))
+        else:
+            print("unknown non-registered param:", hex(key))
+        self.data_entry_course = None
+        self.data_entry_fine = None
+
+    def set_tuning_system(self, value):
+        pass
+
+    def tune(self, value):
+        pass
+
+    # The rest of these are forwarded to Harmonic:
+    def set_freq_offset(self, control_number, value):
+        harmonic = (control_number & 0x0F) - 5
+        if harmonic >= len(self.harmonics) or self.harmonics[harmonic] is None:
+            print(f"control change 0x{control_number:x}: harmonic {harmonic} not set")
+        else:
+            self.harmonics[harmonic].set_freq_offset(value)
+
+    def set_ampl_offset(self, control_number, value):
+        harmonic = (control_number & 0x0F) - 5
+        if harmonic >= len(self.harmonics) or self.harmonics[harmonic] is None:
+            print(f"control change 0x{control_number:x}: harmonic {harmonic} not set")
+        else:
+            self.harmonics[harmonic].set_ampl_offset(value)
+
+    def set_harmonic_focus(self, control_number, value):
+        self.harmonic_focus = value
+
+    def forward_to_harmonic(self, control_number, value):
+        if self.harmonic_focus == 0x7F:
+            print(f"control change 0x{control_number:x}: harmonic_focus not set")
+        elif self.harmonic_focus >= len(self.harmonics) or \
+             self.harmonics[self.harmonic_focus] is None:
+            print(f"control change 0x{control_number:x}: harmonic_focus, "
+                  f"{self.harmonic_focus}, not a valid harmonic")
+        else:
+            self.harmonics[self.harmonic_focus].control_numbers[control_number](value)
 
     def patch_change(self, program_number):             # 0xC0
         print("patch change", program_number)
@@ -347,6 +514,84 @@ class Harmonic(Var):
             self.freq_envelope = 1.0
         else:
             self.freq_envelope = freq_envelope
+
+        self.control_numbers = {
+            0x66: self.set_freq_scalefn,
+            0x67: self.set_freq_type,
+            0x68: self.set_freq_param1,
+            0x69: self.set_freq_param2,
+            0x6A: self.set_freq_param3,
+
+            0x51: self.set_ampl_scalefn,
+            0x52: self.set_ampl_attack_duration,
+            0x53: self.set_ampl_attack_bend,
+            0x54: self.set_ampl_attack_start,
+            0x55: self.set_ampl_decay_duration,
+            0x56: self.set_ampl_decay_bend,
+            0x57: self.set_ampl_tremolo_level,
+            0x58: self.set_ampl_tremolo_cycle_time,
+            0x59: self.set_ampl_tremolo_scalefn,
+            0x5A: self.set_ampl_tremolo_ampl,
+            0x6B: self.set_ampl_release_duration,
+            0x6C: self.set_ampl_release_bend,
+        }
+
+    def set_freq_offset(self, value):
+        pass
+
+    def set_ampl_offset(self, value):
+        pass
+
+    def set_freq_scalefn(self, value):
+        pass
+
+    def set_freq_type(self, value):
+        pass
+
+    def set_freq_param1(self, value):
+        pass
+
+    def set_freq_param2(self, value):
+        pass
+
+    def set_freq_param3(self, value):
+        pass
+
+    def set_ampl_scalefn(self, value):
+        pass
+
+    def set_ampl_attack_duration(self, value):
+        pass
+
+    def set_ampl_attack_bend(self, value):
+        pass
+
+    def set_ampl_attack_start(self, value):
+        pass
+
+    def set_ampl_decay_duration(self, value):
+        pass
+
+    def set_ampl_decay_bend(self, value):
+        pass
+
+    def set_ampl_tremolo_level(self, value):
+        pass
+
+    def set_ampl_tremolo_cycle_time(self, value):
+        pass
+
+    def set_ampl_tremolo_scalefn(self, value):
+        pass
+
+    def set_ampl_tremolo_ampl(self, value):
+        pass
+
+    def set_ampl_release_duration(self, value):
+        pass
+
+    def set_ampl_release_bend(self, value):
+        pass
 
     def play(self, note, velocity):
         r'''Returns a (possibly empty) list of Play_harmonics.

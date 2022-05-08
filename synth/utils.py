@@ -67,3 +67,8 @@ Num_harmonics = Var('Num_harmonics', value=0)
 print(f"{id(Num_harmonics)=}, {Num_harmonics.value=}")
 Target_time = Target_time_actor()
 
+
+def two_byte_value(msb, lsb):
+    r'''Combines two 7-bit MIDI data bytes to produce a 14-bit result.
+    '''
+    return ((msb & 0x7F) << 7) | (lsb & 0x7F)
