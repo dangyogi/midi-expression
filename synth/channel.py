@@ -32,6 +32,8 @@ class Channel:
         self.vars[name]
 
 
+Num_vars = 0
+
 class Var:
     r'''These can hold multiple values.
 
@@ -44,10 +46,12 @@ class Var:
     recalc_order = 0  # to make Actor.__init__ easier...
 
     def __init__(self, name=None, **init_values):
+        global Num_vars
         self.name = name
         self.actors = set()   # {Actor}
         for name, value in init_values.items():
             self.set(name, value)
+        Num_vars += 1
 
     def __str__(self):
         return f"{self.__class__.__name__}(<{self.name}>)"
@@ -134,10 +138,15 @@ class Channel_setting(Setting):
 # These are all recalc-ed after each MIDI events and before generating the next sound block.
 Actors_to_recalc = set()
 
+Num_actors = 0
+Num_actors_deleted = 0
+Max_num_actors = 0
+
 class Actor(Var):
     r'''Actor acts on Var values.  These are its inputs.
     '''
     def __init__(self, *inputs, name=None):
+        global Num_actors, Max_num_actors
         super().__init__(name)
         self.inputs = inputs
         if not self.inputs:
@@ -148,12 +157,19 @@ class Actor(Var):
             Actors_to_recalc.add(self)
             for i in self.inputs:
                 i.register(self)
+        Num_actors += 1
+        if Num_actors > Max_num_actors:
+            Max_num_actors = Num_actors
 
     def delete(self):
+        global Num_vars, Num_actors, Num_actors_deleted
         if self.actors:
             raise AssertionError(f"{self} deleted before dependant actors {self.actors}")
         for i in self.inputs:
             i.deregister(self)
+        Num_vars -= 1
+        Num_actors -= 1
+        Num_actors_deleted += 1
 
 
 class Block_generator(Actor):
@@ -164,41 +180,28 @@ class Block_generator(Actor):
         pass
 
 
-r'''FIX: delete
-def tsort_actors():
-    # Step 1: What Actors does each Actor depend on (inputs)?
-    predecessor_successors = defaultdict(set)  # {predecessor: {successor}}
-    for a in Actors:
-        for i in a.inputs:
-            if isinstance(i, Actor):
-                predecessor_successors[i].add(a)
-
-    # Step 2: Figure out predecessor -> successor links for tsort:
-    successor_predecessors = defaultdict(set)     # {successor: {predecessor}}
-    for predecessor, successors in predecessor_successors.items():
-        for successor in successors:
-            successor_predecessors[successor].add(predecessor)
-
-    # Step 3: Do tsort.
-    remaining_actors = Actors.copy()
-    recalc_order = 1
-    while remaining_actors:
-        next_available_actors = remaining_actors - successor_predecessors.keys()
-        if not next_available_actors:
-            raise AssertionError(f"tsort_actors: cycle detected {successor_predecessors=}")
-        for a in next_available_actors:
-            a.recalc_order = recalc_order
-            for successor in downstream_links[a]:
-                successor_predecessors[successor].remove(a)
-                if not successor_predecessors[successor]:
-                    del successor_predecessors[successor]
-            remaining_actors.remove(a)
-        recalc_order += 1
-'''
-
+Max_starting_num_actors = 0
+Max_num_actors_recalced = 0
+Max_num_actors_added = 0
 
 def recalc_actors():
+    global Max_starting_num_actors, Max_num_actors_recalced, Max_num_actors_added
+    starting_num_actors = len(Actors_to_recalc)
+    if starting_num_actors > Max_starting_num_actors:
+        Max_starting_num_actors = starting_num_actors
+    num_actors_recalced = 0
     while Actors_to_recalc:
         next_actor = min(Actors_to_recalc, key=attrgetter('recalc_order'))
         next_actor.recalc()
+        num_actors_recalced += 1
         Actors_to_recalc.remove(next_actor)
+    if num_actors_recalced > Max_num_actors_recalced:
+        Max_num_actors_recalced = num_actors_recalced
+    if num_actors_recalced - starting_num_actors > Max_num_actors_added:
+        Max_num_actors_added = num_actors_recalced - starting_num_actors
+
+
+def report():
+    print(f"channel: {Num_vars=}, {Num_actors=}, {Num_actors_deleted=}, {Max_num_actors=}")
+    print(f"channel: {Max_starting_num_actors=}, {Max_num_actors_recalced=}, "
+          f"{Max_num_actors_added=}")

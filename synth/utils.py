@@ -43,6 +43,7 @@ class Largest_value_calculator:
         return self.mean + num_stddev*self.stddev()
 
     def report(self, scale=1, units=''):
+        print(self.name, "report called")
         print(self.name, "final largest value", self.get_largest_value() * scale, units)
         print(self.name, "max value", self.max_value * scale, units)
 

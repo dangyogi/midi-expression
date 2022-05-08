@@ -116,16 +116,18 @@ class Soundcard:
             # They do complete if program terminated by call to sys.exit, rather than
             # SIGINT (hitting ^C).
             print("calling steam.stop_stream")
-            self.stream.stop_stream()
+            self.stream.stop_stream()      # never returns (or raises exception)...
             print("calling steam.close")
             self.stream.close()
             print("calling audio.terminate")
             self.audio.terminate()
 
             print("Soundcard.close done!")
-        except Exception as e:
-            print("Soundcard.close.finally caught exception")
-            print("Soundcard.close.finally caught:", e)
+        except BaseException as e:
+            print("Soundcard.close caught exception")
+            print("Soundcard.close caught:", e.__class__.__name__, e)
+        finally:
+            print("Soundcard.close.finally")
 
     def callback(self, in_data, frame_count, time_info, status):
         assert not self.in_callback, "Soundcard: callback called while still running!"

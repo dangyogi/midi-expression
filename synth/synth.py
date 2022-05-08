@@ -30,6 +30,7 @@ class Synth(Var):
         self.unknown_MIDI_commands = set()
         self.num_unknown_channels = 0
         self.unknown_channels = set()
+        self.keep_running = True
 
         self.system_funs = {
             0x00: self.sysex,
@@ -123,12 +124,18 @@ class Synth(Var):
     def system_reset(self):  # 0xFF, does this have data?
         print("MIDI system reset")
 
+    def schedule_quit(self):
+        #print("synth.schedule_quit called")
+        self.keep_running = False
+
     def fill_sound_block(self, block):
         r'''Returns True to continue, False to quit (last sound block).
         '''
         for instrument in self.channels.values():
             instrument.populate_sound_block(block)
-        return True
+        if not self.keep_running:
+            print("synth.fill_sound_block returning False to quit")
+        return self.keep_running
 
 
 class Instrument(Actor):
@@ -162,6 +169,7 @@ class Instrument(Actor):
             self.tuning_system = tuning_system
         self.notes_playing = defaultdict(list)  # {midi_note: [Play_harmonic]}
         self.velocities = {}                    # {midi_note: velocity}  # velocity is %
+        self.num_notes_already_playing = 0
         self.num_notes_not_playing = 0
         self.num_note_ons = 0
         self.num_note_offs = 0
@@ -175,6 +183,7 @@ class Instrument(Actor):
         print(self.name, "got:")
         print("   ", self.num_note_ons, "note_ons")
         print("   ", self.num_note_offs, "note_offs")
+        print("   ", self.num_notes_already_playing, "notes already playing")
         print("   ", self.num_notes_not_playing, "notes not playing")
         print("   ", self.num_aftertouches, "aftertouches")
         print("   ", self.num_control_changes, "control_changes")
@@ -207,12 +216,13 @@ class Instrument(Actor):
             scaled_velocity = velocity - (midi_note - 21) * self.scale_volume
             my_note = self.key_signature.MIDI_to_note(midi_note)
             my_velocity = scaled_velocity / 127
-            print(f"note_on {midi_note=}, {my_note=}, {velocity=}, {scaled_velocity=}, "
-                  f"{my_velocity=}")
+            print(f"note_on {midi_note=}, {my_note=}, {velocity=}, {scaled_velocity=:.0f}, "
+                  f"{my_velocity=:.3f}")
 
             # kill note if already playing...
             if midi_note in self.notes_playing:
                 print(f"killing {midi_note=}: already playing")
+                self.num_notes_already_playing += 1
                 Num_harmonics.dec('value', len(self.notes_playing[midi_note]))
                 for ph in self.notes_playing[midi_note]:
                     ph.delete()
@@ -238,7 +248,7 @@ class Instrument(Actor):
     def note_off(self, midi_note, velocity):            # 0x80
         self.num_note_offs += 1
         my_note = self.key_signature.MIDI_to_note(midi_note)
-        print(f"note_off {midi_note=}, {my_note=}, {velocity=}")
+        #print(f"note_off {midi_note=}, {my_note=}, {velocity=}")
         if midi_note in self.notes_playing:
             for ph in self.notes_playing[midi_note]:
                 ph.note_off(velocity)

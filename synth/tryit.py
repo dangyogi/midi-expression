@@ -20,7 +20,7 @@ Soundcard.callback automatically called to get another sound segment:
 '''
 
 import time
-import atexit
+import signal
 
 from .notes import Key_signature
 from .tuning_systems import Equal_temperament
@@ -28,6 +28,7 @@ from .pyaud import Soundcard
 from . import fill_sound_blocks
 from .synth import Synth, Instrument, Harmonic
 from .midi_in import Midi_in
+from . import channel
 
 
 def init(idle_fun=None):
@@ -43,7 +44,16 @@ def init(idle_fun=None):
     instrument.add_harmonic(Harmonic(instrument, 1, 1.0, 1.0))
     synth.register_instrument(0, instrument)
     fill_sound_blocks.init(synth, midiin)
-    atexit.register(fini)
+    signal.signal(signal.SIGINT, sigint)
+
+
+class Quit(Exception):
+    pass
+
+def sigint(sig, stackframe):
+    synth.schedule_quit()
+    raise Quit          # Necessary to prevent program from being forcably exitted
+                        # (even with a SIGINT handler).
 
 
 def fini():
@@ -51,9 +61,14 @@ def fini():
     # These are in the order that the time critical functions are called, so that the
     # reporting makes more sense:
     soundcard.report()
+    print("Calling fill_sound_blocks.report()")
     fill_sound_blocks.report()
+    print("Calling midiin.report()")
     midiin.report()
+    print("Calling synth.report()")
     synth.report()
+    print("Calling channel.report()")
+    channel.report()
 
     print("tryit.fini doing closes")
     midiin.close()
@@ -127,4 +142,10 @@ if __name__ == "__main__":
     #init(idle_fun=idle_fun)
     init()
     print("tryit: calling soundcard.run()")
-    soundcard.run()
+    try:
+        soundcard.run()
+    except Quit:
+        pass
+    except BaseException as e:
+        print("tryit caught exception", e.__class__.__name__)
+    fini()
