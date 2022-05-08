@@ -11,15 +11,19 @@ MIDI:
           - command codes and parameters (all commands, except SysEx, have 1 or 2 params):
             - 0x80 Note Off: key, velocity
             - 0x90 Note On: key, velocity  # also serves as Note Off when velocity == 0!!
+              - key of 60 is C4
+              - key of 24 is C1
+              - key of 21 is A0
             - 0xA0 Aftertouch: key, touch
             - 0xB0 Continuous controller (control change): control#, control value
               - control#:  * - equip must respond to comply with General MIDI level 1
+                             - there are 9 control#s with *, so 118 available
                 - 0x00 bank select
                 - 0x01 *modulation
-                - 0x02 breath control
+                - 0x02 breath control (vibrato)
                 - 0x04 foot controller
                 - 0x05 portamento time
-                - 0x06 data entry
+                - 0x06 data entry (course) used with registered parameter numbers
                 - 0x07 *channel volume
                 - 0x08 balance
                 - 0x0A *pan
@@ -31,7 +35,9 @@ MIDI:
                 - 0x12 general purpose controller #3
                 - 0x13 general purpose controller #4
                 - 0x20 to 0x3F seems to be a repeat of 0x00 to 0x1F
-                - 0x40 *systain pedal on/off, <=63 off; >= 64 on
+                - 0x26 data entry (fine) used with registered parameter numbers
+                  - not needed if value is 0
+                - 0x40 *sustain pedal on/off, <=63 off; >= 64 on
                 - 0x41 portamento on/off, <=63 off; >= 64 on
                 - 0x42 sustenuto on/off, <=63 off; >= 64 on
                 - 0x43 soft pedal on/off, <=63 off; >= 64 on
@@ -49,12 +55,20 @@ MIDI:
                 - 0x4F sound controller 10
                 - 0x5B reverb
                 - 0x5D chorus
-                - 0x60 data entry +1, N/A
-                - 0x61 data entry -1, N/A
+                - 0x60 data entry +1, N/A; data byte ignored
+                - 0x61 data entry -1, N/A; data byte ignored
                 - 0x62 non-registered parameter number LSB, lsb
                 - 0x63 non-registered parameter number MSB, msb
-                - 0x64 *registered parameter number LSB, lsb
-                - 0x65 *registered parameter number MSB, msb
+                - 0x64 *registered parameter number LSB, lsb; end of sequence marked by 0x7F
+                - 0x65 *registered parameter number MSB, msb; end of sequence marked by 0x7F
+                  - 14 bit parameter numbers are registered with International MIDI
+                    Association (IMA)
+                  - 0x0000 - Pitch bend range (course is semitones, fine is cents)
+                  - 0x0001 - Fine tuning +/- 100 cents centered on 0x2000, 0x2001 is up one
+                  - 0x0002 - Course tuning; only uses course centered on 0x20, in semitones
+                  - 0x0003 - Tuning program change; e.g., to change tuning system
+                  - 0x0004 - Tuning bank select; used with Tuning program change
+                  - 0x0005 - Modulation depth range; depth of vibrato
                 - 0x78 all sound off (value always 0)
                 - 0x79 *reset all controllers (value always 0)
                 - 0x7A local control on/off, 0=off, 127=on
@@ -140,6 +154,15 @@ MIDI:
       - MIDI Capability Inquiry (MIDI-CI)
 
 
+To run synth:
+    $ cd midi-expression
+    $ pasuspender -- python -m synth.tryit
+
+To run aplaymidi
+    $ cd ~/Music
+    $ aplaymidi -l   # to find client:port of My Synth
+    $ aplaymidi -p client bach_prelude_c_major.mid
+
 ALSA:
     - aplaymidi (installed)
     - playmidi doesn't look so good on first glance...  (not installed)
@@ -182,7 +205,7 @@ Raspberry Pi 3 Model B+:
     - gigabit Ethernet, w/Power-over-Ethernet support (requires separate PoE HAT)
     - needs high-quality 2.5A micro USB power supply.
     - 1GB RAM
-    - 40-pin GPIO header
+    - 26 GPIO pins, pull-up or pull-down on input, max 16mA output
     - HDMI
     - 4 USB 2.0 ports
     - CSI camera port for connecting a Raspberry Pi camera
@@ -196,3 +219,55 @@ Raspberry Pi 3 Model B+:
         - omxplayer foobar.mp3
         - omxplayer -o local foobar.mp3  # to force to headphone jack
       - starting with Bullseye version: use vlc
+
+
+Beaglebone Black:
+    - 6 ADC
+    - up to 69 GPIO pins, pull-up or pull-down on input, 6mA limit on output
+      - 69 if you disable everything else...  Not sure how many enabled by default.
+
+
+Arduino:
+    - 6 ADC
+    - 14 GPIO pins
+
+Arduino Nano 33 IoT ($19.40 w/o headers):
+    - Vin 4.5-21V
+    - 3.3V
+    - ARM, 48MHz
+    - 23 GPIO pins (incl ADC, USART, SPI, Analog Ref) LED built in on pin 13, 7mA output
+      - 20 excluding I2C, LED on pin 13
+      - 13 excluding 6 ADC, Analog Ref, I2C and LED on pin 13
+    - 8 ADC pins (incl DAC, I2C) (12 bit)  avoid I2C pins for ADC, they have pull-ups!
+    - 1 DAC pin (10 bit)
+    - USB with 8 end points
+    - I2C (2 pins)
+    - 1 USART (2 pins)
+    - SPI (4 pins)
+
+Arduino Nano Every ($9.70 w/o headers):
+    - Vin 7-21V
+    - 5V
+    - 8 ADC (incl DAC, I2C)
+    - 1 DAC
+    - 23 GPIO (incl ADC, USART, SPI, Analog Ref) 20mA output
+    - I2C (2 pins)
+    - USART (2 pins)
+    - SPI (4 pins)
+
+Tuning Systems:
+    - Cent = 2**(1/1200) == 1.0005777895065548
+    - Ln_cent = 0.0005776226504666107
+    - Pythagorean comma
+      - how far 12 5ths miss the starting point
+      - 3**12 / 2**19 == 1.0136432647705078 == 23.46 cents too long or 1.955 cents/5th
+      - narrowing the 5th by 1.955 cents gives equal temperament
+    - Syntonic comma
+      - how far 4 5ths miss a perfect 3rd
+      - 3**4 / (5 * 2**4) == 81/80 == 1.0125 == 21.5 cents too long or 5.375 cents/5th
+        - 5.375 cents/5th is 1/4 comma Meantone
+        - 4.3 cents/5th is 1/5 comma Meantone
+        - 1.9545 cents/5th is 1/11 comma Meantone is essentially equal temperament
+    - My comma
+      - how far 21 5ths miss the starting point
+      - 3**21 / 2**33 == 1.2177453845506534 == 341.055 cents too long or 16.24 cents/5th

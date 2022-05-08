@@ -2,6 +2,7 @@
 
 from collections import defaultdict
 import numpy as np
+import math
 from itertools import repeat
 
 from .channel import Var, Actor
@@ -134,6 +135,9 @@ class Instrument(Actor):
     r'''
     Provides notifications for tuning_system changes and volume changes.
     '''
+    #scale_volume = 1/12 * 0.5
+    scale_volume = 0
+
     def __init__(self, name, synth, volume=None, tuning_system=None, key_signature=None):
         super().__init__(synth, name=name)
         self.synth = synth
@@ -194,19 +198,29 @@ class Instrument(Actor):
             self.note_off(midi_note, 0)
         else:
             self.num_note_ons += 1
+
+            #scaled_velocity = velocity / (math.exp(midi_note - 21) / self.scale_volume)
+
+            # scale_volume ~ 1/12 * 0.125
+            #scaled_velocity = velocity / ((midi_note - 21) * self.scale_volume + 1)
+
+            scaled_velocity = velocity - (midi_note - 21) * self.scale_volume
             my_note = self.key_signature.MIDI_to_note(midi_note)
-            print(f"note_on {midi_note=}, {my_note=}, {velocity=}")
-            velocity /= 127
+            my_velocity = scaled_velocity / 127
+            print(f"note_on {midi_note=}, {my_note=}, {velocity=}, {scaled_velocity=}, "
+                  f"{my_velocity=}")
 
             # kill note if already playing...
             if midi_note in self.notes_playing:
                 print(f"killing {midi_note=}: already playing")
                 Num_harmonics.dec('value', len(self.notes_playing[midi_note]))
+                for ph in self.notes_playing[midi_note]:
+                    ph.delete()
                 del self.notes_playing[midi_note]
                 del self.velocities[midi_note]
             harmonics_added = 0
             for h in self.harmonics:
-                ph_list = h.play(my_note, velocity)
+                ph_list = h.play(my_note, my_velocity)
                 #print("note_on got ph_list", ph_list)
                 if ph_list:
                     self.notes_playing[midi_note].extend(ph_list)
@@ -216,7 +230,7 @@ class Instrument(Actor):
             if self.synth.idle_fun_running:
                 self.synth.idle_fun_caught_running += 1
             if harmonics_added:
-                self.velocities[midi_note] = velocity
+                self.velocities[midi_note] = my_velocity
                 Num_harmonics.inc('value', harmonics_added)
             #print("note_on", midi_note, len(self.harmonics), harmonics_added,
             #      self.synth.idle_fun_running, Num_harmonics.value)
@@ -304,10 +318,11 @@ class Harmonic(Var):
 
     Reports changes in ampl_offset, freq_offset, ampl_envelope, and freq_envelope.
     '''
-    def __init__(self, instrument, ampl_offset, freq_offset,
+    def __init__(self, instrument, harmonic, ampl_offset, freq_offset,
                  note_on_envelope=None, note_off_envelope=None, freq_envelope=None):
-        super().__init__()
+        super().__init__(name=f"{instrument.name}-H{harmonic}")
         self.instrument = instrument
+        self.harmonic = harmonic
         self.ampl_offset = ampl_offset
         self.freq_offset = freq_offset
         if note_on_envelope is None:
@@ -421,6 +436,7 @@ class Play_harmonic(Actor):
         except StopIteration:
             #print(f"populate_sound_block: got StopIteration for note {self.note} "
             #      f"on waveform, returning", False)
+            self.delete()
             return False
         try:
             ampl_envelope = next(self.ampl_env)
@@ -428,6 +444,7 @@ class Play_harmonic(Actor):
         except StopIteration:
             #print(f"populate_sound_block: got StopIteration for note {self.note} "
             #      f"on ampl_envelope, returning", False)
+            self.delete()
             return False
         num_samples = min(len(base_waveform), len(ampl_envelope))
         if num_samples == self.block_size:
@@ -438,5 +455,6 @@ class Play_harmonic(Actor):
         if num_samples > 0:
             np.multiply(base_waveform[:num_samples], ampl_envelope[:num_samples],
                         out=block[:num_samples])
+        self.delete()
         return False
 

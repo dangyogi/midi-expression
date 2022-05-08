@@ -8,7 +8,6 @@ Must call init to get this started.
 
 import time
 
-from .channel import Var, Actor
 from .utils import Largest_value_calculator, Num_harmonics, Target_time
 
 
@@ -32,6 +31,7 @@ def fill_sound_block(block, target_time):
 
     Returns True to continue, False to quit (last sound block).
     '''
+    #print("fill_sound_block called with target_time", target_time)
     global overruns, time_over, idle_running
     Target_time.set_target_time(target_time, Largest_gen_time.get_largest_value())
     Midiin.process_until(Synth.process_MIDI)
@@ -47,6 +47,7 @@ def fill_sound_block(block, target_time):
     #print(f"fill_sound_block: {Synth.idle_fun_running=}, {Num_harmonics.value=}, {ans=}")
     if Num_harmonics.value > 0:
         Largest_gen_time.add((now - start_time) / Num_harmonics.value)
+    #print("fill_sound_block returning", ans)
     return ans
 
 

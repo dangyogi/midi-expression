@@ -17,6 +17,7 @@ import rtmidi
 import rtmidi.midiutil
 
 from .utils import Largest_value_calculator, Actor, Target_time
+from .channel import recalc_actors
 
 
 #def sig_handler(signum, stackframe):
@@ -27,15 +28,15 @@ from .utils import Largest_value_calculator, Actor, Target_time
 class Midi_in(Actor):
     process_until_overhead = 0.0008         # sec, reported as not quite 0.0003
 
-    def __init__(self):
-        super().__init__(Target_time)
+    def __init__(self, name="midi_in"):
+        super().__init__(Target_time, name=name)
         self.midiin, self.port_name = rtmidi.midiutil.open_midiinput(
                                         port=None,          # default None
                                         api=0,              # default 0
                                         use_virtual=True,   # default False
                                         interactive=False,  # default True
-                                        client_name="synth_client",
-                                        port_name="synth port")
+                                        client_name="My Synth",
+                                        port_name="Synth In")
 
         # ignore_types(sysex=True, timing=True, active_sense=True)  # defaults
         self.midiin.ignore_types(sysex=False)
@@ -57,9 +58,11 @@ class Midi_in(Actor):
         self.in_callback = False
         self.queue = SimpleQueue()
         self.midiin.set_callback(self.queue.put, True)
+        self.process_until_calls = 0
 
     def report(self):
         self.largest_callback_time.report(1e3, "msec")
+        print(f"Midi_in: {self.process_until_calls} process_until calls")
         print(f"Midi_in: {self.process_time_overruns} process_until time overruns", end='')
         if self.process_time_overruns:
             print(f", avg "
@@ -71,29 +74,35 @@ class Midi_in(Actor):
         self.midiin.close_port()
 
     def recalc(self):
-        #print("Midi_in got recalc call...  Not yet implemented.  Ignored!")
         self.target_time = Target_time.target_time - self.process_until_overhead
+        #print("Midi_in.recalc set self.target_time to", self.target_time)
 
     def process_until(self, callback):
-        self.recalc()
+        recalc_actors()  # to set self.target_time
+        self.process_until_calls += 1
         time_left = self.target_time - time.perf_counter() \
                       - self.largest_callback_time.get_largest_value()
         try:
             while time_left > 0:
                 #signal.setitimer(signal.ITIMER_REAL, target_time - now)  # raises SIGALRM
+                #print("Midi_in.process_until: calling self.queue.get with timeout",
+                #      time_left)
                 message, delta_time = self.queue.get(timeout=time_left)
+                #print("Midi_in.process_until: got", message)
 
                 assert not self.in_callback, "Midi_in: callback called while still running!"
                 self.in_callback = True
                 start_time = time.perf_counter()
                 callback(message)
                 self.in_callback = False
+                recalc_actors()
                 now = time.perf_counter()
                 self.largest_callback_time.add(now - start_time)
 
                 time_left = self.target_time - now \
                               - self.largest_callback_time.get_largest_value()
         except Empty:
+            #print("Midi_in.process_until: timeout")
             pass
         time_over = time.perf_counter() - self.target_time
         if time_over > 0:

@@ -76,12 +76,15 @@ class Soundcard:
         self.idle_fn = idle_fn
         self.process_time_overruns = 0
         self.total_process_time_over = 0
+        self.callback_calls = 0
         self.in_callback = False
         #print(dir(self.stream))
 
     def run(self):
         r'''Never returns...
         '''
+        print("Soundcard.run called")
+        self.callback_calls = 0
         self.start_time = time.perf_counter()
         self.underflows = 0
         try:
@@ -104,6 +107,7 @@ class Soundcard:
             print(f", avg {avg_time_over * 1e3} msec")
         else:
             print()
+        print("soundcard:", self.callback_calls, "callback calls")
         print("soundcard: stream active", self.stream.is_active())
 
     def close(self):
@@ -137,6 +141,7 @@ class Soundcard:
         # print("perf_counter", time.perf_counter())  # matches time_info.current_time
         # print("time_info", time_info)      # all zeros with pulse,
                                            # has values with pasuspender!
+        self.callback_calls += 1
         target_time = time.perf_counter() + (time_info['output_buffer_dac_time']
                                               - time_info['current_time']) \
                       - self.process_overhead

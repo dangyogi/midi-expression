@@ -1,0 +1,167 @@
+Affects All:
+    - tempo
+    - volume
+    ? key signature
+    ? tuning
+
+Per Instrument (channel):
+    - note_on timing offset
+    - note_on velocity
+    - note_off timing offset
+    - per Harmonic:
+        - freq_offset
+        - freq_envelope
+          - type:
+            - None
+            - vibrato
+              - freq
+                - scalefn
+              - ampl
+            - ramp up/down
+              - start
+              - stop
+              - geom inc
+              - lin inc
+              - scalefn
+        - ampl_offset
+        - note_on_ampl_envelope
+          - attack (ramp up)
+            - start
+            - geom inc
+            - lin inc
+            - scalefn
+          - decay (ramp down)
+            - geom inc
+            - lin inc
+            - scalefn
+          - sustain
+        - note_off_ampl_envelope (ramp down)
+          - geom inc
+          - lin inc
+          - scalefn
+        - scale_fns (how do these work?)
+          - seems like these only apply to envelopes, not offsets
+          - applies to stretching (or contracting) the time frame of the envelope
+          - based on base_freq (more stable than notes).  This is "my freq" (in cents).
+          - time frame contracts at higher freqs.  So much change per octave.  7.25 octaves
+            on piano keyboard (A0 - C8).
+            - A0 is my note 37, my freq 2200 with Equal_temperament, 27.5 Hz at A4=440
+            - C8 is my note 190, my freq 10900 with Equal_temperament, 4186 Hz at A4=440
+
+
+Control Box Layout:
+
+    - Rotary 12-position switches (2)  RSW-112
+    - LCD display (10)  LCD-111
+    - Slide pot (10)   SLP-50K
+      - Knob (10)   KNB-400
+    - Alpha-numeric 14 segment LED (1 char) (20)  SDA-24
+    - Red button (5)   PB-199
+    - Red LED (20)   LED-10R
+    - 3 digit 7 segment LED (15)  TDA-26
+    - Toggle switch (10)   STS-130
+    - Rotary encoder (5)   RE-66
+    - 300 LED kit (1)   LED-K1
+
+    - Instrument switch (up to 15 channels, one for sequencer)
+      - only have 12 position switch -- should be OK
+    - 5 slide pots
+    - function switch:
+      - sequencer (ignores instrument switch) (1 switch settings):
+        - tempo
+        - volume
+      - instruments (10 switch settings):
+        - key signature:
+          - 15 choices for num flats/sharps, flats -, sharps +
+          - switch for major/minor (freq/ampl switch?), 1 for minor
+        - timing/velocity slides (sent to sequencer channel):
+          - note_on velocity (0x07)
+          - note_on timing offset (0x0F)
+          - note_off timing offset (0x0E)
+        - tuning system
+          - type
+            ? pythagorean (same as meantone(0))
+            - meantone
+              ? tonic
+              - offset (in commas, e.g., 1/4 comma, 1/5 comma)
+            ? just intonation
+              - tonic (one of 21 "my notes" in octave)
+            - well tempered
+              - tonic (one of 21 "my notes" in octave)
+            - equal temperament
+        - tune
+          - tuning type:
+            - absolute
+              - note to tune
+                - note in octave (one of 21 "my notes")
+                ? octave
+              - freq (Hz) 300-500
+            - match
+              - note in octave to tune (one of 21 "my notes")
+              - other instrument (channel)
+        - harmonics
+          - odd/even
+            - odd harmonics: 1,3,5,7,9
+            - even harmonics: 2,4,6,8,10
+          - freq (sets freq_offset for 5 harmonics)
+          - ampl (sets ampl_offset for 5 harmonics)
+        - harmonic 1,3,5,7,9 (odd) or 2,4,6,8,10 (even)
+          - freq
+            - freq_offset (up to +/- 0.5 added to harmonic, e.g., for harmonic 3: 2.5 - 3.5)
+            - freq_envelope type
+              - vibrato
+                - scalefn scale times by 0-1.5/octave (setting / 85)
+                - cycle time (1.00724 ^ setting(0-127) - 1); 0 == off
+                - ampl 0-200 cents
+              - ramp
+                - scalefn
+                - start (stop is freq_offset) +/- 200 cents
+                - duration (sec) 1.00724 ^ setting(0-127) - 1; 0 == off
+                - bend +/-1; % of vert or horz slope (setting * 0.01587)
+          - ampl
+            - ampl_offset 0-1 (setting / 127)
+            - scalefn
+            - ampl_envelope type
+              - attack ramp
+                - duration
+                - bend
+                ? start 0-1 (setting / 127) (stop is 1)
+              - decay ramp (start is 1, stop is sustain)
+                - duration, standard duration * 6
+                - bend
+              - tremolo (stop for decay ramp)
+                - level 0-1 (setting / 127)
+                - cycle time (0 == off)
+                - scalefn
+                - ampl 0-1/9 10Db (setting / 1143)
+              - release ramp, start is dynamic, stop is 0:
+                - duration
+                - bend
+    - odd/even switch
+    - freq/ampl switch
+    - value rotary switch
+      - value display
+    - set button (and switch)
+
+
+Harmonic accuracies to ~1 cent:
+
+      - 1.5   701.955
+    - 2.001                             (width 884)
+      - 2.5   1586.314
+    - 3.002     1901.955 (701.955) (G)  (width 583)
+      - 3.5   2168.825
+    - 4.002                             (width 435)
+      - 4.5   2603.910
+    - 5.003     2786.314 (386.314) (E)  (width 347)
+      - 5.5   2951.318
+    - 6.003                             (width 289)
+      - 6.5   3240.528
+    - 7.004     3368.826 (968.826) (Bb) (width 248)
+      - 7.5   3488.269
+    - 8.005                             (width 217)
+      - 8.5   3704.955
+    - 9.005     3803.910 (203.910) (D)  (width 193)
+      - 9.5   3897.513
+    - 10.006                            (width 173)
+      - 10.5  4070.781

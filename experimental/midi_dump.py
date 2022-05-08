@@ -1,5 +1,7 @@
 # midi_dump.py
 
+r'''Dumps midi file.
+'''
 
 def dump(filename):
     with open(filename, 'rb') as f:

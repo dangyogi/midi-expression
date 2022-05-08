@@ -9,7 +9,7 @@ Soundcard.callback automatically called to get another sound segment:
     - calls fill_sound_blocks.fill_sound_block
        - fill_sound_blocks.fill_sound_block
           - sets Target_time
-          - calls Midiin.process_until(synth.process_MIDI)
+          - calls Midiin.process_until(target_time, synth.process_MIDI)
              - sets midi callback to self.call_callback
                 - call_callback calls synth.process_MIDI for each midi event
              - sleeps for Target_time - fudge
@@ -40,7 +40,7 @@ def init(idle_fun=None):
     synth = Synth(soundcard, tuning_system=tuning_system, key_signature=key_sig)
     synth.idle_fun_running = False
     instrument = Instrument("clavier", synth)
-    instrument.add_harmonic(Harmonic(instrument, 1.0, 1.0))
+    instrument.add_harmonic(Harmonic(instrument, 1, 1.0, 1.0))
     synth.register_instrument(0, instrument)
     fill_sound_blocks.init(synth, midiin)
     atexit.register(fini)
@@ -126,4 +126,5 @@ if __name__ == "__main__":
 
     #init(idle_fun=idle_fun)
     init()
+    print("tryit: calling soundcard.run()")
     soundcard.run()

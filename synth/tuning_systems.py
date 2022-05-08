@@ -29,8 +29,14 @@ Ln_cent = math.log(Cent)
 
 
 # Notes and intervals:
-def to_freq(expanded_interval, delta=0):
-    return round((math.log(expanded_interval) / Ln_cent + delta) % 1200)
+def to_freq(harmonic_multiple, delta_cents=0):
+    r'''Converts harmonic multiple to "my freq" within octave of root note.
+
+    `harmonic_multiple` is in multiples of root note.
+
+    `delta_cents` is cents.
+    '''
+    return round(math.log(harmonic_multiple) / Ln_cent + delta_cents) % 1200
 
 
 C4 = 1200 * 4
@@ -76,9 +82,10 @@ class Meantone(Base_tuning_system):
     the 3rd harmonic applied 4 times, or 3**4 == 81) and the pure 5th harmonic
     (5 * 16 == 80, times 16 to get it into the same octave).
     '''
-    Syntonic_comma = math.log(81/80) / Ln_cent
+    Syntonic_comma = math.log(81/80) / Ln_cent  # 21.5 cents
 
     def __init__(self, comma_fudge=0):
+        # FIX: Seems like this needs a tonic
         self.notes_to_freq = {
             Notes[note]: to_freq(3**n, n*(self.Syntonic_comma * comma_fudge))
             for n, note in enumerate(("Fb", "Cb", "Gb", "Db", "Ab", "Eb", "Bb",
@@ -196,13 +203,18 @@ class Well_temperament(Base_tuning_system):
 
         https://www.jstor.org/stable/41640471
 
-    This is for keyboarded instruments, so only has 12 notes (e.g., no difference
+    This is for keyboard instruments, so only has 12 notes (e.g., no difference
     between A# and Bb).
+
+    Uses two different adjustments to pythagorean tuning on different 5ths (rather
+    than using the same adjustment on all 5ths as on meantone).
 
     Circle of Fifths:
       P = Pythagorian Comma, 3**12/2**19 (531441/524288) or 1.013643265, or 23.46 cents.
+      P/5 = 4.692 cents (between 1/4 comma (5.375 cents) and 1/5 comma (4.3 cents) meantone
+      adjustment)
 
-      Adjustments subtracted from Pythagorian tuning for each interval.
+      Adjustments subtracted from Pythagorian tuning for each interval:
 
         Ab:   -4
            0
@@ -230,6 +242,10 @@ class Well_temperament(Base_tuning_system):
            0
         Ab:    8
 
+    Extending this to 21 notes/octave:
+      Pythagorean comma is 341.1 cents.  The 1/4 to 1/5 meantone comma would have to be
+      used 63 to 79 times (but there are only 21 notes!).  So this doesn't seem like it
+      would work...
 
 
     ================== FIX: cut from here down ================

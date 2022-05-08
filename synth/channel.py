@@ -1,5 +1,7 @@
 # channel.py
 
+from operator import attrgetter
+
 
 class Channel:
     Settings = []
@@ -39,19 +41,24 @@ class Var:
 
     If any of the values change, all interested Actors are notified.
     '''
+    recalc_order = 0  # to make Actor.__init__ easier...
+
     def __init__(self, name=None, **init_values):
         self.name = name
-        self.actors = {}   # {Actor: Actor}
+        self.actors = set()   # {Actor}
         for name, value in init_values.items():
             self.set(name, value)
 
+    def __str__(self):
+        return f"{self.__class__.__name__}(<{self.name}>)"
+
     def register(self, actor):
         assert actor not in self.actors
-        self.actors[actor] = actor
+        self.actors.add(actor)
 
     def deregister(self, actor):
         assert actor in self.actors
-        del self.actors[actor]
+        self.actors.remove(actor)
 
     def set(self, name, value):
         if not hasattr(self, name) or getattr(self, name) != value:
@@ -79,8 +86,7 @@ class Var:
             self.changed()
 
     def changed(self):
-        for a in self.actors:
-            a.tickle()
+        Actors_to_recalc.update(self.actors)
 
 
 class Setting(Var):
@@ -125,31 +131,29 @@ class Channel_setting(Setting):
 
 # Program wide (all channels)
 #
-# These are all prep-ed after catching up on MIDI events and before generating the
-# next sound block.
-Actors = {}   # {Actor: Actor}
+# These are all recalc-ed after each MIDI events and before generating the next sound block.
+Actors_to_recalc = set()
 
 class Actor(Var):
-    def __init__(self, *ins, name=None):
+    r'''Actor acts on Var values.  These are its inputs.
+    '''
+    def __init__(self, *inputs, name=None):
         super().__init__(name)
-        self.ins = ins
-        self.needs_recalc = False
-        Actors[self] = self
-        for i in self.ins:
-            i.register(self)
+        self.inputs = inputs
+        if not self.inputs:
+            self.recalc_order = 1
+        else:
+            self.recalc_order = max(self.inputs, key=attrgetter('recalc_order')) \
+                                  .recalc_order + 1
+            Actors_to_recalc.add(self)
+            for i in self.inputs:
+                i.register(self)
 
     def delete(self):
-        del Actors[self]
-        for i in self.ins:
+        if self.actors:
+            raise AssertionError(f"{self} deleted before dependant actors {self.actors}")
+        for i in self.inputs:
             i.deregister(self)
-
-    def tickle(self):
-        self.needs_recalc = True
-
-    def prep(self):
-        if self.needs_recalc:
-            self.needs_recalc = False
-            self.recalc()
 
 
 class Block_generator(Actor):
@@ -160,6 +164,41 @@ class Block_generator(Actor):
         pass
 
 
-def process_events():
-    for actor in Actors.values():
-        actor.prep()
+r'''FIX: delete
+def tsort_actors():
+    # Step 1: What Actors does each Actor depend on (inputs)?
+    predecessor_successors = defaultdict(set)  # {predecessor: {successor}}
+    for a in Actors:
+        for i in a.inputs:
+            if isinstance(i, Actor):
+                predecessor_successors[i].add(a)
+
+    # Step 2: Figure out predecessor -> successor links for tsort:
+    successor_predecessors = defaultdict(set)     # {successor: {predecessor}}
+    for predecessor, successors in predecessor_successors.items():
+        for successor in successors:
+            successor_predecessors[successor].add(predecessor)
+
+    # Step 3: Do tsort.
+    remaining_actors = Actors.copy()
+    recalc_order = 1
+    while remaining_actors:
+        next_available_actors = remaining_actors - successor_predecessors.keys()
+        if not next_available_actors:
+            raise AssertionError(f"tsort_actors: cycle detected {successor_predecessors=}")
+        for a in next_available_actors:
+            a.recalc_order = recalc_order
+            for successor in downstream_links[a]:
+                successor_predecessors[successor].remove(a)
+                if not successor_predecessors[successor]:
+                    del successor_predecessors[successor]
+            remaining_actors.remove(a)
+        recalc_order += 1
+'''
+
+
+def recalc_actors():
+    while Actors_to_recalc:
+        next_actor = min(Actors_to_recalc, key=attrgetter('recalc_order'))
+        next_actor.recalc()
+        Actors_to_recalc.remove(next_actor)
