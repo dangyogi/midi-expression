@@ -51,9 +51,13 @@ class Base_tuning_system:
     # Keyboard reference:
     #    # #   # # #
     #   C D E F G A B C
+
+    cents_per_octave = 1200
+
     def to_tonic(self, freqs, tonic_start):
         self.notes_to_freq = [f - freqs[tonic_start] for f in freqs[tonic_start:]] \
-                             + [f + 1200 - freqs[tonic_start] for f in freqs[:tonic_start]]
+                             + [f + self.cents_per_octave - freqs[tonic_start]
+                                for f in freqs[:tonic_start]]
 
     def realign(self):
         # Realign self.notes_to_freq so that C is 0:
@@ -65,29 +69,90 @@ class Base_tuning_system:
         r'''Use freq_to_Hz to translate this freq to Hz.
         '''
         octave, note = divmod(note_number, 12)
-        return self.notes_to_freq[note] + 1200 * octave
+        return self.notes_to_freq[note] + self.cents_per_octave * octave
 
 
-def frange(inc, num_elements=12):
+def frange(inc, cents_per_octave=1200, num_elements=12):
     r'''Freq range, starting at 0.
 
-    Freqs wrap around at 1200.
+    Freqs wrap around at cents_per_octave.
     '''
     for i in range(num_elements):
-        yield (i * inc) % 1200
+        yield (i * inc) % cents_per_octave
 
 
-H3 = math.log(3/2) / Ln_cent                # 701.955 cents
+# Harmonics in cents:
+H3 = math.log(3/2) / Ln_cent  # 701.955 cents, ideally 100.279 cents/semitone, off by 0.279
+H5 = math.log(5/4) / Ln_cent  # 386.314 cents, ideally 96.579 cents/semitone, off by 3.421
+H7 = math.log(7/4) / Ln_cent  # 968.826 cents, ideally 96.883 cents/semitone, off by 3.117
+
+# Overall errors at 100 cents/semitone:
+#
+#    H2 = 0
+#    H3 = 1.955
+#    H5 = 13.686
+#    H7 = 31.174
+
+# Avg of lowest to highest is 98.429 cents/semi, off by 1.571
+#
+# But if we look at the overall error, H5 is 4*cent_err while H3 is 7*cent_err.  So
+# splitting the overall error down the middle gives (100-e)*4 - H5 == H3 - (100-e)*7
+#   400 - 4e - H5 == H3 - 700 + 7e
+#   1100 - H5 == H3 + 11e
+#   1100 - (H5 + H3) == 11e
+#   1100 - 1088.269 == 11e
+#   e = 1.066, so semitone would be 98.9335 cents giving an overall error of 9.42 for H3
+#                 and H5, but this gives an overall error of 12.798 for the octave!
+#
+# Trying again...
+#   (100-e)*4 - H5 == 1200 - (100-e)*12
+#   400 - 4e - H5 == 1200 - 1200 + 12e
+#   400 - H5 == 16e
+#   e = 0.855375, so semitone would be 99.145 giving overall errors:
+#
+#      H2: 10.26
+#      H3: 7.94
+#      H5: 10.27
+#      H7: 22.624
+#
+# Targeting H7, rather than H5:
+#   (100-e)*10 - H7 == 1200 - (100-e)*12
+#   1000 - 10e - H7 == 1200 - 1200 + 12e
+#   1000 - H7 = 22e
+#   e = 1.417, so semitone would 98.583 giving overall errors:
+#
+#      H2: 17.004
+#      H3: 8.018
+#      H5: 11.874
+#      H7: 17.004
+#
+# So the smallest sensible semitone size is 98.583 which splits the overall error between
+# H2 and H7.  The largest semitone size is 100.279, which is Pythagorean tuning.  Note that
+# 1/4 comma Meantone has a 94.625 cent semitone, and 1/5 comma is 95.7 cents.  The 98.583
+# would be 0.0659 pct_comma_fudge Meantone.
+
+
+# Pythagorian comma, how far 12 H3's miss an octave:
+P_comma = math.log((3/2)**12/2**7) / Ln_cent  # 531441/524288 == 1.013643265, or 23.46 cents
+
+# How far 4 H3's miss H5.
+Syntonic_comma = math.log((3/2)**4/5) / Ln_cent # 81/80 == 1.0125, or 21.5 cents
+
+# How far 10 H3's miss H7.
+H7_comma = math.log((3/2)**10/7/2**3) / Ln_cent # 59049/57344 == 1.02973284, or 50.724 cents
+#print("H7_comma", H7_comma)
+
 
 class H3_tuning(Base_tuning_system):
     r'''These are the family of tuning_systems that depend on a cycle of H3 [- delta]
     freqs.
     '''
-    def __init__(self, tonic_start, delta=0):
+    def init(self, tonic_start, delta=0, cents_per_octave=1200):
         r'''`start` is the offset to "C".
         '''
-        freqs = sorted(frange(H3 - delta))
+        freqs = sorted(frange(H3 - delta, cents_per_octave))
         self.to_tonic(freqs, tonic_start)
+        self.cents_per_octave = cents_per_octave
 
 
 class Meantone(H3_tuning):
@@ -108,12 +173,19 @@ class Meantone(H3_tuning):
     the 3rd harmonic applied 4 times, or 3**4 == 81) and the pure 5th harmonic
     (5 * 16 == 80 -- times 16 to get it into the same octave).
     '''
-    Syntonic_comma = math.log(81/80) / Ln_cent  # 21.5 cents
-    tonic_offset = 7                            # start with tonic - 7 (Ab for tonic "C")
 
-    def __init__(self, tonic="C", pct_comma_fudge=0.25, tonic_offset=7):
-        super().__init__((Notes[tonic] + tonic_offset) % 12,
-                         self.Syntonic_comma * pct_comma_fudge)
+    def __init__(self, tonic="C", pct_comma_fudge=0.25, tonic_offset=-7, max_octave_fudge=0):
+        r'''
+        Octave at pct_comma_fudge of 0.20 is 1171.845 cents, off by 28.155 cents.
+        Octave at pct_comma_fudge of 0.25 is 1158.941 cents, off by 41.059 cents.
+        '''
+        delta = Syntonic_comma * pct_comma_fudge
+        times_12 = (H3 - delta) * 12 % 1200
+        print("Meantone.__init__: pct_comma_fudge", pct_comma_fudge, "times_12", times_12)
+        octave_comma = min(abs(times_12), abs(times_12 - 1200))
+        self.init((Notes[tonic] + tonic_offset) % 12,
+                  delta,
+                  1200 - math.copysign(min(octave_comma, max_octave_fudge), times_12 - 600))
         #print(f"Meantone.__init__, {self.notes_to_freq=}")
 
 
@@ -122,8 +194,9 @@ class Pythagorean_tuning(H3_tuning):
 
     Start at tonic - 3 semitones (e.g., if tonic is 'C', start at 'A').
     '''
-    def __init__(self, tonic="C"):
-        super().__init__((Notes[tonic] + 3) % 12)
+    def __init__(self, tonic="C", max_octave_fudge=0):
+        self.init((Notes[tonic] + 3) % 12,
+                  cents_per_octave=1200 + min(P_comma, max_octave_fudge))
 
 
 class Just_intonation(Base_tuning_system):
@@ -196,24 +269,18 @@ class Well_temperament(Base_tuning_system):
     Herbert starts at tonic - 4 semitones (e.g., if tonic is "C", start at "Ab").
     Alternatively, start at tonic + 1 semitone (e.g., if tonic is "C", start at "C#").
 
-    This is for keyboard instruments, so only has 12 notes (e.g., no difference
-    between A# and Bb).
-
     Uses two different adjustments to pythagorean tuning on different 5ths (rather
     than using the same adjustment on all 5ths as on meantone).
 
-    Circle of Fifths:
-      P = Pythagorian Comma, 3**12/2**19 (531441/524288) or 1.013643265, or 23.46 cents.
-      P/5 = 4.692 cents (between 1/4 comma (5.375 cents) and 1/5 comma (4.3 cents) meantone
-      adjustment)
+    P_comma is 23.46 cents.
+    P_comma/5 = 4.692 cents (between 1/4 comma (5.375 cents) and
+                             1/5 comma (4.3 cents) meantone adjustment)
 
-      Adjustments subtracted from Pythagorian tuning for each interval:
-
+    H3 - P_comma/5 is applied to 5 5ths, and H3 is applied to the remaining 7 5ths.  This
+    brings the octave into a perfect 8th.
     '''
 
-    # Pythagorian comma
-    P = math.log(3**12/2**19) / Ln_cent  # (531441/524288) or 1.013643265, or 23.46 cents.
-    P_5 = P/5
+    P_5 = P_comma/5    # 4.692 cents
 
     freqs = tuple(sorted(cumsum(
                            # C:     0
@@ -243,16 +310,17 @@ class Well_temperament(Base_tuning_system):
                            # C:     0
                         )))
 
-    def __init__(self, tonic="C"):
-        start = Notes[tonic]
+    def __init__(self, tonic="C", tonic_offset=-4):
+        start = (Notes[tonic] + tonic_offset) % 12
         self.to_tonic(self.freqs, start)
 
 
 class Equal_temperament(Base_tuning_system):
     r'''Equal_temperament has no tonic...
     '''
-    def __init__(self):
-        self.notes_to_freq = [0, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100]
+    def __init__(self, cents_per_semitone=100):
+        self.notes_to_freq = [n * cents_per_semitone for n in range(12)]
+        self.cents_per_octave = 12 * cents_per_semitone
 
 
 class Tuning_system(Channel_setting):
@@ -318,9 +386,6 @@ if __name__ == "__main__":
                 print(f"{ntf[i + 1] - ntf[i]:.2f}, ", end='')
             print(f"{ntf[0] + 1200 - ntf[11]:.2f}, ")
     else:
-        H3 = math.log(3/2) / Ln_cent                # 701.955 cents
-        H5 = math.log(5/4) / Ln_cent                # 386.314 cents
-        H7 = math.log(7/4) / Ln_cent                # 968.826 cents
         def show_major(key, freqs):
             return f"{key + ':':3} " \
                       f"H3 {abs(freqs[7] - freqs[0] - H3):5.2f}, " \

@@ -32,12 +32,13 @@ def test_freq_to_Hz(freq, hz):
     assert freq_to_Hz(freq) == pytest.approx(hz, abs=1e-4)
 
 
-@pytest.mark.parametrize("inc, num_elements, ans", (
-    (1, 3, (0, 1, 2)),
-    (1000, 3, (0, 1000, 800)),
+@pytest.mark.parametrize("inc, cents_per_octave, num_elements, ans", (
+    (1, 1200, 3, (0, 1, 2)),
+    (1000, 1200, 3, (0, 1000, 800)),
+    (1000, 1100, 3, (0, 1000, 900)),
 ))
-def test_frange(inc, num_elements, ans):
-    assert tuple(frange(inc, num_elements)) == ans
+def test_frange(inc, cents_per_octave, num_elements, ans):
+    assert tuple(frange(inc, cents_per_octave, num_elements)) == ans
 
 
 @pytest.mark.parametrize("numbers, sums", (
@@ -91,3 +92,15 @@ def test_tuning_systems(cls, arg2_name, arg2_values, arg3_name, arg3_values):
             test(t1, t2)
         test("B", "C")
 
+
+@pytest.mark.parametrize("pct_comma_fudge, max_octave_fudge, octave_cents", (
+    (0.25, 0, 1200),
+    (0.25, 10, 1190),
+    (0.25, 50, 1158.941),
+    (0.20, 0, 1200),
+    (0.20, 10, 1190),
+    (0.20, 50, 1171.845),
+))
+def test_meantone_max_octave_fudge(pct_comma_fudge, max_octave_fudge, octave_cents):
+    ts = Meantone(pct_comma_fudge=pct_comma_fudge, max_octave_fudge=max_octave_fudge)
+    assert ts.cents_per_octave == pytest.approx(octave_cents, abs=1e-3)
