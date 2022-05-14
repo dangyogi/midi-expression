@@ -15,6 +15,9 @@ alsa_midi_dump
 # sound files
 *.wav
 
+# csv files
+*.csv
+
 # Distribution / packaging
 .Python
 build/

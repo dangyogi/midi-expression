@@ -1,6 +1,6 @@
 # test_envelope.py
 
-from synth.envelop import *
+from synth.envelope import *
 
 
 def scale_unity(x):

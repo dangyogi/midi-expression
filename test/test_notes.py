@@ -6,46 +6,34 @@ from synth.notes import *
 
 
 @pytest.mark.parametrize("base_note, octave, answer", (
-    ("Cb", -1, 0),
-    ("C", -1, 1),
-    ("C", 0, 22),
-    ("C", 4, 106),
-    ("C#", 4, 107),
-    ("Db", 4, 108),
-    ("D", 4, 109),
-    ("D#", 4, 110),
-    ("Eb", 4, 111),
-    ("E", 4, 112),
-    ("E#", 4, 113),
-    ("Fb", 4, 114),
-    ("F", 4, 115),
-    ("F#", 4, 116),
-    ("Gb", 4, 117),
-    ("G", 4, 118),
-    ("G#", 4, 119),
-    ("Ab", 4, 120),
-    ("A", 4, 121),
-    ("A#", 4, 122),
-    ("Bb", 4, 123),
-    ("B", 4, 124),
-    ("B#", 4, 125),
+    ("C", -1, 0),
+    ("C", 0, 12),
+    ("C", 4, 60),
+    ("C#", 4, 61),
+    ("Db", 4, 61),
+    ("D", 4, 62),
+    ("D#", 4, 63),
+    ("Eb", 4, 63),
+    ("E", 4, 64),
+    ("E#", 4, 65),
+    ("Fb", 4, 64),
+    ("F", 4, 65),
+    ("F#", 4, 66),
+    ("Gb", 4, 66),
+    ("G", 4, 67),
+    ("G#", 4, 68),
+    ("Ab", 4, 68),
+    ("A", 4, 69),
+    ("A#", 4, 70),
+    ("Bb", 4, 70),
+    ("B", 4, 71),
+    ("B#", 4, 60),
+    ("C", 5, 72),
 ))
 def test_nat(base_note, octave, answer):
     assert nat(Notes[base_note], octave) == answer
-    if base_note.endswith('#'):
-        if base_note in ("B#", "E#"):
-            assert sharp(Notes[base_note], octave) == answer + 3
-        else:
-            assert sharp(Notes[base_note], octave) == answer + 2
-    else:
-        assert sharp(Notes[base_note], octave) == answer + 1
-    if base_note.endswith('b'):
-        if base_note in ("Cb", "Fb"):
-            assert flat(Notes[base_note], octave) == answer - 3
-        else:
-            assert flat(Notes[base_note], octave) == answer - 2
-    else:
-        assert flat(Notes[base_note], octave) == answer - 1
+    assert sharp(Notes[base_note], octave) == answer + 1
+    assert flat(Notes[base_note], octave) == answer - 1
 
 
 def expect_translate(black_keys, **others):
@@ -67,7 +55,7 @@ def test_key_signature():
     assert Key_signature().translation() == expect_translate(("C#", "Eb", "F#", "Ab", "Bb"))
 
 
-@pytest.mark.parametrize("midi_note, note", (
+@pytest.mark.parametrize("midi_note, name", (
     ("C", "C"),
     ("C#", "C#"),
     ("Db", "C#"),
@@ -86,32 +74,39 @@ def test_key_signature():
     ("Bb", "Bb"),
     ("B", "B"),
 ))
-def test_midi_note(midi_note, note):
-    assert Note_names[Key_signature().MIDI_to_note(MIDI_notes[midi_note])] == note
+@pytest.mark.parametrize("octave", (
+    0, 4,
+))
+def test_midi_note(midi_note, octave, name):
+    assert Key_signature().note_name(nat(Notes[midi_note], octave)) == f"{name}{octave}"
 
 
 @pytest.mark.parametrize("num_sharps, expect", (
+    # Sharps: F#, C#, G#, D#, A#, E#, B#
+    # Black keys are       C#,   D#,   F#,   G# and A#.
     # 0 expect_translate(("C#", "Eb", "F#", "Ab", "Bb"))
-    (1, expect_translate(("C#", "Eb", "F#", "G#", "Bb"))),                  # F# -> G#
-    (2, expect_translate(("C#", "D#", "F#", "G#", "Bb"))),                  # C# -> D#
-    (3, expect_translate(("C#", "D#", "F#", "G#", "A#"))),                  # G# -> A#
-    (4, expect_translate(("C#", "D#", "F#", "G#", "A#"), F="E#")),          # D# -> E#
-    (5, expect_translate(("C#", "D#", "F#", "G#", "A#"), F="E#", C="B#")),  # A# -> B#
-    (6, expect_translate(("C#", "D#", "F#", "G#", "A#"), F="E#", C="B#")),  # E# -> F##??
-    (7, expect_translate(("C#", "D#", "F#", "G#", "A#"), F="E#", C="B#")),  # B# -> C##??
+    (1, expect_translate(("C#", "Eb", "F#", "G#", "Bb"))),                  # Ab -> G#
+    (2, expect_translate(("C#", "D#", "F#", "G#", "Bb"))),                  # Eb -> D#
+    (3, expect_translate(("C#", "D#", "F#", "G#", "A#"))),                  # Bb -> A#
+    (4, expect_translate(("C#", "D#", "F#", "G#", "A#"))),
+    (5, expect_translate(("C#", "D#", "F#", "G#", "A#"))),
+    (6, expect_translate(("C#", "D#", "F#", "G#", "A#"), F="E#")),          # F  -> E#
+    (7, expect_translate(("C#", "D#", "F#", "G#", "A#"), F="E#", C="B#")),  # C  -> B#
 ))
 def test_sharp_signature(num_sharps, expect):
     assert Key_signature(num_sharps).translation() == expect
 
 @pytest.mark.parametrize("num_flats, expect", (
+    # Flats: Bb, Eb, Ab, Db, Gb, Cb, Fb
+    # Black keys are       Db,   Eb,   Gb,   Ab and Bb.
     # 0 expect_translate(("C#", "Eb", "F#", "Ab", "Bb"))
-    (1, expect_translate(("Db", "Eb", "F#", "Ab", "Bb"))),                  # Bb -> Db
-    (2, expect_translate(("Db", "Eb", "Gb", "Ab", "Bb"))),                  # Eb -> Gb
-    (3, expect_translate(("Db", "Eb", "Gb", "Ab", "Bb"), B="Cb")),          # Ab -> Cb
-    (4, expect_translate(("Db", "Eb", "Gb", "Ab", "Bb"), B="Cb", E="Fb")),  # Db -> Fb
-    (5, expect_translate(("Db", "Eb", "Gb", "Ab", "Bb"), B="Cb", E="Fb")),  # Gb -> Bbb??
-    (6, expect_translate(("Db", "Eb", "Gb", "Ab", "Bb"), B="Cb", E="Fb")),  # Cb -> Ebb??
-    (7, expect_translate(("Db", "Eb", "Gb", "Ab", "Bb"), B="Cb", E="Fb")),  # Fb -> Abb??
+    (1, expect_translate(("Db", "Eb", "F#", "Ab", "Bb"))),                  # C# -> Db
+    (2, expect_translate(("Db", "Eb", "Gb", "Ab", "Bb"))),                  # F# -> Gb
+    (3, expect_translate(("Db", "Eb", "Gb", "Ab", "Bb"))),
+    (4, expect_translate(("Db", "Eb", "Gb", "Ab", "Bb"))),
+    (5, expect_translate(("Db", "Eb", "Gb", "Ab", "Bb"))),
+    (6, expect_translate(("Db", "Eb", "Gb", "Ab", "Bb"), B="Cb")),          # B  -> Cb
+    (7, expect_translate(("Db", "Eb", "Gb", "Ab", "Bb"), B="Cb", E="Fb")),  # E  -> Fb
 ))
 def test_flat_signature(num_flats, expect):
     assert Key_signature(-num_flats).translation() == expect

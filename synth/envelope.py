@@ -52,7 +52,7 @@ class Constant_generator(Block_generator):
             self.set('length', None)
         else:
             self.set('length',
-                     self.constant.duration * self.constant.scale_fn(self.base_freq)
+                     self.constant.duration * self.constant.scale_fn(self.base_freq))
         self.set('value', self.constant.value)
 
     def __iter__(self):
@@ -104,15 +104,15 @@ class Line(Envelope):
         step = (self.stop - start) / length_remaining
         while length_remaining >= Output.block_size:
             stop = start + step * Output.block_size
-            yield np.linspace(start, stop, Output.block_size, endpoint=False), \
-                  Output.block_size, \
-                  stop
+            yield (np.linspace(start, stop, Output.block_size, endpoint=False),
+                   Output.block_size,
+                   stop)
             start = stop
             length_remaining -= Output.block_size
         if length_remaining > 0:
-            yield np.linspace(start, self.stop, length_remaining, endpoint=False), \
-                  length_remaining, \
-                  self.stop
+            yield (np.linspace(start, self.stop, length_remaining, endpoint=False),
+                   length_remaining,
+                   self.stop)
 
 
 class Line_generator(Block_generator):
@@ -138,17 +138,17 @@ class Line_generator(Block_generator):
     def __iter__(self):
         while self.length - self.amount_sent >= Output.block_size:
             stop = self.start + self.step * Output.block_size
-            yield np.linspace(start, stop, Output.block_size, endpoint=False), \
-                  Output.block_size, \
-                  stop
+            yield (np.linspace(start, stop, Output.block_size, endpoint=False),
+                   Output.block_size,
+                   stop)
             self.start = stop
             self.amount_sent += Output.block_size
         if self.length - self.amount_sent > 0:
-            yield np.linspace(self.start, self.line.stop,
-                              self.length - self.amount_sent,
-                              endpoint=False), \
-                  self.length - self.amount_sent, \
-                  self.line.stop
+            yield (np.linspace(self.start, self.line.stop,
+                               self.length - self.amount_sent,
+                               endpoint=False),
+                   self.length - self.amount_sent,
+                   self.line.stop)
         self.delete()
 
 
@@ -176,7 +176,7 @@ class Ramp(Envelope):
     Thus, lin' == lin*X/(X * scale)
                == lin/scale
     '''
-    def __init__(self, geom=1.0, lin=0.0, scale_fn, start=None, limit=None):
+    def __init__(self, scale_fn, geom=1.0, lin=0.0, start=None, limit=None):
         assert geom != 1 or lin != 0
         self.geom = geom
         self.lin = lin
@@ -219,42 +219,42 @@ class Ramp(Envelope):
                 samples_left = self.num_samples(start, lin=lin)
                 while samples_left >= Output.block_size:
                     stop = start + lin * Output.block_size
-                    yield np.linspace(start, stop, Output.block_size, endpoint=False), \
-                          Output.block_size
+                    yield (np.linspace(start, stop, Output.block_size, endpoint=False),
+                           Output.block_size)
                     start = stop
                     samples_left -= Output.block_size
                 if samples_left > 0:
                     stop = start + lin * samples_left
-                    yield np.linspace(start, stop, samples_left, endpoint=False), \
-                          samples_left
+                    yield (np.linspace(start, stop, samples_left, endpoint=False),
+                           samples_left)
         elif lin == 0:
             samples_left = self.num_samples(start, geom=geom)
             while samples_left >= Output.block_size:
                 stop = start * geom ** Output.block_size
-                yield np.geomspace(start, stop, Output.block_size, endpoint=False), \
-                      Output.block_size
+                yield (np.geomspace(start, stop, Output.block_size, endpoint=False),
+                       Output.block_size)
                 start = stop
                 samples_left -= Output.block_size
             if samples_left > 0:
                 stop = start * geom ** samples_left
-                yield np.geomspace(start, stop, samples_left, endpoint=False), \
-                      samples_left
+                yield (np.geomspace(start, stop, samples_left, endpoint=False),
+                       samples_left)
         else:
             samples_left = self.num_samples(start, geom=geom, lin=lin)
             lin_stop = lin * Output.block_size
             lin_adj = np.linspace(0, lin_stop, Output.block_size, endpoint=False)
             while samples_left >= Output.block_size:
                 geom_stop = start * geom ** Output.block_size
-                yield np.geomspace(start, geom_stop, Output.block_size, endpoint=False)
-                        + lin_adj, \
-                      Output.block_size
+                yield (np.geomspace(start, geom_stop, Output.block_size, endpoint=False)
+                         + lin_adj, \
+                       Output.block_size)
                 start = geom_stop + lin_stop
                 samples_left -= Output.block_size
             if samples_left > 0:
                 stop = start * geom ** samples_left
-                yield np.geomspace(start, stop, samples_left, endpoint=False) \
-                        + np.linspace(0, lin * samples_left, samples_left, endpoint=False), \
-                      samples_left
+                yield (np.geomspace(start, stop, samples_left, endpoint=False)
+                         + np.linspace(0, lin * samples_left, samples_left, endpoint=False),
+                      samples_left)
 
     def num_samples(self, start, geom, lin):
         r'''Returns lin_samples, geom_samples, lin_samples.
@@ -333,17 +333,17 @@ class Ramp_generator(Block_generator):
     def __iter__(self):
         while self.length - self.amount_sent >= Output.block_size:
             stop = self.start + self.step * Output.block_size
-            yield np.linspace(start, stop, Output.block_size, endpoint=False), \
-                  Output.block_size, \
-                  stop
+            yield (np.linspace(start, stop, Output.block_size, endpoint=False),
+                   Output.block_size,
+                   stop)
             self.start = stop
             self.amount_sent += Output.block_size
         if self.length - self.amount_sent > 0:
-            yield np.linspace(self.start, self.ramp.stop,
-                              self.length - self.amount_sent,
-                              endpoint=False), \
-                  self.length - self.amount_sent, \
-                  self.ramp.stop
+            yield (np.linspace(self.start, self.ramp.stop,
+                               self.length - self.amount_sent,
+                               endpoint=False),
+                   self.length - self.amount_sent,
+                   self.ramp.stop)
         self.delete()
 
 

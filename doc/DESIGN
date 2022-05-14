@@ -64,9 +64,8 @@ Amplitude samples:
 
 Frequencies:
     - Uses log frequencies that are added to multiply the underlying freq in Hz.  These are
-      log base 2**(1/12) so that a value of "1" represents one semitone (and "12"
-      represents and octave).  Also a change of 1 cent directly maps to a change of 0.01 on
-      these log frequencies.  There are 9 octaves (ranging from C0 to B9), so 108 (9*12)
+      log base 2**(1/1200) so that a value of "1" represents one cent (and "1200"
+      represents and octave).  There are 9 octaves (ranging from C0 to B9), so 108 (9*12)
       notes total.  With 100 cents/note, that would be 10,800 different freq values down
       to the cent.
 

@@ -27,12 +27,13 @@ For Instruments:
           3 - Meantone
               - parameter is offset as percent of 5.375 cents (0 is pythagorean tuning)
               - tonic used
-      - fine is: tonic (one of 21 "my notes" in octave)
+      - fine is: tonic (one of 12 notes in octave)
     - 0x0001: tune
       - course is:
         - first bit (MSB): absolute(0)/match(1)
-          5 bits: note in octave to tune (one of 21 "my notes")
+          4 bits: note in octave to tune
           last bit (LSB): 8th bit for absolute fine
+          <extra bit>: ??
       - fine is:
         - absolute: freq (300-500) (with 8th bit, above)
         - match: channel# of other instrument to match to

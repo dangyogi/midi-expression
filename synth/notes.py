@@ -1,108 +1,64 @@
 # notes.py
 
 r'''
-Notes are numbered in two ways:
+Notes are numbered by MIDI as going from 0 to 127 with 12 notes/octave.  Note 0 is C-1
+(8.18 Hz).  Note 12 is C0 (16.32 Hz), 60 is C4, 127 is G9.
 
-    MIDI: 0-127, 12 notes/octave, 0 is C-1, 12 is C0, 60 is C4, 127 is G9.
+    MIDI: 0-127, 12 notes/octave, 0 is C-1 (8.18 Hz, lowest MIDI note),
+    12 is C0 (16.32 Hz), 21 is A0 (27.5 Hz, lowest piano key),
+    60 is C4 (261.63 Hz, 69 is A4 (440 Hz, the "A" for "A-440"),
+    108 is C8 (4186 Hz, highest piano key), 127 is G9 (12,544 Hz, highest MIDI note).
 
-    My notes: 0-230, 21 notes/octave counting the natural, sharp and flat of
-              each diatonic note.  1 is C-1 (8.18Hz), 230 is B#10 (31,609Hz).
-              (E10 is 21,096Hz).
-
-MIDI notes are converted to my notes by a Key_signature.
-
-My notes are translated into my freqs using a Tuning_system.
+Notes are translated into my freqs using a Tuning_system.
 '''
 
 
-# My Notes.  These differentiate between sharps and flats (e.g., C# and Db).  There
-# are 7 main notes (C D E F G A B) that each have a sharp and a flat.  That gives 21 notes
-# total.  For these notes, each octave starts at Cb so that Cb4 is right next to C4 and the
-# octave breaks going from B# to Cb.  This also means any main note - 1 is it's flat, and
-# + 1 is it's sharp.
-Notes = {  # Note numbers offset from Cb (21 notes/octave).
-    "Cb":  0,
-    "C":   1,
-    "C#":  2,
-    "Db":  3,
-    "D":   4,
-    "D#":  5,
-    "Eb":  6,
-    "E":   7,
-    "E#":  8,
-    "Fb":  9,
-    "F":  10,
-    "F#": 11,
-    "Gb": 12,
-    "G":  13,
-    "G#": 14,
-    "Ab": 15,
-    "A":  16,
-    "A#": 17,
-    "Bb": 18,
-    "B":  19,
-    "B#": 20,
+# MIDI note numbers for one octave.
+Notes = {  # Note numbers offset from C (12 notes/octave).
+    "C":   0,
+    "C#":  1,
+    "Db":  1,
+    "D":   2,
+    "D#":  3,
+    "Eb":  3,
+    "E":   4,
+    "E#":  5,
+    "Fb":  4,
+    "F":   5,
+    "F#":  6,
+    "Gb":  6,
+    "G":   7,
+    "G#":  8,
+    "Ab":  8,
+    "A":   9,
+    "A#": 10,
+    "Bb": 10,
+    "B":  11,
+    "B#":  0,
+    "Cb": 11,
 }
 
+# Sorted by note number
 Note_names = tuple(k for k, v in sorted(Notes.items(), key=lambda i: i[1]))
 
-print(Note_names)
+#print(Note_names)
 
 def nat(base_note, octave):
     r'''Lookup base_note in Notes.  C4 is middle C.
     '''
-    return 21 * (octave + 1) + base_note
+    return 12 * (octave + 1) + base_note
 
 def sharp(base_note, octave):
-    r'''This will sharp any note, including notes already sharped.
-    '''
-    if base_note % 3 == 2:    # a sharp already
-        if base_note in (8, 20):  # E# (almost F) or B# (almost C)
-            # E# -> F#, B# -> C#
-            return 21 * (octave + 1) + (base_note + 3)
-        # ... up to next natural
-        return 21 * (octave + 1) + (base_note + 2)
-    # else it's a flat or a natural
-    return 21 * (octave + 1) + (base_note + 1)
+    return 12 * (octave + 1) + (base_note + 1)
 
 def flat(base_note, octave):
-    r'''This will flat any note, including notes already flatted.
-    '''
-    if base_note % 3 == 0:      # a flat already
-        if base_note in (0, 9):  # Cb (almost B) or  Fb (almost E)
-            # Cb -> Bb, Fb -> Eb
-            return 21 * (octave + 1) + (base_note - 3)
-        # ... down to next natural
-        return 21 * (octave + 1) + (base_note - 2)
-    # else it's a sharp or a natural
-    return 21 * (octave + 1) + (base_note - 1)
+    return 12 * (octave + 1) + (base_note - 1)
 
-
-# MIDI Notes go from 0 = C-1 to 127 = G9
-MIDI_notes = {  # for one octave
-    "C": 0,
-    "C#": 1,
-    "Db": 1,
-    "D": 2,
-    "D#": 3,
-    "Eb": 3,
-    "E": 4,
-    "F": 5,
-    "F#": 6,
-    "Gb": 6,
-    "G": 7,
-    "G#": 8,
-    "Ab": 8,
-    "A": 9,
-    "A#": 10,
-    "Bb": 10,
-    "B": 11,
-}
 
 Fifths = "FCGDAEB"
-Circle_of_fifths = tuple(n + 'b' for n in Fifths) \
-                 + tuple(Fifths) \
-                 + tuple(n + '#' for n in Fifths)
+Flats = tuple(n + 'b' for n in Fifths)
+Sharps = tuple(n + '#' for n in Fifths)
+Circle_of_fifths = Flats + tuple(Fifths) + Sharps
 
 class Key_signature:
     # Keyboard reference:
@@ -125,36 +81,56 @@ class Key_signature:
 
     def init(self, sf=0, minor=False):
         r'''Positive sf for sharps, negative for flats.
-        
+
         Thus, sf can go from -7 (7 flats) to 7 (7 sharps).
 
         self.translate is indexed by the MIDI base note number (0-11, see MIDI_notes).
         '''
+        self.sf = sf
         self.minor = bool(minor)
+        self.tonic = Circle_of_fifths[sf + 8]  # FIX: Does minor flag figure into this??
+        print(f"{sf=}, {self.tonic=}")
         translate = [None] * 12
+        if -2 <= sf <= 3:
+            # Doesn't include Cb, Fb, E# or B#, no adjustment necessary
+            notes = Circle_of_fifths[sf + 4: sf + 16]
+        elif -6 < sf < -2:
+            # exclude Cb, Fb, as they are not in the signature
+            notes = Circle_of_fifths[2: 14]
+        elif sf <= -6:
+            # include Cb (and Fb), as they are in the signature
+            notes = Circle_of_fifths[sf + 7: sf + 19]
+        elif 3 < sf <= 5:
+            # exclude E#, B#, as they are not in the signature
+            notes = Circle_of_fifths[-14:-2]
+        else:  # sf > 5
+            # include E# (and B#), as they are in the signature
+            notes = Circle_of_fifths[sf + 2: sf + 14]
+        print(f"{sf=}, {notes=}")
+        for note in notes:
+            #print(f"doing {note=}, {Notes[note]=}")
+            assert translate[Notes[note]] is None
+            translate[Notes[note]] = note
 
-        # Set default values.  Black keys are a crap shoot here...
-        for note, midi_index in MIDI_notes.items():
-            translate[midi_index] = Notes[note]
+        #print("translate", translate)
+        for i, note in enumerate(translate):
+            assert note is not None, f"translate[{i}] not set"
 
-        # sharps:
-        if sf > -2:
-            for note in Fifths[:2+min(sf, 5)]:
-                print("sharping", note,
-                      "setting", (MIDI_notes[note] + 1) % 12, "to", Notes[note] + 1)
-                translate[(MIDI_notes[note] + 1) % 12] = Notes[note] + 1
-        # flats:
-        if sf < 3:
-            for note in Fifths[4+max(sf, -4):]:
-                print("flatting", note,
-                      "setting", (MIDI_notes[note] - 1) % 12, "to", Notes[note] - 1)
-                translate[(MIDI_notes[note] - 1) % 12] = Notes[note] - 1
-        self.translate = translate
+        self.translate = tuple(translate)
 
     def translation(self):
-        return tuple(Note_names[t] for t in self.translate)
+        return self.translate
 
-    def MIDI_to_note(self, midi_note):
-        octave, note = divmod(midi_note, 12)
-        return 21 * octave + self.translate[note]
+    def note_name(self, note_number):
+        octave, note = divmod(note_number, 12)
+        return f"{self.translate[note]}{octave - 1}"
 
+
+
+if __name__ == "__main__":
+    print(f"{Circle_of_fifths=}")
+    #print(f"{Circle_of_fifths[4: 16]=}")
+    for sf in range(-7, 8):
+        ks = Key_signature(sf, False)
+        print(sf, ks.translation())
+        print(ks.note_name(68))

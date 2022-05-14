@@ -1,8 +1,10 @@
-Two programs:
-    - synth has MIDI in, and ALSA sound out
+Three programs:
+    - midi player has MIDI file in, MIDI in (from exp board), MIDI out (to synth), and
+      optional MIDI file out.
+    - synth has MIDI in (from both midi player and exp board), and ALSA sound out
       - takes adjustments as MIDI control (or SysEx?) messages
-    - expression has MIDI in (from expression board), MIDI file in (notes), MIDI file out
-      (optional, modified notes as played), MIDI out (to synth)
+    - expression board has MIDI in (from midi player) and MIDI out (to midi player and
+      synth)
     - python packages:
       - alsa-midi (only ALSA MIDI, not JACK)
       - python-rtmidi (cross-platform, includes both ALSA and JACK on Linux)
