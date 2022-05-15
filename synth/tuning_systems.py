@@ -42,6 +42,10 @@ def freq_to_Hz(freq):
 
 #print(f"{Freq_offset=}, {A4=}, {freq_to_Hz(A4 + 1200)=}")
 
+def format_list(l, format="{:.2f}"):
+    str_elements = ', '.join(format.format(n) for n in l)
+    return f"[{str_elements}]"
+
 
 class Base_tuning_system:
     r'''Converts notes to freqs.  C is 0.
@@ -55,9 +59,12 @@ class Base_tuning_system:
     cents_per_octave = 1200
 
     def to_tonic(self, freqs, tonic_start):
-        self.notes_to_freq = [f - freqs[tonic_start] for f in freqs[tonic_start:]] \
-                             + [f + self.cents_per_octave - freqs[tonic_start]
-                                for f in freqs[:tonic_start]]
+        assert len(freqs) == 12
+        self.notes_to_freq = [f - freqs[-tonic_start]
+                              for f in freqs[-tonic_start:]] + \
+                             [f + (self.cents_per_octave - freqs[-tonic_start])
+                              for f in freqs[:-tonic_start]]
+        assert len(self.notes_to_freq) == 12
 
     def realign(self):
         # Realign self.notes_to_freq so that C is 0:
@@ -145,14 +152,19 @@ H7_comma = math.log((3/2)**10/7/2**3) / Ln_cent # 59049/57344 == 1.02973284, or 
 
 class H3_tuning(Base_tuning_system):
     r'''These are the family of tuning_systems that depend on a cycle of H3 [- delta]
-    freqs.
+    freqs.  These start at the tonic and go in H3_order.
     '''
+    H3_order = ("C", "G", "D", "A", "E", "B", "F#", "C#", "G#", "D#", "A#")
+
     def init(self, tonic_start, delta=0, cents_per_octave=1200):
         r'''`start` is the offset to "C".
         '''
+        print(f"H3_tuning.init {tonic_start=}, {delta=}, {cents_per_octave=}")
         freqs = sorted(frange(H3 - delta, cents_per_octave))
-        self.to_tonic(freqs, tonic_start)
+        print(f"H3_tuning.init freqs={format_list(freqs)}")
         self.cents_per_octave = cents_per_octave
+        self.to_tonic(freqs, tonic_start)
+        print(f"H3_tuning.init notes_to_freq={format_list(self.notes_to_freq)}")
 
 
 class Meantone(H3_tuning):
@@ -172,6 +184,9 @@ class Meantone(H3_tuning):
     The syntonic comma is the difference between the Pythagorian tuning for E (based on
     the 3rd harmonic applied 4 times, or 3**4 == 81) and the pure 5th harmonic
     (5 * 16 == 80 -- times 16 to get it into the same octave).
+
+    WARNING: using pct_comma_fudge of 0.25 with max_octave_fudge > 10 may give very wonky
+    results!  Seems OK with pct_comma_fudge of 0.20.
     '''
 
     def __init__(self, tonic="C", pct_comma_fudge=0.25, tonic_offset=-7, max_octave_fudge=0):
@@ -181,8 +196,9 @@ class Meantone(H3_tuning):
         '''
         delta = Syntonic_comma * pct_comma_fudge
         times_12 = (H3 - delta) * 12 % 1200
-        print("Meantone.__init__: pct_comma_fudge", pct_comma_fudge, "times_12", times_12)
         octave_comma = min(abs(times_12), abs(times_12 - 1200))
+        print(f"Meantone.__init__: {pct_comma_fudge=}, {times_12=}, {max_octave_fudge=}, "
+              f"{octave_comma=}")
         self.init((Notes[tonic] + tonic_offset) % 12,
                   delta,
                   1200 - math.copysign(min(octave_comma, max_octave_fudge), times_12 - 600))
@@ -193,10 +209,15 @@ class Pythagorean_tuning(H3_tuning):
     r'''Pythagorean tuning.  Did anybody ever actually use this???
 
     Start at tonic - 3 semitones (e.g., if tonic is 'C', start at 'A').
+
+    This jumps by H3, but is wrapped to the "octave", which may be greater than 1200 cents
+    (if max_octave_fudge > 0).
     '''
     def __init__(self, tonic="C", max_octave_fudge=0):
-        self.init((Notes[tonic] + 3) % 12,
+        self.init((Notes[tonic] - 3) % 12,
                   cents_per_octave=1200 + min(P_comma, max_octave_fudge))
+        print(f"Pythagorean_tuning, {tonic=}, {max_octave_fudge=}, "
+              f"freqs={format_list(self.notes_to_freq)}")
 
 
 class Just_intonation(Base_tuning_system):
@@ -258,8 +279,8 @@ def cumsum(*numbers):
     sum = 0
     yield 0
     for n in numbers:
-        sum += n
-        yield sum % 1200
+        sum = (sum + n) % 1200
+        yield sum
 
 class Well_temperament(Base_tuning_system):
     r'''Well temperament as defined by Herbert Anton Kellner:
@@ -282,36 +303,41 @@ class Well_temperament(Base_tuning_system):
 
     P_5 = P_comma/5    # 4.692 cents
 
-    freqs = tuple(sorted(cumsum(
-                           # C:     0
-                               H3 - P_5,
-                           # G:     1
-                               H3 - P_5,
-                           # D:     2
-                               H3 - P_5,
-                           # A:     3
-                               H3 - P_5,
-                           # E:     4
-                               H3,
-                           # B:     5
-                               H3 - P_5,
-                           # F#:    6
-                               H3,
-                           # C#:    7
-                               H3,
-                           # Ab:    8
-                               H3,
-                           # Eb:    9
-                               H3,
-                           # Bb:   10
-                               H3,
-                           # F:    10
-                           #   H3,
-                           # C:     0
-                        )))
+    raw_freqs = tuple(cumsum(
+                       # C:     0
+                           H3 - P_5,
+                       # G:     1
+                           H3 - P_5,
+                       # D:     2
+                           H3 - P_5,
+                       # A:     3
+                           H3 - P_5,
+                       # E:     4
+                           H3,
+                       # B:     5
+                           H3 - P_5,
+                       # F#:    6
+                           H3,
+                       # C#:    7
+                           H3,
+                       # Ab:    8
+                           H3,
+                       # Eb:    9
+                           H3,
+                       # Bb:   10
+                           H3,
+                       # F:    10
+                           H3,
+                       # C:     0
+                    ))
+
+    freqs = tuple(sorted(raw_freqs[:-1]))
 
     def __init__(self, tonic="C", tonic_offset=-4):
         start = (Notes[tonic] + tonic_offset) % 12
+        assert len(self.raw_freqs) == 13
+        assert abs(self.raw_freqs[-1]) < 1e-3, \
+               f"Well_temperament expected last raw_freq 1200, got {self.raw_freqs[-1]}"
         self.to_tonic(self.freqs, start)
 
 

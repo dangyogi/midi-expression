@@ -1,10 +1,10 @@
 # test_tuning_systems.py
 
 import pytest
-from itertools import tee
+from itertools import tee, product
 from functools import partial
 
-from synth.notes import nat
+from synth.notes import nat, Notes
 from synth.tuning_systems import *
 
 
@@ -16,7 +16,7 @@ from synth.tuning_systems import *
     ("C", 0, 16.3516),
     ("C", -1, 8.1758),
 ))
-def test_freq_to_Hz(note, octave, freq):
+def test_freq_to_Hz_1(note, octave, freq):
     tuning = Equal_temperament()
     assert freq_to_Hz(tuning.note_to_freq(nat(Notes[note], octave))) == \
              pytest.approx(freq, abs=1e-4)
@@ -28,7 +28,7 @@ def test_freq_to_Hz(note, octave, freq):
     (6000, 261.6256),
     (6900, 440),
 ))
-def test_freq_to_Hz(freq, hz):
+def test_freq_to_Hz_2(freq, hz):
     assert freq_to_Hz(freq) == pytest.approx(hz, abs=1e-4)
 
 
@@ -37,7 +37,7 @@ def test_freq_to_Hz(freq, hz):
     (1000, 1200, 3, (0, 1000, 800)),
     (1000, 1100, 3, (0, 1000, 900)),
 ))
-def test_frange(inc, cents_per_octave, num_elements, ans):
+def test_frange1(inc, cents_per_octave, num_elements, ans):
     assert tuple(frange(inc, cents_per_octave, num_elements)) == ans
 
 
@@ -49,9 +49,88 @@ def test_cumsum(numbers, sums):
 
 
 # Then test tuning_systems:
-def test_equal_temperament():
-    assert Equal_temperament().notes_to_freq == \
-      [0, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100]
+@pytest.mark.parametrize("cents_per_semitone", (
+    100, 90, 110
+))
+def test_equal_temperament(cents_per_semitone):
+    ts = Equal_temperament(cents_per_semitone)
+    for start in range(60, 80):
+        assert ts.note_to_freq(start + 1) - ts.note_to_freq(start) == \
+                 pytest.approx(cents_per_semitone, abs=1e-3)
+    assert ts.cents_per_octave == pytest.approx(cents_per_semitone * 12, abs=1e-4)
+
+
+@pytest.mark.parametrize("tonic_start, notes_to_freq", (
+    (0, [0,    100, 201, 303, 406, 510, 615, 721, 828, 936, 1045, 1155]),
+    (1, [0,    45, 145, 246, 348, 451, 555, 660, 766, 873, 981, 1090]),
+    (5, [0, 107, 215, 324, 434,    479, 579, 680, 782, 885, 989, 1094]),
+    (11, [0, 101, 203, 306, 410, 515, 621, 728, 836, 945, 1055,   1100]),
+))
+def test_to_tonic(tonic_start, notes_to_freq):
+    ts = Base_tuning_system()
+    freqs = [0, 100, 201, 303, 406, 510, 615, 721, 828, 936, 1045, 1155]
+    assert len(freqs) == 12
+    ts.to_tonic(freqs, tonic_start)
+    assert ts.notes_to_freq == notes_to_freq
+
+
+@pytest.mark.parametrize("tonic", (
+    "C", "C#", "B",
+))
+def test_well_temperament(tonic):
+    ts = Well_temperament(tonic=tonic, tonic_offset=0)
+    tonic_note_number = Notes[tonic]
+    p5s = tuple((x + tonic_note_number) % 12 for x in (0, 7, 2, 9, 11))
+    for i in p5s:
+        assert ts.note_to_freq(nat(i+7, 4)) - ts.note_to_freq(nat(i, 4)) == \
+               pytest.approx(H3 - P_comma/5, abs=1e-3)
+    for i in range(12):
+        if i not in p5s:
+            assert ts.note_to_freq(nat(i+7, 4)) - ts.note_to_freq(nat(i, 4)) == \
+                   pytest.approx(H3, abs=1e-3)
+
+
+@pytest.mark.parametrize("tonic", (
+    "C", "C#", "B",
+))
+@pytest.mark.parametrize("max_octave_fudge", (
+    0, 10, 100,
+))
+def test_pythagorean_tuning(tonic, max_octave_fudge):
+    ts = Pythagorean_tuning(tonic=tonic, max_octave_fudge=max_octave_fudge)
+    if max_octave_fudge < 23:
+        assert ts.cents_per_octave == pytest.approx(1200 + max_octave_fudge, abs=1e-4)
+    else:
+        assert ts.cents_per_octave == pytest.approx(1200 + P_comma, abs=1e-4)
+    for H3_start in H3_tuning.H3_order:
+        start = nat(Notes[H3_start], 4) + Notes[tonic] - 3
+        assert ts.note_to_freq(start + 7) - ts.note_to_freq(start) == \
+                 pytest.approx(H3, abs=1e-3)
+
+
+@pytest.mark.parametrize("tonic", (
+    "C", "C#", "B",
+))
+@pytest.mark.parametrize("pct_comma_fudge", (
+    0.20, 0.25,
+))
+@pytest.mark.parametrize("max_octave_fudge", (
+    0, 10, 100,
+))
+def test_meantone(tonic, pct_comma_fudge, max_octave_fudge):
+    ts = Meantone(tonic=tonic, pct_comma_fudge=pct_comma_fudge, tonic_offset=0,
+                  max_octave_fudge=max_octave_fudge)
+    inc = H3 - Syntonic_comma * pct_comma_fudge
+    octave_comma = 1200 - 12 * inc % 1200
+    if max_octave_fudge < octave_comma:
+        assert ts.cents_per_octave == pytest.approx(1200 - max_octave_fudge, abs=1e-4)
+    else:
+        assert ts.cents_per_octave == pytest.approx(1200 - octave_comma, abs=1e-4)
+    if max_octave_fudge < octave_comma or pct_comma_fudge != 0.25:
+        for H3_start in H3_tuning.H3_order:
+            start = nat(Notes[H3_start], 4) + Notes[tonic]
+            assert ts.note_to_freq(start + 7) - ts.note_to_freq(start) == \
+                     pytest.approx(inc, abs=1e-3)
 
 
 def pairwise(iterable):
@@ -60,37 +139,45 @@ def pairwise(iterable):
     next(b, None)
     return zip(a, b)
 
-@pytest.mark.parametrize("cls, arg2_name, arg2_values, arg3_name, arg3_values", (
-    (Meantone, "pct_comma_fudge", (0.25, 0.20), "tonic_offset", (4, -1, 7)),
-    (Pythagorean_tuning, None, (), None, ()),
-    (Just_intonation, "tuning", tuple(range(14)), None, ()),
-    (Well_temperament, None, (), None, ()),
-))
-def test_tuning_systems(cls, arg2_name, arg2_values, arg3_name, arg3_values):
-    if arg2_name is None:
-        create_fns = cls,
-    elif arg3_name is None:
-        create_fns = [partial(cls, **{arg2_name: value2}) for value2 in arg2_values]
-    else:
-        create_fns = [partial(cls, **{arg2_name: value2, arg3_name: value3})
-                      for value2 in arg2_values
-                      for value3 in arg3_values]
-    for create_fn in create_fns:
-        Notes = ("C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B",)
-        def test(t1, t2):
-            ntf1 = create_fn(tonic=t1).notes_to_freq
-            assert len(ntf1) == 12
-            assert ntf1[0] == pytest.approx(0, abs=1e-4)
-            ntf2 = create_fn(tonic=t2).notes_to_freq
-            assert len(ntf2) == 12
-            assert ntf2[0] == pytest.approx(0, abs=1e-4)
-            for i in range(10):
-                print(f"{t1=}, {t2=}, {i=}")
-                assert ntf2[i+1] - ntf2[i] == pytest.approx(ntf1[i+2] - ntf1[i+1], abs=1e-4)
-            assert ntf2[11] - ntf2[10] == pytest.approx(ntf1[0] + 1200 - ntf1[11], abs=1e-4)
-        for t1, t2 in pairwise(Notes):
-            test(t1, t2)
-        test("B", "C")
+
+def prepare_create_fns(cls, args):
+    if not args:
+        return [(cls.__name__, cls)]
+    product_input = [[(key, value) for value in values]
+                        for key, values in args.items()]
+    #print("product_input", product_input)
+    arg_combinations = tuple(product(*product_input))
+    #print("arg_combinations", arg_combinations)
+    kws_list = [{key: value for key, value in combination}
+                for combination in arg_combinations]
+    print("kws_list", kws_list)
+    return [((cls.__name__, kws), partial(cls, **kws)) for kws in kws_list]
+
+@pytest.mark.parametrize("msg, create_fn",
+    prepare_create_fns(Well_temperament, {}) # +
+    #prepare_create_fns(Meantone, {"pct_comma_fudge": (0.25, 0.20),
+    #                              "tonic_offset": (4, -1, 7),
+    #                              "max_octave_fudge": (0, 10, 100)}) +
+    #prepare_create_fns(Pythagorean_tuning, {}) +
+    #prepare_create_fns(Just_intonation, {"tuning": tuple(range(14))})
+)
+def test_tonics(msg, create_fn):
+    Note_order = ("C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B",)
+    for t1, t2 in pairwise(Note_order + ("C",)):
+        ts1 = create_fn(tonic=t1)
+        assert len(ts1.notes_to_freq) == 12
+        assert ts1.notes_to_freq[0] == pytest.approx(0, abs=1e-4)
+        ts2 = create_fn(tonic=t2)
+        assert len(ts2.notes_to_freq) == 12
+        assert ts2.notes_to_freq[0] == pytest.approx(0, abs=1e-4)
+        print("ts1.notes_to_freq", ts1.notes_to_freq)
+        print("ts2.notes_to_freq", ts2.notes_to_freq)
+        for n in range(Notes[t1], Notes[t1] + 12):
+            print(f"{msg=}, {t1=}, {t2=}, {n=}")
+            assert ts1.note_to_freq(nat(n+1,4)) - ts1.note_to_freq(nat(n,4)) == \
+              pytest.approx(ts2.note_to_freq(nat(n+2,4)) - ts2.note_to_freq(nat(n+1,4)),
+                            abs=1e-4)
+        #assert ntf2[11] - ntf2[10] == pytest.approx(ntf1[0] + 1200 - ntf1[11], abs=1e-4)
 
 
 @pytest.mark.parametrize("pct_comma_fudge, max_octave_fudge, octave_cents", (
