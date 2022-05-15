@@ -1,8 +1,11 @@
+* - means changes have an immediate affect on notes that are already playing.  Otherwise,
+    the change only affects notes played following the change.
+
 For Sequencer:
     - 0x09: tempo
     - 0x07: channel volume (when sent to sequencer channel applies to all channels)
     - 0x07: channel volume (listens for all channels, to affect just that channel)
-    - 0x0E: note_off timing offset
+    * 0x0E: note_off timing offset
     - 0x0F: note_on timing offset
 
 For Instruments:
@@ -16,17 +19,23 @@ For Instruments:
       - course is: 2 bit type, 5 bit offset
         - types:
           0 - Equal temperament, no parameter
-              - parameter ignored
+              - cents_per_semitone (98.583 to 100.279, default 100)
               - tonic ignored
           1 - Well tempered
-              - parameter ignored
+              - tonic offset
               - tonic used
           2 - Just intonation
-              - parameter ignored
+              - type (14 to choose from)
               - tonic used
+              - may need a tonic offset too
           3 - Meantone
-              - parameter is offset as percent of 5.375 cents (0 is pythagorean tuning)
+              - parameter is offset as percent of 21.5 cents (0 is pythagorean tuning)
               - tonic used
+              - tonic offset
+              - max octave fudge (up to 42 cents)
+          4 - Pythagorean tuning
+              - tonic used
+              - max octave fudge (up to 24 cents)
       - fine is: tonic (one of 12 notes in octave)
     - 0x0001: tune
       - course is:

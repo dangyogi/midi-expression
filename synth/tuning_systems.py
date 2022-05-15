@@ -159,21 +159,15 @@ class H3_tuning(Base_tuning_system):
     def init(self, tonic_start, delta=0, cents_per_octave=1200):
         r'''`start` is the offset to "C".
         '''
-        print(f"H3_tuning.init {tonic_start=}, {delta=}, {cents_per_octave=}")
         freqs = sorted(frange(H3 - delta, cents_per_octave))
-        print(f"H3_tuning.init freqs={format_list(freqs)}")
         self.cents_per_octave = cents_per_octave
         self.to_tonic(freqs, tonic_start)
-        print(f"H3_tuning.init notes_to_freq={format_list(self.notes_to_freq)}")
 
 
 class Meantone(H3_tuning):
     r'''Meantone tuning (commonly 1/4 comma, but 1/5 comma is also supported here).
 
-    Start at tonic - 4 semitones (e.g., if tonic is "C", start at "Ab").
-    Alternative is to start at tonic + 1 semitone (e.g., if tonic is "C", start at "C#").
-    Starting at tonic - 7 semitones, e.g., if tonic is "C", start at "F", gives nearly
-    perfect 7th at Bb.
+    Tonic_offsets of 3 or 8 work best for both 1/4 and 1/5 commma.
 
     This encompasses all 3-limit tunings with fudges applied to eliminate (or reduce)
     the syntonic comma.  A pct_comma_fudge of 0 produces the Pythagorean tuning (but with a
@@ -189,7 +183,7 @@ class Meantone(H3_tuning):
     results!  Seems OK with pct_comma_fudge of 0.20.
     '''
 
-    def __init__(self, tonic="C", pct_comma_fudge=0.25, tonic_offset=-7, max_octave_fudge=0):
+    def __init__(self, tonic="C", pct_comma_fudge=0.25, tonic_offset=3, max_octave_fudge=0):
         r'''
         Octave at pct_comma_fudge of 0.20 is 1171.845 cents, off by 28.155 cents.
         Octave at pct_comma_fudge of 0.25 is 1158.941 cents, off by 41.059 cents.
@@ -197,8 +191,6 @@ class Meantone(H3_tuning):
         delta = Syntonic_comma * pct_comma_fudge
         times_12 = (H3 - delta) * 12 % 1200
         octave_comma = min(abs(times_12), abs(times_12 - 1200))
-        print(f"Meantone.__init__: {pct_comma_fudge=}, {times_12=}, {max_octave_fudge=}, "
-              f"{octave_comma=}")
         self.init((Notes[tonic] + tonic_offset) % 12,
                   delta,
                   1200 - math.copysign(min(octave_comma, max_octave_fudge), times_12 - 600))
@@ -216,15 +208,14 @@ class Pythagorean_tuning(H3_tuning):
     def __init__(self, tonic="C", max_octave_fudge=0):
         self.init((Notes[tonic] - 3) % 12,
                   cents_per_octave=1200 + min(P_comma, max_octave_fudge))
-        print(f"Pythagorean_tuning, {tonic=}, {max_octave_fudge=}, "
-              f"freqs={format_list(self.notes_to_freq)}")
+        #print(f"Pythagorean_tuning, {tonic=}, {max_octave_fudge=}, "
+        #      f"freqs={format_list(self.notes_to_freq)}")
 
 
 class Just_intonation(Base_tuning_system):
-    r'''This has 7 different representative examples of just intonations.
+    r'''This has 14 different representative examples of just intonations.
 
-    This includes 4 different 5-limit tunings, and one 7-limit and
-    two 17-limit tunings.
+    This includes 8 different 5-limit tunings, 2 7-limit and 4 17-limit tunings.
 
     These all start on the tonic.
 
@@ -333,7 +324,7 @@ class Well_temperament(Base_tuning_system):
 
     freqs = tuple(sorted(raw_freqs[:-1]))
 
-    def __init__(self, tonic="C", tonic_offset=-4):
+    def __init__(self, tonic="C", tonic_offset=0):
         start = (Notes[tonic] + tonic_offset) % 12
         assert len(self.raw_freqs) == 13
         assert abs(self.raw_freqs[-1]) < 1e-3, \
@@ -384,6 +375,7 @@ if __name__ == "__main__":
     argparser = argparse.ArgumentParser()
     argparser.add_argument("cls", choices=tuple(cls_map.keys()))
     argparser.add_argument("-c", "--pct-comma", type=float, choices=(0.25, 0.20))
+    argparser.add_argument("-o", "--tonic_offset", type=int)
     argparser.add_argument("-t", "--tuning", type=int, choices=tuple(range(14)))
 
     args = argparser.parse_args()
@@ -395,6 +387,8 @@ if __name__ == "__main__":
         kws['pct_comma_fudge'] = args.pct_comma
     if args.tuning is not None:
         kws['tuning'] = args.tuning
+    if args.tonic_offset is not None:
+        kws['tonic_offset'] = args.tonic_offset
 
     print(args.cls, end='')
     if kws:
@@ -412,20 +406,19 @@ if __name__ == "__main__":
                 print(f"{ntf[i + 1] - ntf[i]:.2f}, ", end='')
             print(f"{ntf[0] + 1200 - ntf[11]:.2f}, ")
     else:
-        def show_major(key, freqs):
+        def show_major(key, ts):
+            start = nat(Notes[key], 4)
             return f"{key + ':':3} " \
-                      f"H3 {abs(freqs[7] - freqs[0] - H3):5.2f}, " \
-                      f"H5 {abs(freqs[4] - freqs[0] - H5):5.2f}, " \
-                      f"H7 {abs(freqs[10] - freqs[0] - H7):5.2f}"
-        def show_minor(key, freqs):
+              f"H3 {abs(ts.note_to_freq(start + 7) - ts.note_to_freq(start) - H3):5.2f}, " \
+              f"H5 {abs(ts.note_to_freq(start + 4) - ts.note_to_freq(start) - H5):5.2f}, " \
+              f"H7 {abs(ts.note_to_freq(start + 10) - ts.note_to_freq(start) - H7):5.2f}"
+        def show_minor(key, ts):
+            end = nat(Notes[key], 4) + 7
             return f"{key + ':':3} " \
-                      f"H3 {abs(freqs[-1] - freqs[-8] - H3):5.2f}, " \
-                      f"H5 {abs(freqs[-1] - freqs[-5] - H5):5.2f}, " \
-                      f"H7 {abs(freqs[-1] - freqs[-11] - H7):5.2f}"
-        ntf = cls_map[args.cls](**kws).notes_to_freq
-        #print("ntf", ntf)
-        ntf_doubled = ntf + [freq + 1200 for freq in ntf]
-        #print("ntf_doubled", ntf_doubled)
+              f"H3 {abs(ts.note_to_freq(end) - ts.note_to_freq(end-7) - H3):5.2f}, " \
+              f"H5 {abs(ts.note_to_freq(end) - ts.note_to_freq(end-4) - H5):5.2f}, " \
+              f"H7 {abs(ts.note_to_freq(end) - ts.note_to_freq(end-10) - H7):5.2f}"
+        ts = cls_map[args.cls](**kws)
         notes = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"]
         notes_doubled = notes + [n + '2' for n in notes]
         #print("notes", notes)
@@ -437,12 +430,10 @@ if __name__ == "__main__":
         print("majors:                 ", end='')
         for i, key in enumerate(major_keys):
             #print("major", key, notes_doubled[Notes[key]:Notes[key]+11])
-            freqs = ntf_doubled[Notes[key]:Notes[key]+11]
-            assert len(freqs) == 11
             if i % 2:
-                print('         ', show_major(key, freqs), end='')
+                print('         ', show_major(key, ts), end='')
             else:
-                print('   ', show_major(key, freqs))
+                print('   ', show_major(key, ts))
         print()
 
         minor_keys = ("A", "D", "E", "G", "B", "C", "F#", "F", "C#", "Bb", "Ab", "Eb")
@@ -450,15 +441,10 @@ if __name__ == "__main__":
         print()
         print("minors:                 ", end='')
         for i, key in enumerate(minor_keys):
-            last_note = Notes[key] + 8
-            if last_note <= 12:
-                last_note += 12
             #print("minor", key, last_note, notes_doubled[last_note - 11: last_note])
-            freqs = ntf_doubled[last_note - 11: last_note]
-            assert len(freqs) == 11
             if i % 2:
-                print('         ', show_minor(key, freqs), end='')
+                print('         ', show_minor(key, ts), end='')
             else:
-                print('   ', show_minor(key, freqs))
+                print('   ', show_minor(key, ts))
         print()
 
