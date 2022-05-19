@@ -2,93 +2,71 @@
     the change only affects notes played following the change.
 
 For Sequencer:
-    - 0x09: tempo
+    - 0x09: tempo (% change in sec/beat)
+            - up to 2x faster (50%)
+            - up to 5x slower (500%)
+            - 7-bit value, X (0-127): 1.0183^(X-38) gives number to multiply sec/beat by
     - 0x07: channel volume (when sent to sequencer channel applies to all channels)
+            - this sets the volume to an absolute value (not incremental to current setting)
+            - 7 bit, dB 
     - 0x07: channel volume (listens for all channels, to affect just that channel)
-    * 0x0E: note_off timing offset
-    - 0x0F: note_on timing offset
+            - this sets the volume to an absolute value (not incremental to current setting)
+            - 7 bit, dB 
+    * 0x0E: note_off timing offset (+/- in 5 mSec increments up to +/- 315 mSec)
+    - 0x0F: note_on timing offset (+/- in 5 mSec increments up to +/- 315 mSec)
+    - 0x15: transpose +/0 24 notes (2 octaves)
 
 For Instruments:
     - 0x14: key signature
       - first hex digit: major/minor bit, 1 for minor, 0 for major
       - second hex digit: 15 choices for num flats/sharps, flats -, sharps +
-    - 0x15: <unused>
-    - 0x6D: <unused>
     - 0x6E: <unused>
-    - 0x0000: tuning system
-      - course is: 2 bit type, 5 bit offset
-        - types:
-          0 - Equal temperament, no parameter
-              - cents_per_semitone (98.583 to 100.279, default 100)
-              - tonic ignored
-          1 - Well tempered
-              - tonic offset
-              - tonic used
-          2 - Just intonation
-              - type (14 to choose from)
-              - tonic used
-              - may need a tonic offset too
-          3 - Meantone
-              - parameter is offset as percent of 21.5 cents (0 is pythagorean tuning)
-              - tonic used
-              - tonic offset
-              - max octave fudge (up to 42 cents)
-          4 - Pythagorean tuning
-              - tonic used
-              - max octave fudge (up to 24 cents)
-      - fine is: tonic (one of 12 notes in octave)
-    - 0x0001: tune
-      - course is:
-        - first bit (MSB): absolute(0)/match(1)
-          4 bits: note in octave to tune
-          last bit (LSB): 8th bit for absolute fine
-          <extra bit>: ??
-      - fine is:
-        - absolute: freq (300-500) (with 8th bit, above)
-        - match: channel# of other instrument to match to
+
+    - 0x0001: Equal temperament (5 bits)
+                - cents_per_semitone (98.583 to 100.279, default 100)
+                  - 12ths, 17 == 100
+    - 0x0002: Well tempered (8 bits)
+                - tonic offset (4 bits)
+                - tonic used (4 bits)
+    - 0x0003: Just intonation (12 bits)
+                - type (14 to choose from, 4 bits)
+                - tonic used (4 bits)
+                - may need a tonic offset too (4 bits)
+    - 0x0004: Meantone (13 bits)
+                - tonic used (4 bits)
+                - tonic offset (1 bit, 0 -> 3, 1 -> 8)
+                - parameter is offset as percent of 21.5 cents (1 bit, 0 -> 1/5, 1 -> 1/4)
+                - max octave fudge (up to 42 cents, 7 bits by 1/3 cents from 0)
+    - 0x0005: Pythagorean tuning (11 bits)
+                - tonic used (4 bits)
+                - max octave fudge (up to 24 cents, 7 bits by 0.2 cents from 0)
+
+    - 0x0006: tune_absolute
+          - note in octave to tune (4 bits, default "A"(9))
+          - octave: 0-7 (3 bits, default 4)
+          - freq_adjustment (-32 to +31.5, 7 bits by 0.5 Hz)
+             -664 to 364 Hz
+
+    - 0x0007: tune_match
+          - note in octave to tune (4 bits)
+          - channel# of other instrument to match to (4 bits)
 
 For Harmonics (19 settings/harmonic * 10 harmonics):
-    - 0x16: freq_offset_1
-    - 0x17: freq_offset_2
-    - 0x18: freq_offset_3
-    - 0x19: freq_offset_4
-    - 0x1A: freq_offset_5
-    - 0x1B: freq_offset_6
-    - 0x1C: freq_offset_7
-    - 0x1D: freq_offset_8
-    - 0x1E: freq_offset_9
-    - 0x1F: freq_offset_10
+    * 0x16-F: freq_multiplier_offset_1-10 (targeting +/- 0.5 by 0.01,
+                                           so 3rd harmonic would range from ~2.5 to ~3.5)
+                bits: 7
+                signed: true
+                steps_per_unit: 100
+    * 0x50-9: freq_cent_offset_1-10 (targeting +/- 50 by 2)
+                units: cent
+                bits: 7
+                signed: true
+                steps_per_unit: 2
 
-    - 0x36: ampl_offset_1
-    - 0x37: ampl_offset_2
-    - 0x38: ampl_offset_3
-    - 0x39: ampl_offset_4
-    - 0x3A: ampl_offset_5
-    - 0x3B: ampl_offset_6
-    - 0x3C: ampl_offset_7
-    - 0x3D: ampl_offset_8
-    - 0x3E: ampl_offset_9
-    - 0x3F: ampl_offset_10
+    * 0x36-F: ampl_offset_1-10 dB by 1
 
-    - 0x50: harmonic_focus; specifies which harmonic the following messages apply to:
-      - value 0x7F disables
+    # For envelopes, see synth_settings.yaml
 
-    - 0x66: freq_scalefn
-    - 0x67: freq_type (0=ramp, 1=vibrato)
-    - 0x68: freq_param1 (start for ramp, cycle time for vibrato)
-    - 0x69: freq_param2 (duration for ramp, ampl for vibrato)
-    - 0x6A: freq_param3 (bend for ramp, not used for vibrato)
-
-    - 0x51: ampl_scalefn
-    - 0x52: ampl_attack_duration
-    - 0x53: ampl_attack_bend
-    - 0x54: ampl_attack_start
-    - 0x55: ampl_decay_duration
-    - 0x56: ampl_decay_bend
-    - 0x57: ampl_tremolo_level
-    - 0x58: ampl_tremolo_cycle_time
-    - 0x59: ampl_tremolo_scalefn
-    - 0x5A: ampl_tremolo_ampl
-    - 0x6B: ampl_release_duration
-    - 0x6C: ampl_release_bend
+    - 0x5A: <reserved for freq_cent_offset>
+    - 0x66-D: <unused>
 

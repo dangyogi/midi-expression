@@ -52,7 +52,7 @@ Per Instrument (channel):
 Control Box Layout:
 
     - Rotary 12-position switches (2)  RSW-112
-    - LCD display (10)  LCD-111
+    - LCD display (10)  LCD-111, HD66717 controller IC
     - Slide pot (10)   SLP-50K
       - Knob (10)   KNB-400
     - Alpha-numeric 14 segment LED (1 char) (20)  SDA-24
@@ -62,6 +62,11 @@ Control Box Layout:
     - Toggle switch (10)   STS-130
     - Rotary encoder (5)   RE-66
     - 300 LED kit (1)   LED-K1
+    - MCP23016 (10)  16-bit I/O Expander, 3 addr bits, 25mA, polarity inversion reg, 2-5.5V
+                     needs 3.9k ohm and 33pF cap for clock generation.  I2C addr: 0x2A,
+                     where A is 0-7 dep on 3 addr bits.  No pull up/down resisters!
+    - Switches tied high with .1uF cap across the contacts and 50K resistor to ground.
+      This should give 5mS debounce.  CANCEL
 
     - Instrument switch (up to 15 channels, one for sequencer)
       - only have 12 position switch -- should be OK
@@ -165,3 +170,79 @@ Harmonic accuracies to ~1 cent:
       - 9.5   3897.513
     - 10.006                            (width 173)
       - 10.5  4070.781
+
+
+Electronics:
+    Parts:
+        - 2 rotary switches
+        - 4 rotary encoders
+        - 6 slide pots
+        - 10 LCD displays (6 for slide pots, 1 master, 3 for rotary encoders)
+        - 5 toggle switches
+        - 5 buttons
+        - 5 LEDs
+        - 1 Nano 33 IoT
+        - 2 Nano Everys
+        - 3 I/O Expanders
+
+    - 1 Master controller
+      - Nano 33 IoT
+      - MIDI Out to PC
+      - Serial to PC
+      - I2C master
+        - polls I/O Expanders
+        - polls Nano Everys
+
+    - 1 Slide pot and rotary encoder controller (6 slide pots, 4 rotary encoders)
+      - Nano Every
+        - 6 slide pots (6 Analog pins)
+        - 4 rotary encoder channel A
+        - 4 rotary encoder channel B
+        - 4 rotary encoder buttons
+        - 2 pins: I2C slave
+          - Read (22 bytes):
+            - errno (1 byte)
+            - 6 slide pots (2 bytes each)
+            - 4 encoders (2 bytes each)
+            - encoder buttons (1 byte)
+          - Write:
+            - 1 commmand byte
+              - 3 bits:
+                - calibrate low (calibrates all slide pots)
+                - calibrate centered (calibrates all slide pots)
+                - calibrate high (calibrates all slide pots)
+                - set rotary encoder current value (0 on reset)
+                - set rotary encoder multiplier button up (1 on reset)
+                - set rotary encoder multiplier button down (10 on reset)
+                - set rotary encoder minimum value
+                - set rotary encoder maximum value
+              - 3 bits: rotary encoder select
+            - 2 rotary encoder value
+        - 20 total pins used
+
+    - 1 LCD controller (controls 10 LCD displays)
+      - Nano Every
+        - 11 pins: RESET, RS, R/W, D0-7 -- shared with all LCD devices
+                   Test button on D0, would pullup resistor be OK with LCD device?
+        - 10 pins: Enable -- 1/LCD device
+        - 2 pins: I2C slave
+          - Read:
+            - Errno (1 byte)
+          - Write:
+            - Command byte
+              - Function: RESET, Test, Clear, Update Display (3 bits)
+              - LCD selector (4 bits, 15 == all)
+            - Char Offset
+            - Message Length
+            - Message
+        - 23 total pins used
+
+    - 2 I/O expanders for 2 rotary switches
+        - needs 24 pull-ups
+
+    - 1 I/O expander:
+        - 5 toggle switches
+        - 5 buttons
+        - 5 LEDs
+        - needs 5 pull-ups
+

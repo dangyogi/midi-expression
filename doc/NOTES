@@ -248,6 +248,7 @@ Arduino Nano 33 IoT ($19.40 w/o headers):
 Arduino Nano Every ($9.70 w/o headers):
     - Vin 7-21V
     - 5V
+    - ATMega4809
     - 8 ADC (incl DAC, I2C)
     - 1 DAC
     - 23 GPIO (incl ADC, USART, SPI, Analog Ref) 20mA output

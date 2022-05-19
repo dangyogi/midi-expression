@@ -537,9 +537,11 @@ class Harmonic(Var):
         }
 
     def set_freq_offset(self, value):
+        # immediate
         pass
 
     def set_ampl_offset(self, value):
+        # immediate
         pass
 
     def set_freq_scalefn(self, value):
@@ -549,9 +551,11 @@ class Harmonic(Var):
         pass
 
     def set_freq_param1(self, value):
+        # immediate for vibrato
         pass
 
     def set_freq_param2(self, value):
+        # immediate for vibrato
         pass
 
     def set_freq_param3(self, value):
@@ -576,21 +580,27 @@ class Harmonic(Var):
         pass
 
     def set_ampl_tremolo_level(self, value):
+        # immediate
         pass
 
     def set_ampl_tremolo_cycle_time(self, value):
+        # immediate
         pass
 
     def set_ampl_tremolo_scalefn(self, value):
+        # immediate
         pass
 
     def set_ampl_tremolo_ampl(self, value):
+        # immediate
         pass
 
     def set_ampl_release_duration(self, value):
+        # immediate, but not if note has already been released
         pass
 
     def set_ampl_release_bend(self, value):
+        # immediate, but not if note has already been released
         pass
 
     def play(self, note, velocity):

@@ -92,6 +92,7 @@ def frange(inc, cents_per_octave=1200, num_elements=12):
 H3 = math.log(3/2) / Ln_cent  # 701.955 cents, ideally 100.279 cents/semitone, off by 0.279
 H5 = math.log(5/4) / Ln_cent  # 386.314 cents, ideally 96.579 cents/semitone, off by 3.421
 H7 = math.log(7/4) / Ln_cent  # 968.826 cents, ideally 96.883 cents/semitone, off by 3.117
+H11 = math.log(11/8) / Ln_cent # 551.318 cents
 
 # Overall errors at 100 cents/semitone:
 #
@@ -169,9 +170,9 @@ class Meantone(H3_tuning):
 
     Tonic_offsets of 3 or 8 work best for both 1/4 and 1/5 commma.
 
-    This encompasses all 3-limit tunings with fudges applied to eliminate (or reduce)
-    the syntonic comma.  A pct_comma_fudge of 0 produces the Pythagorean tuning (but with a
-    different interpretation of tonic).  A common meantone tuning is 1/4 comma
+    This narrows the 5th (H3) to eliminate (or reduce) the syntonic comma.
+    A pct_comma_fudge of 0 produces the Pythagorean tuning (but with a different
+    interpretation of tonic).  A common meantone tuning is 1/4 comma
     (pct_comma_fudge) which completely eliminates the Syntonic comma by narrowing (fudging)
     each of the 5ths by 1/4 of a syntonic comma.
 
