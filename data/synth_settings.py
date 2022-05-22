@@ -20,7 +20,6 @@
 
 #}
 
-
 def pack(bytes):
     # convert 7-bit bytes to an int
     n = 0
@@ -207,6 +206,7 @@ System_common_map = {
 def report():
     print(f"{Number_of_unknown_control_numbers=}, {Unknown_control_numbers=}")
     print(f"{Number_of_unknown_system_commands=}, {Unknown_system_commands=}")
+    print(f"{Number_of_unknown_NR_params=}, {Unknown_NR_params=}")
 
 
 {% for line in helpers %}
