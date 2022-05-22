@@ -76,7 +76,8 @@ class Synth(Var):
         r'''Processes a MIDI message.  This is a list of numbers...
         '''
         #print("synth.process_MIDI", message)
-        command, rest = message[0], message[1:]
+        #command, rest = message[0], message[1:]
+        command, *rest = message
         #print("synth.process_MIDI", hex(command), rest)
         first_nibble = command & 0xF0
         if first_nibble & 0x80:
@@ -140,7 +141,8 @@ class Synth(Var):
 
 class Instrument(Actor):
     r'''
-    Provides notifications for tuning_system changes and volume changes.
+    Provides notifications for key_signature changes, tuning_system changes and
+    volume changes.
     '''
     #scale_volume = 1/12 * 0.5
     scale_volume = 0
@@ -663,9 +665,11 @@ class Play_harmonic(Actor):
         #print(f"recalc, {self.waveform=}")
         #print(f"recalc, {next(self.waveform)=}")
         if self.state == 'note_on':
+            # FIX: This won't work, need to rely on envelope recalc
             self.ampl_env = iter(self.harmonic.get_note_on_envelope(self.base_freq,
                                                                     self.velocity))
         else:
+            # FIX: This won't work, need to rely on envelope recalc
             self.ampl_env = iter(self.harmonic.get_note_off_envelope(self.base_freq,
                                                                      self.velocity))
 

@@ -207,7 +207,7 @@ Electronics:
             - encoder buttons (1 byte)
           - Write:
             - 1 commmand byte
-              - 3 bits:
+              - 4 bits:
                 - calibrate low (calibrates all slide pots)
                 - calibrate centered (calibrates all slide pots)
                 - calibrate high (calibrates all slide pots)
@@ -216,8 +216,11 @@ Electronics:
                 - set rotary encoder multiplier button down (10 on reset)
                 - set rotary encoder minimum value
                 - set rotary encoder maximum value
-              - 3 bits: rotary encoder select
-            - 2 rotary encoder value
+                - write EEPROM
+                - read EEPROM (starting at EEPROM addr, wraps around)
+                - read devices
+              - 4 bits: rotary encoder select
+            - 2 rotary encoder value/EEPROM addr, EEPROM data
         - 20 total pins used
 
     - 1 LCD controller (controls 10 LCD displays)
@@ -227,13 +230,16 @@ Electronics:
         - 10 pins: Enable -- 1/LCD device
         - 2 pins: I2C slave
           - Read:
-            - Errno (1 byte)
+            - what (EEPROM=0 or errno=1, 1 byte)
+            - EEPROM addr (1 byte)
+            - byte from EEPROM or Errno (1 byte)
           - Write:
             - Command byte
-              - Function: RESET, Test, Clear, Update Display (3 bits)
+              - Function: RESET, Test, Clear, Update Display, write EEPROM, read EEPROM,
+                          read errno (4 bits)
               - LCD selector (4 bits, 15 == all)
-            - Char Offset
-            - Message Length
+            - Char Offset/EEPROM addr
+            - Message Length/EEPROM data byte
             - Message
         - 23 total pins used
 

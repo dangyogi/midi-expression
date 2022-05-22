@@ -100,7 +100,8 @@ MIDI:
               - 0xF5 <undefined>
               - 0xF6 Tune Request (Sys Common) analog synths to tune their oscillators
               - 0xF7 (end of system exclusive message)
-            - System Real-Time:
+            - System Real-Time (one byte messages that may appear in the middle of any
+                                other message!):
               - 0xF8 Timing Clock (Sys Realtime) sent 24 times/quarter note
               - 0xF9 <undefined>
               - 0xFA Start (Sys Realtime) will be followed by Timing Clocks
@@ -244,6 +245,9 @@ Arduino Nano 33 IoT ($19.40 w/o headers):
     - I2C (2 pins)
     - 1 USART (2 pins)
     - SPI (4 pins)
+    - 256 KB CPU Flash
+    - 32 KB of SRAM
+    - no EEPROM
 
 Arduino Nano Every ($9.70 w/o headers):
     - Vin 7-21V
@@ -255,6 +259,9 @@ Arduino Nano Every ($9.70 w/o headers):
     - I2C (2 pins)
     - USART (2 pins)
     - SPI (4 pins)
+    - 48 KB of CPU Flash
+    - 6 KB of SRAM
+    - 256 byte EEPROM
 
 Tuning Systems:
     - Cent = 2**(1/1200) == 1.0005777895065548

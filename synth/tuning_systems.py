@@ -259,9 +259,9 @@ class Just_intonation(Base_tuning_system):
         ("17-limit D",
           1, 14/13,  8/7, 6/5, 5/4, 4/3, 24/17, 3/2, 8/5, 5/3, 7/4, 13/7, 2),
     )
-    def __init__(self, tuning=0, tonic="C"):
+    def __init__(self, tuning=0, tonic="C", tonic_offset=0):
         ratios = tuple(math.log(ratio) / Ln_cent for ratio in self.tunings[tuning][1:-1])
-        tonic_start = Notes[tonic]
+        tonic_start = (Notes[tonic] + tonic_offset) % 12
         self.to_tonic(ratios, tonic_start)
 
 

@@ -1,0 +1,154 @@
+Two settings generated: python to receive setting commands, and exp setting code to
+generate the setting commands.
+
+
+Python settings processing:
+
+    - give MIDI message to process_MIDI_config_setting or process_MIDI_system_common,
+      along with the Synth object.
+
+    - unpack the arguments, converting them to the proper python value.  Apply to_python
+      instructions last (after converting the N-bits to what was displayed on the exp
+      console).
+
+    - these routines locate the object to place the setting on, starting at Synth.  This
+      uses the identified_by attr on the Setting object.
+
+      - but process_MIDI_system_common just always uses Synth object.
+
+      - from Synth: synth.channels[<channel>]
+      - from Instrument: instrument.harmonics[<harmonic>]
+
+      so attr on parent just has 's' appended to identified_by name.
+
+    - the attr on change on the object is the name of the lowest setting not under
+      "choices".
+
+    - options:
+
+      - ignore constant parameters (i.e., with "value") and identified_by parameters.
+
+      - otherwise:
+
+        - if there is more than one parameter left (counting null arguments), use setting
+          name as name of function to call.
+
+          - if any argument has kills_value, kill the value by setting the attr to
+            setting.kill_value.
+
+          - if the function is a global function, call it and store the result in the attr.
+
+          - otherwise call method on the object with that name.
+
+          - in either case, omit null arguments.
+
+        - otherwise
+
+          - if the argument is kills_value, kill the value by calling
+            kill_child(<identifier>) on parent object.
+
+          - otherwise:
+
+            - store the argument as attr on object.  (Check ?? to see if this should be
+              done with "set").
+
+
+Exp console processing:
+
+    - each device on the console is tied to a settings parameter or a state changer 
+      (state changers don't go on slide pots).
+
+    - the loop for the console code is:
+
+      - read device settings
+
+      - for each device_setting (send flag first):
+
+        - convert to bits according to attached parameter rules.
+
+        - compare bits to last_sent value for the parameter
+
+        - if different & send flag is set: set send_flag on setting assoc with param
+
+        - compare bits to last_displayed value for the parameter
+
+        - if different:
+
+          - update display
+
+          - make any state changes (e.g, if odd/even toggle is switched, different params
+            need to be assoc with the slide pots)
+
+          - send any indicated data on serial
+
+      - for each setting:
+
+        - if send_flag is set:
+
+          - send MIDI message for that setting
+
+          - pause
+
+          - reset send_flag
+
+      - check for and process serial input, commands are:
+
+        - resend # all settings to synth & sequencer
+ 
+          - for each setting:
+            
+            - send MIDI message for that setting
+
+            - pause
+
+            - reset send_flag
+          
+          - send "OK\n" on serial port
+
+        - errno
+          
+          - send "<I2C_addr>:errno:NNN\n" on serial port
+
+          - reset errno
+
+        - reload # new program
+
+          - receive and install program
+
+          - send "OK\n" on serial port
+
+        - ping
+         
+          - send "pong\n" on serial port
+
+        - devices
+
+          - send list of devices, one per line:
+
+            - <device_num>:<kind>[:<arg>]
+
+              - kind is:
+
+                - toggle  # true when up
+
+                - button  # true when pressed
+
+                - switch
+
+                  - arg is number of positions
+
+                - encoder
+
+                  - arg is true if it also has a button
+
+                - pot   # can be set to 0 to 1 or -1 to 1
+
+                  - arg is resolution (1/(4*N))
+
+                - LED
+
+                  - arg is color
+
+                - LCD   # 1 line char display
+
+                  - arg is number of chars

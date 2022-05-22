@@ -2,376 +2,401 @@
 
 ---
 
-Instrument:
-    identified_by: channel
-    settings:
-        key_signature:
-            parameters:
-                minor:
-                    type: bool
-                    labels:
-                        minor: true
-                        major: false
-                flats_sharps:
-                    type: int
-                    range: [-7, 7]
-                    labels:
-                        flats:
-                            less_than: 0
-                        sharps:
-                            greater_than: 0
-                        '':
-                            equal: 0
-            control_change:
-                code: 0x14
-                param:
-                    hex_digits:
-                        msb: minor
-                        lsb: flats_sharps
-        tuning_system:
-            equal_temperament:
-                parameters:
-                    Cents/Semitone:
-                        units: cents
-                        default: 100
-                        range: [98.583, 100.279]
-                        steps_per_unit: 12
-                        alignment:
-                            steps: 17
-                            value: 100
-                        max_steps: 21
-                non_registered_parameter:
-                    code: 0x0001
-            well_tempered:
-                parameters:
-                    tonic:
-                        default: C
-                        choices: [C, "C#", D, Eb, E, F, "F#", G, Ab, A, Bb, B]
-                        range: [0-11]
-                    tonic_offset:
-                        choices: [C, "C#", D, Eb, E, F, "F#", G, Ab, A, Bb, B, null]
-                        default: null
-                        null: 0xF
-                non_registered_parameter:
-                    code: 0x0002
-                    format:
-                        tonic: 4
-                        tonic_offset: 4
-            just_intonation:
-                parameters:
-                    type:
-                        choices:
-                            - Symmetric 5-limit 1-A
-                            - Symmetric 5-limit 1-B
-                            - Symmetric 5-limit 2-A
-                            - Symmetric 5-limit 2-B
-                            - Asymmetric 5-limit standard A
-                            - Asymmetric 5-limit standard B
-                            - Asymmetric 5-limit extended A
-                            - Asymmetric 5-limit extended B
-                            - 7-limit A
-                            - 7-limit B
-                            - 17-limit A
-                            - 17-limit B
-                            - 17-limit C
-                            - 17-limit D
-                    tonic:
-                        default: C
-                        choices: [C, "C#", D, Eb, E, F, "F#", G, Ab, A, Bb, B]
-                        range: [0-11]
-                    tonic_offset:
-                        choices: [C, "C#", D, Eb, E, F, "F#", G, Ab, A, Bb, B, null]
-                        default: null
-                        null: 0xF
-                non_registered_parameter:
-                    code: 0x0003
-                    format:
-                        type: 4
-                        tonic: 4
-                        tonic_offset: 4
-            meantone:
-                parameters:
-                    tonic:
-                        default: C
-                        choices: [C, "C#", D, Eb, E, F, "F#", G, Ab, A, Bb, B]
-                        range: [0-11]
-                    tonic_offset:
-                        choices: [Eb, Ab, null]
-                        default: null
-                        null: 3
-                    pct_comma_fudge:
-                        choices: [0.20, 0.25]
-                    max_octave_fudge:
-                        units: cents
-                        default: 0
-                        steps_per_unit: 3
-                        bits: 7
-                non_registered_parameter:
-                    code: 0x0004
-                    format:
-                        tonic: 4
-                        tonic_offset: 2
-                        pct_comma_fudge: 1
-                        max_octave_fudge: 7
-            pythagorean_tuning:
-                parameters:
-                    tonic:
-                        default: C
-                        choices: [C, "C#", D, Eb, E, F, "F#", G, Ab, A, Bb, B]
-                        range: [0-11]
-                    max_octave_fudge:
-                        units: cents
-                        default: 0
-                        steps_per_unit: 3
-                        bits: 7
-                non_registered_parameter:
-                    code: 0x0005
-                    format:
-                        tonic: 4
-                        max_octave_fudge: 7
+Synth:
+    Ignore_control_codes: [0x07, 0x0E, 0x0F]
 
-        tuning:
-            tune_absolute:
-                parameters:
-                    note_to_tune:
-                        default: A
-                        choices: [C, "C#", D, Eb, E, F, "F#", G, Ab, A, Bb, B]
-                        range: [0, 11]
-                    octave:
-                        range: [0, 7]
-                        default: 4
-                    freq_adjustment:
-                        bits: 7
-                        units: Hz
-                        steps_per_unit: 2
-                        signed: true
-                non_registered_parameter:
-                    code: 0x0006
-                    format:
-                        note_to_tune: 4
-                        octave: 3
-                        freq_adjustment: 7
-
-            tune_match:
-                parameters:
-                    note_to_tune:
-                        default: A
-                        choices: [C, "C#", D, Eb, E, F, "F#", G, Ab, A, Bb, B]
-                        range: [0, 11]
-                    channel_#_of_other_instrument:
-                        bits: 4
-                non_registered_parameter:
-                    code: 0x0007
-                    format:
-                        note_to_tune: 4
-                        channel_#_of_other_instrument: 4
-
-    subordinates:
-        harmonics:
-            freq_multiplier_offset:
-                parameters:
-                    harmonic: # 1-10
-                        start: 1
-                        bits: 4
-                    offset:         # targeting +/- 0.5 by 0.01, so 3rd harmonic
-                                    # would range from 2.5 to 3.5
-                        bits: 7
-                        signed: true
-                        steps_per_unit: 100
-                control_change:
-                    code:
-                        base: 0x16
-                        add:
-                            - harmonic
-                    param:
-                        - offset
-
-            freq_cent_offset:
-                parameters:
-                    harmonic: # 1-10
-                        start: 1
-                        bits: 4
-                    offset:         # targeting +/- 50 by 2
-                        units: cent
-                        bits: 7
-                        signed: true
-                        steps_per_unit: 2
-                control_change:
-                    code:
-                        base: 0x50
-                        add:
-                            - harmonic
-                    param:
-                        - offset
-
-            ampl_offset:
-                parameters:
-                    harmonic: # 1-10
-                        start: 1
-                        bits: 4
-                    offset:         # targeting 0 - 100 by 2
-                        units: dB
-                        range: [0, 100]
-                        bits: 7
-                control_change:
-                    code:
-                        base: 0x36
-                        add:
-                            - harmonic
-                    param:
-                        - offset
-
-            envelopes:
-                freq_envelope:
+    Subordinates:
+        Instrument:
+            Identified_by: channel
+            Settings:
+                key_signature:
+                    parameters:
+                        - minor:
+                            choices: [major, minor]  # major=False, minor=True
+                        - flats_sharps:
+                            range: [-7, 7]
+                            labels:
+                                flats:
+                                    less_than: 0
+                                sharps:
+                                    greater_than: 0
+                                '': 0
+                            python_arg_name: sf
+                    control_change: 0x14
+                    system_common: 0xF4
+                tuning_system:
                     choices:
-                        ramp:
+                        Equal_temperament:
                             parameters:
-                                harmonic: # 1-10
-                                    start: 1
-                                    bits: 4
-                                scale:    # targeting 0-5 over 3 octaves
+                                - sys_common_type:
                                     bits: 3
-                                start:    # -400 - 350
-                                    signed: true
+                                    value: 1
+                                - Cents/Semitone:
                                     units: cents
-                                    step_size: 50
-                                    bits: 4
-                                duration: # targeting 0-5 seconds
-                                    units: sec
-                                    limit: 5
-                                    progression: geom
-                                    b: -1
-                                    bits: 4   # first value is 72 mSec
-                                bend:
-                                    units: percent
-                                    signed: true
-                                    limit: 100
-                                    bits: 3
+                                    default: 100
+                                    range: [98.583, 100.279]
+                                    steps_per_unit: 12
+                                    alignment:
+                                        steps: 17
+                                        value: 100
+                                    max_steps: 21
+                                    python_arg_name: cents_per_semitone
                             non_registered_parameter:
-                                code:
-                                    base: 0x0100
-                                    add:
-                                        - harmonic
-
-                        vibrato:
+                                code: 0x0000
+                                add: sys_common_type
+                            system_common: 0xF5
+                        Well_temperament:
                             parameters:
-                                harmonic: # 1-10
-                                    start: 1
-                                    bits: 4
-                                scale:    # targeting 0-5 over 3 octaves
+                                - sys_common_type:
                                     bits: 3
-                                cycle_time: # targeting 0.05 to 1 sec
-                                    start: 0.05
-                                    step_size: 0.05
-                                    bits: 4
-                                ampl:     # targeting 0 - 400
+                                    value: 2
+                                - tonic:
+                                    default: C
+                                    choices: [C, "C#", D, Eb, E, F, "F#", G, Ab, A, Bb, B]
+                                - tonic_offset:
+                                    choices: [C, "C#", D, Eb, E, F, "F#", G, Ab, A, Bb, B,
+                                              null]
+                                    default: null
+                                    null_value: 0xF
+                            non_registered_parameter:
+                                code: 0x0000
+                                add: sys_common_type
+                            system_common: 0xF5
+                        Just_intonation:
+                            parameters:
+                                - sys_common_type:
+                                    bits: 3
+                                    value: 3
+                                - tuning:
+                                    choices:
+                                        - Symmetric 5-limit 1-A
+                                        - Symmetric 5-limit 1-B
+                                        - Symmetric 5-limit 2-A
+                                        - Symmetric 5-limit 2-B
+                                        - Asymmetric 5-limit standard A
+                                        - Asymmetric 5-limit standard B
+                                        - Asymmetric 5-limit extended A
+                                        - Asymmetric 5-limit extended B
+                                        - 7-limit A
+                                        - 7-limit B
+                                        - 17-limit A
+                                        - 17-limit B
+                                        - 17-limit C
+                                        - 17-limit D
+                                - tonic:
+                                    default: C
+                                    choices: [C, "C#", D, Eb, E, F, "F#", G, Ab, A, Bb, B]
+                                - tonic_offset:
+                                    choices: [C, "C#", D, Eb, E, F, "F#", G, Ab, A, Bb, B,
+                                              null]
+                                    default: null
+                                    null_value: 0xF
+                            non_registered_parameter:
+                                code: 0x0000
+                                add: sys_common_type
+                            system_common: 0xF5
+                        Meantone:
+                            parameters:
+                                - sys_common_type:
+                                    bits: 3
+                                    value: 4
+                                - tonic:
+                                    default: C
+                                    choices: [C, "C#", D, Eb, E, F, "F#", G, Ab, A, Bb, B]
+                                - tonic_offset:
+                                    choices: [Eb, Ab, null]
+                                    default: null
+                                    null_value: 3
+                                    to_python:
+                                        as_index_in: [C, "C#", D, Eb, E, F, "F#", G,
+                                                      Ab, A, Bb, B]
+                                - pct_comma_fudge:
+                                    choices: [0.20, 0.25]
+                                - max_octave_fudge:
                                     units: cents
+                                    default: 0
+                                    steps_per_unit: 3
                                     bits: 7
-                                    step_size: 3
                             non_registered_parameter:
-                                code:
-                                    base: 0x0200
-                                    add:
-                                        - harmonic
+                                code: 0x0000
+                                add: sys_common_type
+                            system_common: 0xF5
+                        Pythagorean_tuning:
+                            parameters:
+                                - sys_common_type:
+                                    bits: 3
+                                    value: 5
+                                - tonic:
+                                    default: C
+                                    choices: [C, "C#", D, Eb, E, F, "F#", G, Ab, A, Bb, B]
+                                - max_octave_fudge:
+                                    units: cents
+                                    default: 0
+                                    steps_per_unit: 3
+                                    bits: 7
+                            non_registered_parameter:
+                                code: 0x0000
+                                add: sys_common_type
+                            system_common: 0xF5
 
-                ampl_envelope:
-                    attack:
-                        parameters:
-                            harmonic: # 1-10
-                                start: 1
-                                bits: 4
-                            scale:    # targeting 0-5 over 3 octaves
-                                bits: 3
-                            start:    # targeting -40 to 10, step 5
-                                units: dB
-                                range: [-40, 10]
-                                bits: 4
-                            duration: # targeting 0-5 seconds
-                                units: sec
-                                limit: 5
-                                progression: geom
-                                b: -1
-                                bits: 4   # first value is 72 mSec
-                            bend:
-                                units: percent
-                                signed: true
-                                limit: 100
-                                bits: 3
-                        non_registered_parameter:
-                            code:
-                                base: 0x0300
-                                add:
-                                    - harmonic
-                    decay:
-                        parameters:
-                            harmonic: # 1-10
-                                start: 1
-                                bits: 4
-                            scale:    # targeting 0-5 over 3 octaves
-                                bits: 3
-                            duration: # targeting 0-20 seconds
-                                units: sec
-                                limit: 20
-                                progression: geom
-                                b: -1
-                                bits: 5   # first value is 51 mSec
-                            bend:
-                                units: percent
-                                signed: true
-                                limit: 100
-                                bits: 3
-                        non_registered_parameter:
-                            code:
-                                base: 0x0400
-                                add:
-                                    - harmonic
-                    sustain:
-                        parameters:
-                            harmonic: # 1-10
-                                start: 1
-                                bits: 4
-                            scale:        # targeting 0-5 over 3 octaves
-                                bits: 3
-                            center_ampl:  # targeting 0-20 dB
-                                          # how far off the peak ampl_offset the sustain
-                                          # ampl is.
-                                units: dB
-                                limit: 20
-                                bits: 4
-                            cycle_time:   # targeting 0.05 to 1 sec
-                                start: 0.05
-                                step_size: 0.05
-                                bits: 4
-                            ampl_swing:   # targeting 0-10 dB, step 2 dB
-                                units: dB
-                                range: [0, 10]
-                                bits: 3
-                        non_registered_parameter:
-                            code:
-                                base: 0x0500
-                                add:
-                                    - harmonic
-                    release:
-                        parameters:
-                            harmonic: # 1-10
-                                start: 1
-                                bits: 4
-                            scale:    # targeting 0-5 over 3 octaves
-                                bits: 3
-                            duration: # targeting 0-5 seconds
-                                units: sec
-                                limit: 5
-                                progression: geom
-                                b: -1
-                                bits: 4   # first value is 72 mSec
-                            bend:
-                                units: percent
-                                signed: true
-                                limit: 100
-                                bits: 3
-                        non_registered_parameter:
-                            code:
-                                base: 0x0600
-                                add:
-                                    - harmonic
+                tuning:
+                    choices:
+                        tune_absolute:
+                            parameters:
+                                - sys_common_type:
+                                    bits: 3
+                                    value: 6
+                                - note_to_tune:
+                                    default: A
+                                    choices: [C, "C#", D, Eb, E, F, "F#", G, Ab, A, Bb, B]
+                                - octave:
+                                    range: [0, 7]
+                                    default: 4
+                                - freq_adjustment:
+                                    bits: 7
+                                    units: Hz
+                                    steps_per_unit: 2
+                                    signed: true
+                                    to_python: Hz_to_cents
+                            non_registered_parameter:
+                                code: 0x0000
+                                add: sys_common_type
+                            system_common: 0xF5
+
+                        tune_match:
+                            parameters:
+                                - note_to_tune:
+                                    default: A
+                                    choices: [C, "C#", D, Eb, E, F, "F#", G, Ab, A, Bb, B]
+                                - channel_#_of_other_instrument:
+                                    range: [1, 16]
+                                    bits: 4
+                                    to_python: sub1
+                            non_registered_parameter: 0x000A
+
+            Subordinates:
+                Harmonic:
+                    Identified_by: harmonic
+                    Settings:
+                        freq_offset:
+                            choices:
+                                freq_multiplier_offset:
+                                    immediate: true
+                                    parameters:
+                                        - harmonic:  # 1-10
+                                            range: [1, 10]
+                                            to_python: sub1
+                                        - offset:    # targeting +/- 0.5 by 0.01,
+                                                     # so 3rd harmonic would range
+                                                     # from 2.5 to 3.5
+                                            bits: 7
+                                            signed: true
+                                            steps_per_unit: 100
+                                            center_value:
+                                                param: harmonic
+                                                show: true
+                                            to_python: to_cents
+                                    control_change:
+                                        code: 0x16
+                                        add: harmonic
+
+                                freq_cent_offset:
+                                    immediate: true
+                                    parameters:
+                                        - harmonic: # 1-10
+                                            range: [1, 10]
+                                            to_python: sub1
+                                        - offset:         # targeting +/- 50 by 2
+                                            units: cent
+                                            bits: 7
+                                            signed: true
+                                            steps_per_unit: 2
+                                            center_value:
+                                                what: closest_semitone
+                                                show: false
+                                            to_python: add_closest_semitone
+                                    control_change:
+                                        code: 0x50
+                                        add: harmonic
+
+                        ampl_offset:
+                            immediate: true
+                            parameters:
+                                - harmonic:         # 1-10
+                                    range: [1, 10]
+                                    to_python: sub1
+                                - offset:           # targeting 0 - 100 by 2
+                                    kills_value: 0  # disables the instrument if H1
+                                    units: dB
+                                    range: [0, 90]
+                                    bits: 7
+                                    to_python:
+                                        as_percent_of: 90
+                            control_change:
+                                code: 0x36
+                                add: harmonic
+
+                        envelopes:
+                            freq_envelope:
+                                choices:
+                                    ramp:
+                                        parameters:
+                                            - harmonic:   # 1-10
+                                                range: [1, 10]
+                                                to_python: sub1
+                                            - scale:      # targeting 0-5 over 3 octaves
+                                                bits: 3
+                                            - start:      # -400 - 350
+                                                signed: true
+                                                units: cents
+                                                step_size: 50
+                                                bits: 4
+                                            - duration:   # targeting 0-5 seconds
+                                                kills_value: 0
+                                                units: sec
+                                                limit: 5
+                                                progression: geom
+                                                b: -1.5
+                                                bits: 4   # first value is 72 mSec
+                                            - bend:
+                                                units: percent
+                                                signed: true
+                                                limit: 100
+                                                bits: 3
+                                        non_registered_parameter:
+                                            code: 0x0010
+                                            add: harmonic
+                                        kill_value: 1.0
+
+                                    vibrato:
+                                        immediate: true
+                                        parameters:
+                                            - harmonic:   # 1-10
+                                                range: [1, 10]
+                                                to_python: sub1
+                                            - scale:      # targeting 0-5 over 3 octaves
+                                                bits: 3
+                                            - cycle_time: # targeting 0.05 to 1 sec
+                                                start: 0.05
+                                                step_size: 0.05
+                                                bits: 4
+                                            - ampl:       # targeting 0 - 400
+                                                kills_value: 0
+                                                units: cents
+                                                bits: 7
+                                                step_size: 3
+                                        non_registered_parameter:
+                                            code: 0x0020
+                                            add: harmonic
+                                        kill_value: 1.0
+
+                            ampl_envelope:
+                                attack:
+                                    parameters:
+                                        - harmonic:   # 1-10
+                                            range: [1, 10]
+                                            to_python: sub1
+                                        - scale:      # targeting 0-5 over 3 octaves
+                                            bits: 3
+                                        - start:      # targeting -40 to 10, step 5
+                                            units: dB
+                                            range: [-40, 10]
+                                            bits: 4
+                                            to_python:
+                                                as_percent_of: 90
+                                        - duration:   # targeting 0-5 seconds
+                                            kills_value: 0
+                                            units: sec
+                                            limit: 5
+                                            progression: geom
+                                            b: -1.5
+                                            bits: 4   # first value is 72 mSec
+                                        - bend:
+                                            units: percent
+                                            signed: true
+                                            limit: 100
+                                            bits: 3
+                                    non_registered_parameter:
+                                        code: 0x0030
+                                        add: harmonic
+                                    kill_value: 1.0
+                                decay:
+                                    parameters:
+                                        - harmonic:   # 1-10
+                                            range: [1, 10]
+                                            to_python: sub1
+                                        - scale:      # targeting 0-5 over 3 octaves
+                                            bits: 3
+                                        - duration:   # targeting 0-20 seconds
+                                            kills_value: 0
+                                            units: sec
+                                            limit: 20
+                                            progression: geom
+                                            b: -1
+                                            bits: 5   # first value is 51 mSec
+                                        - bend:
+                                            units: percent
+                                            signed: true
+                                            limit: 100
+                                            bits: 3
+                                    non_registered_parameter:
+                                        code: 0x0040
+                                        add: harmonic
+                                    kill_value: 1.0
+                                sustain:
+                                    immediate: true
+                                    parameters:
+                                        - harmonic:     # 1-10
+                                            range: [1, 10]
+                                            to_python: sub1
+                                        - scale:        # targeting 0-5 over 3 octaves
+                                            bits: 3
+                                        - center_ampl:  # targeting 0-20 dB
+                                                        # how far off the peak ampl_offset
+                                                        # and sustain ampl are.
+                                            units: dB
+                                            limit: 20
+                                            bits: 4
+                                            to_python:
+                                                as_percent_of: 90
+                                        - cycle_time:   # targeting 0.05 to 1 sec
+                                            start: 0.05
+                                            step_size: 0.05
+                                            bits: 4
+                                        - ampl_swing:   # targeting 0-10 dB, step 2 dB
+                                            kills_value: 0  # only uses center_ampl
+                                            units: dB
+                                            range: [0, 10]
+                                            bits: 3
+                                            to_python:
+                                                as_percent_of: 90
+                                    non_registered_parameter:
+                                        code: 0x0050
+                                        add: harmonic
+                                    kill_value: center_ampl
+
+                                release:
+                                    parameters:
+                                        - harmonic:   # 1-10
+                                            range: [1, 10]
+                                            to_python: sub1
+                                        - scale:      # targeting 0-5 over 3 octaves
+                                            bits: 3
+                                        - duration:   # targeting 0-5 seconds
+                                            kills_value: 0  # WARNING: produces clicking
+                                                            #          sounds...
+                                            units: sec
+                                            limit: 5
+                                            progression: geom
+                                            b: -1.5
+                                            bits: 4   # first value is 72 mSec
+                                        - bend:
+                                            units: percent
+                                            signed: true
+                                            limit: 100
+                                            bits: 3
+                                    non_registered_parameter:
+                                        code: 0x0060
+                                        add: harmonic
+                                    kill_value: 1.0  # FIX: is this right?
 
