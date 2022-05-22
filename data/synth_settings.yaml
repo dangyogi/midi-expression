@@ -28,9 +28,6 @@ Synth:
                     choices:
                         Equal_temperament:
                             parameters:
-                                - sys_common_type:
-                                    bits: 3
-                                    value: 1
                                 - Cents/Semitone:
                                     units: cents
                                     default: 100
@@ -41,15 +38,17 @@ Synth:
                                         value: 100
                                     max_steps: 21
                                     python_arg_name: cents_per_semitone
+                                - sys_common_type:
+                                    bits: 3
+                                    value: 1
                             non_registered_parameter:
                                 code: 0x0000
                                 add: sys_common_type
-                            system_common: 0xF5
+                            system_common:
+                                code: 0xF5
+                                key_on: sys_common_type
                         Well_temperament:
                             parameters:
-                                - sys_common_type:
-                                    bits: 3
-                                    value: 2
                                 - tonic:
                                     default: C
                                     choices: [C, "C#", D, Eb, E, F, "F#", G, Ab, A, Bb, B]
@@ -58,15 +57,17 @@ Synth:
                                               null]
                                     default: null
                                     null_value: 0xF
+                                - sys_common_type:
+                                    bits: 3
+                                    value: 2
                             non_registered_parameter:
                                 code: 0x0000
                                 add: sys_common_type
-                            system_common: 0xF5
+                            system_common:
+                                code: 0xF5
+                                key_on: sys_common_type
                         Just_intonation:
                             parameters:
-                                - sys_common_type:
-                                    bits: 3
-                                    value: 3
                                 - tuning:
                                     choices:
                                         - Symmetric 5-limit 1-A
@@ -91,15 +92,17 @@ Synth:
                                               null]
                                     default: null
                                     null_value: 0xF
+                                - sys_common_type:
+                                    bits: 3
+                                    value: 3
                             non_registered_parameter:
                                 code: 0x0000
                                 add: sys_common_type
-                            system_common: 0xF5
+                            system_common:
+                                code: 0xF5
+                                key_on: sys_common_type
                         Meantone:
                             parameters:
-                                - sys_common_type:
-                                    bits: 3
-                                    value: 4
                                 - tonic:
                                     default: C
                                     choices: [C, "C#", D, Eb, E, F, "F#", G, Ab, A, Bb, B]
@@ -117,15 +120,17 @@ Synth:
                                     default: 0
                                     steps_per_unit: 3
                                     bits: 7
+                                - sys_common_type:
+                                    bits: 3
+                                    value: 4
                             non_registered_parameter:
                                 code: 0x0000
                                 add: sys_common_type
-                            system_common: 0xF5
+                            system_common:
+                                code: 0xF5
+                                key_on: sys_common_type
                         Pythagorean_tuning:
                             parameters:
-                                - sys_common_type:
-                                    bits: 3
-                                    value: 5
                                 - tonic:
                                     default: C
                                     choices: [C, "C#", D, Eb, E, F, "F#", G, Ab, A, Bb, B]
@@ -134,18 +139,20 @@ Synth:
                                     default: 0
                                     steps_per_unit: 3
                                     bits: 7
+                                - sys_common_type:
+                                    bits: 3
+                                    value: 5
                             non_registered_parameter:
                                 code: 0x0000
                                 add: sys_common_type
-                            system_common: 0xF5
+                            system_common:
+                                code: 0xF5
+                                key_on: sys_common_type
 
                 tuning:
                     choices:
                         tune_absolute:
                             parameters:
-                                - sys_common_type:
-                                    bits: 3
-                                    value: 6
                                 - note_to_tune:
                                     default: A
                                     choices: [C, "C#", D, Eb, E, F, "F#", G, Ab, A, Bb, B]
@@ -158,10 +165,15 @@ Synth:
                                     steps_per_unit: 2
                                     signed: true
                                     to_python: Hz_to_cents
+                                - sys_common_type:
+                                    bits: 3
+                                    value: 6
                             non_registered_parameter:
                                 code: 0x0000
                                 add: sys_common_type
-                            system_common: 0xF5
+                            system_common:
+                                code: 0xF5
+                                key_on: sys_common_type
 
                         tune_match:
                             parameters:

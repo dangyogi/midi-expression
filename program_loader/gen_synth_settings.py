@@ -7,6 +7,32 @@ from collections.abc import Mapping
 from .utils import read_yaml, calc_geom
 
 
+Reserved_control_numbers = frozenset((
+    0x01,  # modulation
+    0x06,  # data entry (course)
+    0x07,  # channel volume
+    0x0A,  # pan
+    0x0B,  # expression controller
+    0x26,  # data entry (fine)
+    0x40,  # sustain
+    0x62,  # Non-Reg param number LSB
+    0x63,  # Non-Reg param number MSB
+    0x64,  # Reg param number LSB
+    0x65,  # Reg param number MSB
+    0x79,  # Reset all controllers
+    0x7B,  # All notes off
+))
+
+Reserved_system_common = frozenset((
+    0xF0,  # System Exclusive
+    0xF1,  # MIDI Time Code Quarter Frame
+    0xF2,  # Song Position Pointer
+    0xF3,  # Song Select
+    0xF6,  # Tune Request
+    0xF7,  # End of System Exclusive Message
+))
+
+
 class Thing:
     kw_args = dict(identified_by=None,
                    ignore_control_codes=[],
@@ -79,6 +105,13 @@ class Setting:
             if key not in seen:
                 setattr(self, key, default)
         self.parameters = parse_parameters(self.parameters, self.full_name, self)
+        offset = system_common_offset = 0
+        for p in reversed(self.parameters):
+            p.offset = offset
+            p.system_common_offset = system_common_offset
+            system_common_offset += p.bits
+            if not p.is_constant:
+                offset += p.bits
         self.message_formatters = []
         if 'non_registered_parameter' in args:
             self.message_formatters.append(
@@ -105,20 +138,26 @@ class Setting:
 
 
 class Message_format:
+    allow_options = ("add",)
+
     def __init__(self, setting, config):
         self.setting = setting
         if not isinstance(config, Mapping):
-            self.code = self.my_code = config
-        else:
-            assert "code" in config
-            self.code = self.my_code = config.pop("code")
-            if "add" in config:
-                self.add = config.pop("add")
+            config = dict(code=config)
+        assert "code" in config
+        self.code = self.my_code = config.pop("code")
+        for option in self.allow_options:
+            if option not in config:
+                setattr(self, option, None)
+            else:
+                name = config.pop(option)
+                setattr(self, option, name)
                 for p in setting.parameters:
-                    if p.name == self.add:
+                    if p.name == name:
                         self.param = p
-                        if isinstance(p, Constant_param):
-                            self.my_code += p.value
+                        if p.is_constant:
+                            if option == "add":
+                                self.my_code += p.value
                             self.constant_param = True
                         else:
                             self.constant_param = False
@@ -126,21 +165,73 @@ class Message_format:
                 else:
                     raise AssertionError(
                             f"{setting} {self.__class__.__name__}: "
-                            f"add parameter, '{self.add}', not found")
-            assert not config, f"{setting} {self.__class__.__name__}: " \
-                               f"unknown parameters {tuple(config.keys())}"
+                            f"{option} parameter, '{name}', not found")
+        assert not config, f"{setting} {self.__class__.__name__}: " \
+                           f"unknown parameters {tuple(config.keys())}"
+        self.init()
 
 
 class Non_registered_parameter(Message_format):
-    pass
+    NR_param_numbers_used = set()
+
+    def init(self):
+        if self.add is None or self.constant_param:
+            codes_to_check = (self.my_code,)
+        else:
+            codes_to_check = range(self.code,
+                                   self.code + (self.param.limit - self.param.start) + 1)
+        #print("NR param nums:", ', '.join(hex(c) for c in codes_to_check))
+        for code in codes_to_check:
+            assert code not in self.NR_param_numbers_used, \
+              f"{self.setting} non_registered_parameter: 0x{code:X} is already assigned"
+            self.NR_param_numbers_used.add(code)
 
 
 class Control_change(Message_format):
-    pass
+    Control_numbers_used = set()
+
+    def init(self):
+        if self.add is None or self.constant_param:
+            codes_to_check = (self.my_code,)
+        else:
+            codes_to_check = range(self.my_code,
+                                   self.my_code + (self.param.limit - self.param.start) + 1)
+        #print("Control_change:", ', '.join(hex(c) for c in codes_to_check))
+        for code in codes_to_check:
+            assert code not in Reserved_control_numbers, \
+              f"{self.setting} control_change: 0x{code:X} is a reserved code"
+            assert code not in self.Control_numbers_used, \
+              f"{self.setting} control_change: 0x{code:X} is already assigned"
+            self.Control_numbers_used.add(code)
+
 
 
 class System_common(Message_format):
-    pass
+    allow_options = ("key_on",)
+
+    Offset_lengths = {}   # {code: (length, offset)}
+
+    def init(self):
+        assert self.code not in Reserved_system_common, \
+          f"{self.setting} system_common: 0x{self.code:X} is a reserved code"
+        if self.key_on is None:
+            if self.code not in self.Offset_lengths:
+                self.Offset_lengths[self.code] = (0, 0)
+            else:
+                assert self.Offset_lengths[self.code] == (0, 0), \
+                  f"{self.setting} system_common: Conflict with other key_on setting " \
+                  f"{self.Offset_lengths[self.code]}"
+        else:
+            assert self.constant_param, \
+              f"{self.setting} system_common: key_on parameter must be constant"
+            length = self.param.bits
+            offset = self.param.system_common_offset
+            if self.code not in self.Offset_lengths:
+                self.Offset_lengths[self.code] = (length, offset)
+            else:
+                assert self.Offset_lengths[self.code] == (length, offset), \
+                  f"{self.setting} system_common ({length}, {offset}): " \
+                  f"Conflict with other key_on setting {self.Offset_lengths[self.code]}"
 
 
 class Group:
@@ -162,6 +253,7 @@ class Group:
 
 
 class Parameter:
+    is_constant = False
     required = frozenset()
     kw_args = {}
 
@@ -328,6 +420,7 @@ class Geom_param(Parameter):
 
 
 class Constant_param(Parameter):
+    is_constant = True
     required = frozenset("bits,value".split(','))
 
     def init(self):
