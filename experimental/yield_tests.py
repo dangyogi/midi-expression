@@ -15,22 +15,14 @@ class Linked_chain:
         self.iters = iters
 
     def start(self, start):
-        self.iter = iter(self.start2(start))
-        return self.iter
-
-    def start2(self, start):
         next = start
         for iter in self.iters:
-            next = yield from iter.start(next)
-        print("Linked_chain returning", next)
-        return next
+            self.current_iter = iter
+            yield from iter.start(next)
+            next = self.current_iter.next_value()
 
-    def abort(self):
-        try:
-            return self.iter.throw(AbortException)
-        except StopIteration as exc:
-            print("abort: caught StopIteration")
-            return exc.value
+    def next_value(self):
+        return self.current_iter.next_value()
 
 
 class foo:
@@ -38,51 +30,53 @@ class foo:
         self.n = n
 
     def start(self, start=0):
-        try:
-            for x in range(start, start + self.n):
-                yield x
-        except AbortException:
-            print("foo caught AbortException")
-        print("foo returning", x)
-        return x
+        for x in range(start, start + self.n):
+            self.next = x + 1  # This has to come before the yield statement!
+            yield x
+
+    def next_value(self):
+        return self.next
 
 lc = Linked_chain(foo(5), foo(3))
 iter = lc.start(44)
 
-for i in range(3):
-    print(i, next(iter))
+for i in range(9):
+    print(i, next(iter, "done"))
 
-try:
-    print("lc.abort()", lc.abort())
-    #print("close", iter.close())                  # close doesn't work!  top never catches
-                                                  # anything.
-    #print("throw", iter.throw(AbortException))    # throw doesn't return when on last iter
-                                                  # in Linked_chain, in that case:
-                                                  #  - foo converts AbortException to
-                                                  #    StopIteration with the final value.
-                                                  #  - Linked_chain terminates normally (no
-                                                  #    exception caught), throwing
-                                                  #    StopIteration with the final value.
-                                                  #  - top catches StopIteration with the
-                                                  #    final value.
-                                                  # When throw is not on the last iter in
-                                                  # Linked_chain:
-                                                  #  - foo catches AbortException
-                                                  #  - foo ignores that and raises
-                                                  #    StopIteration with the final value.
-                                                  #  - throw returns the final value.
-                                                  #  - sometime later, Linked_chain catches
-                                                  #    GeneratorExit, ignores it, and
-                                                  #    raises StopIteration with the final
-                                                  #    value, which is not seen by top.
-                                                  #  - no exception is caught at the top
-                                                  #    level.
-    #print("throw", iter.throw(GeneratorExit))     # doesn't work, causes wrong last value
-                                                  # in final StopIteration received by top
-except StopIteration as exc:
-    print("top caught StopIteration", str(exc))
-except AbortException:
-    print("top caught AbortException")
-except BaseException as exc:
-    print("top caught BaseException", type(exc), str(exc))
-print("done")
+print("done", lc.next_value())
+
+if False:
+    try:
+        print("lc.abort()", lc.abort())
+        #print("close", iter.close())                  # close doesn't work!  top never catches
+                                                      # anything.
+        #print("throw", iter.throw(AbortException))    # throw doesn't return when on last iter
+                                                      # in Linked_chain, in that case:
+                                                      #  - foo converts AbortException to
+                                                      #    StopIteration with the final value.
+                                                      #  - Linked_chain terminates normally (no
+                                                      #    exception caught), throwing
+                                                      #    StopIteration with the final value.
+                                                      #  - top catches StopIteration with the
+                                                      #    final value.
+                                                      # When throw is not on the last iter in
+                                                      # Linked_chain:
+                                                      #  - foo catches AbortException
+                                                      #  - foo ignores that and raises
+                                                      #    StopIteration with the final value.
+                                                      #  - throw returns the final value.
+                                                      #  - sometime later, Linked_chain catches
+                                                      #    GeneratorExit, ignores it, and
+                                                      #    raises StopIteration with the final
+                                                      #    value, which is not seen by top.
+                                                      #  - no exception is caught at the top
+                                                      #    level.
+        #print("throw", iter.throw(GeneratorExit))     # doesn't work, causes wrong last value
+                                                      # in final StopIteration received by top
+    except StopIteration as exc:
+        print("top caught StopIteration", str(exc))
+    except AbortException:
+        print("top caught AbortException")
+    except BaseException as exc:
+        print("top caught BaseException", type(exc), str(exc))
+    print("done")

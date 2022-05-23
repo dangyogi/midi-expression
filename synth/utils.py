@@ -74,35 +74,23 @@ def two_byte_value(msb, lsb):
     return ((msb & 0x7F) << 7) | (lsb & 0x7F)
 
 
-class AbortGenerator(Exception):
-    pass
-
 class Linked_chain:
-    r'''Like itertools.chain, but passes the last value returned from one iter to the next.
+    r'''Like itertools.chain, but passes the last value from one iter to the next.
 
-    Expects each iter to have a start method to accept the last value of the preceeding
+    Expects each iter to have a start method to accept the next value from the preceeding
     iter.  This a generator method that replaces the __iter__ method.  These generators
-    must catch AbortGenerator, ignore it, and return the final value generated.
+    must have a next_value() method that will return the next value to use after the last
+    value yielded.
     '''
     def __init__(self, *iters):
         self.iters = iters
 
     def start(self, start):
-        r'''iter already called on generator.
-        '''
-        self.iter = self.start2(start)
-        return self.iter
-
-    def start_iter(self, start):
         next = start
         for iter in self.iters:
-            next = yield from iter.start(next)
-        return next
+            self.current_iter = iter
+            yield from iter.start(next)
+            next = self.current_iter.next_value()
 
-    def abort(self):
-        r'''Returns last value.
-        '''
-        try:
-            return self.iter.throw(AbortGenerator)
-        except StopIteration as exc:
-            return exc.value
+    def next_value(self):
+        return self.current_iter.next_value()
