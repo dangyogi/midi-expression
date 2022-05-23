@@ -416,14 +416,14 @@ class Instrument(Actor):
     def set_freq_offset(self, control_number, value):
         harmonic = (control_number & 0x0F) - 5
         if harmonic >= len(self.harmonics) or self.harmonics[harmonic] is None:
-            print(f"control change 0x{control_number:x}: harmonic {harmonic} not set")
+            print(f"control change 0x{control_number:02X}: harmonic {harmonic} not set")
         else:
             self.harmonics[harmonic].set_freq_offset(value)
 
     def set_ampl_offset(self, control_number, value):
         harmonic = (control_number & 0x0F) - 5
         if harmonic >= len(self.harmonics) or self.harmonics[harmonic] is None:
-            print(f"control change 0x{control_number:x}: harmonic {harmonic} not set")
+            print(f"control change 0x{control_number:02X}: harmonic {harmonic} not set")
         else:
             self.harmonics[harmonic].set_ampl_offset(value)
 
@@ -432,10 +432,10 @@ class Instrument(Actor):
 
     def forward_to_harmonic(self, control_number, value):
         if self.harmonic_focus == 0x7F:
-            print(f"control change 0x{control_number:x}: harmonic_focus not set")
+            print(f"control change 0x{control_number:02X}: harmonic_focus not set")
         elif self.harmonic_focus >= len(self.harmonics) or \
              self.harmonics[self.harmonic_focus] is None:
-            print(f"control change 0x{control_number:x}: harmonic_focus, "
+            print(f"control change 0x{control_number:02X}: harmonic_focus, "
                   f"{self.harmonic_focus}, not a valid harmonic")
         else:
             self.harmonics[self.harmonic_focus].control_numbers[control_number](value)

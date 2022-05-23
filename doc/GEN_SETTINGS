@@ -9,15 +9,15 @@ Python settings processing:
 
     - unpack the arguments, converting them to the proper python value.  Apply to_python
       instructions last (after converting the N-bits to what was displayed on the exp
-      console).
+      console -- ignoring for_display).
 
     - these routines locate the object to place the setting on, starting at Synth.  This
-      uses the identified_by attr on the Setting object.
+      uses the identified_by attr on the Thing object.
 
       - but process_MIDI_system_common just always uses Synth object.
 
-      - from Synth: synth.channels[<channel>]
-      - from Instrument: instrument.harmonics[<harmonic>]
+      - from Synth: synth.channels[<channel>] -> Instrument
+      - from Instrument: instrument.harmonics[<harmonic>] -> Harmonic
 
       so attr on parent just has 's' appended to identified_by name.
 
@@ -45,7 +45,7 @@ Python settings processing:
         - otherwise
 
           - if the argument is kills_value, kill the value by calling
-            kill_child(<identifier>) on parent object.
+            disable() on the object.
 
           - otherwise:
 

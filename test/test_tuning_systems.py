@@ -32,6 +32,14 @@ def test_freq_to_Hz_2(freq, hz):
     assert freq_to_Hz(freq) == pytest.approx(hz, abs=1e-4)
 
 
+@pytest.mark.parametrize("hz", (
+    10, 100, 440, 500.6, 14000
+))
+def test_Hz_to_freq(hz):
+    freq = Hz_to_freq(hz)
+    assert freq_to_Hz(freq) == pytest.approx(hz)
+
+
 @pytest.mark.parametrize("inc, cents_per_octave, num_elements, ans", (
     (1, 1200, 3, (0, 1, 2)),
     (1000, 1200, 3, (0, 1000, 800)),

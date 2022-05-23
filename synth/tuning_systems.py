@@ -40,6 +40,11 @@ def freq_to_Hz(freq):
     '''
     return np.exp((freq + Freq_offset) * Ln_cent)
 
+def Hz_to_freq(Hz):
+    r'''Translate Hz to internal absolute freq value.
+    '''
+    return math.log(Hz) / Ln_cent - Freq_offset
+
 #print(f"{Freq_offset=}, {A4=}, {freq_to_Hz(A4 + 1200)=}")
 
 def format_list(l, format="{:.2f}"):

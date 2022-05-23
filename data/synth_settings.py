@@ -19,22 +19,37 @@
      - helpers ([line])
 
 #}
+import math
+
+from .tuning_systems import Hz_to_freq
+
 
 def pack(bytes):
-    # convert 7-bit bytes to an int
+    # convert 7-bit bytes to an int, LSB first
     n = 0
-    for b in bytes:
+    for b in reversed(bytes):
         n = (n << 7) | b
     return n
 
 
-def unpack(value, *bits):
-    ans = []
-    for num_bits in reversed(bits):
-        ans.append(value & ((1 << num_bits) - 1))
-        value >>= num_bits
-    ans.reverse()
-    return ans
+class bits:
+    def __init__(self, bytes):
+        self.num_bits = 7 * len(bytes)
+        self.value = pack(bytes)
+
+    def peek(self, num_bits):
+        r'''Returns least significant num_bits without shifting them out.
+        '''
+        assert num_bits > self.num_bits, f"bits: ran out of data"
+        return self.value & ((1 << num_bits) - 1)
+
+    def pop(self, num_bits):
+        r'''Returns least significant num_bits, shifting them out.
+        '''
+        ans = self.peek(num_bits)
+        self.value >>= num_bits
+        self.num_bits -= num_bits
+        return ans
 
 
 Number_of_unknown_control_numbers = 0
@@ -125,13 +140,13 @@ def {{ name }}(synth, channel, control_number, value):
 
 {% endfor %}
 Control_number_map = {
-  0x63: set_NR_param_MSB,
-  0x62: set_NR_param_LSB,
-  0x06: set_NR_data_entry_course,
-  0x26: set_NR_data_entry_fine,
+    0x63: set_NR_param_MSB,
+    0x62: set_NR_param_LSB,
+    0x06: set_NR_data_entry_course,
+    0x26: set_NR_data_entry_fine,
   {% for keys, name, _ in control_fns %}
     {% for key in keys %}
-    {{ key }}: {{ name }},
+    {{ key|hex }}: {{ name }},
     {% endfor %}
   {% endfor %}
 }
@@ -164,7 +179,7 @@ def {{ name }}(synth, channel, param_number, value):
 NR_param_map = {
   {% for keys, name, _ in NR_param_fns %}
     {% for key in keys %}
-    {{ key }}: {{ name }},
+    {{ key|hex(4) }}: {{ name }},
     {% endfor %}
   {% endfor %}
 }
@@ -177,13 +192,14 @@ def process_MIDI_system_common(synth, MIDI_message):
     global Number_of_unknown_system_commands
 
     command, *rest = MIDI_message
+    value = bits(rest)
     key = {{ system_common_key }}
     if key not in System_common_map:
         print(f"Unknown MIDI System Common command: {key}")
         Number_of_unknown_system_commands += 1
         Unknown_system_commands.add(key)
         return
-    System_common_map[key](synth, pack(rest))
+    System_common_map[key](synth, value)
 
 
 {% for _, name, body in system_common_fns %}
@@ -197,7 +213,11 @@ def {{ name }}(synth, value):
 System_common_map = {
   {% for keys, name, _ in system_common_fns %}
     {% for key in keys %}
-    {{ key }}: {{ name }},
+    {% if key is integer %}
+    {{ key|hex }}: {{ name }},
+    {% else %}
+    {{ key|map(hex) }}: {{ name }},
+    {% endif %}
     {% endfor %}
   {% endfor %}
 }

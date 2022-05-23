@@ -28,19 +28,19 @@ Synth:
                     choices:
                         Equal_temperament:
                             parameters:
+                                - sys_common_type:
+                                    bits: 3
+                                    value: 1
                                 - Cents/Semitone:
                                     units: cents
                                     default: 100
-                                    range: [98.583, 100.279]
+                                    # target range: [98.583, 100.279]
                                     steps_per_unit: 12
                                     alignment:
                                         steps: 17
                                         value: 100
                                     max_steps: 21
                                     python_arg_name: cents_per_semitone
-                                - sys_common_type:
-                                    bits: 3
-                                    value: 1
                             non_registered_parameter:
                                 code: 0x0000
                                 add: sys_common_type
@@ -49,6 +49,9 @@ Synth:
                                 key_on: sys_common_type
                         Well_temperament:
                             parameters:
+                                - sys_common_type:
+                                    bits: 3
+                                    value: 2
                                 - tonic:
                                     default: C
                                     choices: [C, "C#", D, Eb, E, F, "F#", G, Ab, A, Bb, B]
@@ -57,9 +60,6 @@ Synth:
                                               null]
                                     default: null
                                     null_value: 0xF
-                                - sys_common_type:
-                                    bits: 3
-                                    value: 2
                             non_registered_parameter:
                                 code: 0x0000
                                 add: sys_common_type
@@ -68,6 +68,9 @@ Synth:
                                 key_on: sys_common_type
                         Just_intonation:
                             parameters:
+                                - sys_common_type:
+                                    bits: 3
+                                    value: 3
                                 - tuning:
                                     choices:
                                         - Symmetric 5-limit 1-A
@@ -92,9 +95,6 @@ Synth:
                                               null]
                                     default: null
                                     null_value: 0xF
-                                - sys_common_type:
-                                    bits: 3
-                                    value: 3
                             non_registered_parameter:
                                 code: 0x0000
                                 add: sys_common_type
@@ -103,6 +103,9 @@ Synth:
                                 key_on: sys_common_type
                         Meantone:
                             parameters:
+                                - sys_common_type:
+                                    bits: 3
+                                    value: 4
                                 - tonic:
                                     default: C
                                     choices: [C, "C#", D, Eb, E, F, "F#", G, Ab, A, Bb, B]
@@ -120,9 +123,6 @@ Synth:
                                     default: 0
                                     steps_per_unit: 3
                                     bits: 7
-                                - sys_common_type:
-                                    bits: 3
-                                    value: 4
                             non_registered_parameter:
                                 code: 0x0000
                                 add: sys_common_type
@@ -131,6 +131,9 @@ Synth:
                                 key_on: sys_common_type
                         Pythagorean_tuning:
                             parameters:
+                                - sys_common_type:
+                                    bits: 3
+                                    value: 5
                                 - tonic:
                                     default: C
                                     choices: [C, "C#", D, Eb, E, F, "F#", G, Ab, A, Bb, B]
@@ -139,9 +142,6 @@ Synth:
                                     default: 0
                                     steps_per_unit: 3
                                     bits: 7
-                                - sys_common_type:
-                                    bits: 3
-                                    value: 5
                             non_registered_parameter:
                                 code: 0x0000
                                 add: sys_common_type
@@ -153,6 +153,9 @@ Synth:
                     choices:
                         tune_absolute:
                             parameters:
+                                - sys_common_type:
+                                    bits: 3
+                                    value: 6
                                 - note_to_tune:
                                     default: A
                                     choices: [C, "C#", D, Eb, E, F, "F#", G, Ab, A, Bb, B]
@@ -164,10 +167,7 @@ Synth:
                                     units: Hz
                                     steps_per_unit: 2
                                     signed: true
-                                    to_python: Hz_to_cents
-                                - sys_common_type:
-                                    bits: 3
-                                    value: 6
+                                    to_python: Hz_to_freq
                             non_registered_parameter:
                                 code: 0x0000
                                 add: sys_common_type
@@ -191,45 +191,47 @@ Synth:
                     Identified_by: harmonic
                     Settings:
                         freq_offset:
-                            choices:
-                                freq_multiplier_offset:
-                                    immediate: true
-                                    parameters:
-                                        - harmonic:  # 1-10
-                                            range: [1, 10]
-                                            to_python: sub1
-                                        - offset:    # targeting +/- 0.5 by 0.01,
-                                                     # so 3rd harmonic would range
-                                                     # from 2.5 to 3.5
-                                            bits: 7
-                                            signed: true
-                                            steps_per_unit: 100
-                                            center_value:
-                                                param: harmonic
-                                                show: true
-                                            to_python: to_cents
-                                    control_change:
-                                        code: 0x16
-                                        add: harmonic
+                            course_multiple:
+                                immediate: true
+                                parameters:
+                                    - harmonic:  # 1-10
+                                        range: [1, 10]
+                                        to_python: sub1
+                                    - value:     # targeting 0, 12 by 0.1
+                                        bits: 7
+                                        steps_per_unit: 10
+                                        for_display:
+                                            label: mult
+                                            add: fine_multiple
+                                            for: [channel, harmonic]
+                                            alt_display:
+                                                fn: to_cents
+                                                label: cents
+                                control_change:
+                                    code: 0x16
+                                    add: harmonic
 
-                                freq_cent_offset:
-                                    immediate: true
-                                    parameters:
-                                        - harmonic: # 1-10
-                                            range: [1, 10]
-                                            to_python: sub1
-                                        - offset:         # targeting +/- 50 by 2
-                                            units: cent
-                                            bits: 7
-                                            signed: true
-                                            steps_per_unit: 2
-                                            center_value:
-                                                what: closest_semitone
-                                                show: false
-                                            to_python: add_closest_semitone
-                                    control_change:
-                                        code: 0x50
-                                        add: harmonic
+                            fine_multiple:
+                                immediate: true
+                                parameters:
+                                    - harmonic: # 1-10
+                                        range: [1, 10]
+                                        to_python: sub1
+                                    - offset:         # +/- 0.050
+                                        units: cent
+                                        bits: 7
+                                        signed: true
+                                        steps_per_unit: 1000
+                                        for_display:
+                                            label: mult
+                                            add: course_multiple
+                                            for: [channel, harmonic]
+                                            alt_display:
+                                                fn: to_cents
+                                                label: cents
+                                control_change:
+                                    code: 0x50
+                                    add: harmonic
 
                         ampl_offset:
                             immediate: true

@@ -40,12 +40,13 @@ class Thing:
                    settings={},
               )
 
-    def __init__(self, name, location, **args):
+    def __init__(self, name, location, parent=None, **args):
         self.name = name
         if location:
             self.full_name = f"{location}.{name}"
         else:
             self.full_name = name
+        self.parent = parent
         seen = set()
         for key, value in args.items():
             lkey = key.lower()
@@ -58,7 +59,7 @@ class Thing:
                 setattr(self, key, default)
         assert isinstance(self.ignore_control_codes, list)
         self.ignore_control_codes = frozenset(self.ignore_control_codes)
-        self.subordinates = parse_things(self.subordinates, self.full_name)
+        self.subordinates = parse_things(self.subordinates, self.full_name, self)
         self.settings = parse_settings(self.settings, self.full_name, self)
 
     def __str__(self):
@@ -105,7 +106,7 @@ class Setting:
                 setattr(self, key, default)
         self.parameters = parse_parameters(self.parameters, self.full_name, self)
         offset = system_common_offset = 0
-        for p in reversed(self.parameters):
+        for p in self.parameters:
             p.offset = offset
             p.system_common_offset = system_common_offset
             system_common_offset += p.bits
@@ -129,11 +130,24 @@ class Setting:
     def dump(self, indent=''):
         print(indent, f"Setting: {self.name}", sep='')
 
-    def gen_python_code(self):
-        pass
+    def find_param(self, p_name, error_if_not_found=True):
+        r'''Returns None if not found.
+        '''
+        for p in self.parameters:
+            if p.name == p_name:
+                return p
+        if error_if_not_found:
+            raise KeyError(f"{self.full_name}: parameter {p_name} not found")
+        return None
 
-    def gen_exp_code(self):
-        pass
+    def get_attr_name(self):
+        current = self
+        while True:
+            assert current is not None
+            if current.group is None or current.group.name != 'choices':
+                return current.name
+            current = current.group
+
 
 
 class Message_format:
@@ -145,6 +159,7 @@ class Message_format:
             config = dict(code=config)
         assert "code" in config
         self.code = self.my_code = config.pop("code")
+        self.param = None
         for option in self.allow_options:
             if option not in config:
                 setattr(self, option, None)
@@ -169,6 +184,11 @@ class Message_format:
                            f"unknown parameters {tuple(config.keys())}"
         self.init()
 
+    def keys(self):
+        if self.add is None:
+            return [self.my_code]
+        return [self.my_code + v for v in range(self.param.limit - self.param.start + 1)]
+
 
 class Non_registered_parameter(Message_format):
     NR_param_numbers_used = set()
@@ -182,7 +202,7 @@ class Non_registered_parameter(Message_format):
         #print("NR param nums:", ', '.join(hex(c) for c in codes_to_check))
         for code in codes_to_check:
             assert code not in self.NR_param_numbers_used, \
-              f"{self.setting} non_registered_parameter: 0x{code:X} is already assigned"
+              f"{self.setting} non_registered_parameter: 0x{code:04X} is already assigned"
             self.NR_param_numbers_used.add(code)
 
 
@@ -198,9 +218,9 @@ class Control_change(Message_format):
         #print("Control_change:", ', '.join(hex(c) for c in codes_to_check))
         for code in codes_to_check:
             assert code not in Reserved_control_numbers, \
-              f"{self.setting} control_change: 0x{code:X} is a reserved code"
+              f"{self.setting} control_number: 0x{code:02X} is a reserved code"
             assert code not in self.Control_numbers_used, \
-              f"{self.setting} control_change: 0x{code:X} is already assigned"
+              f"{self.setting} control_number: 0x{code:02X} is already assigned"
             self.Control_numbers_used.add(code)
 
 
@@ -209,10 +229,12 @@ class System_common(Message_format):
     allow_options = ("key_on",)
 
     Offset_lengths = {}   # {code: (length, offset)}
+    Offset = 0
+    Length = 0
 
     def init(self):
         assert self.code not in Reserved_system_common, \
-          f"{self.setting} system_common: 0x{self.code:X} is a reserved code"
+          f"{self.setting} system_common: 0x{self.code:02X} is a reserved code"
         if self.key_on is None:
             if self.code not in self.Offset_lengths:
                 self.Offset_lengths[self.code] = (0, 0)
@@ -231,6 +253,15 @@ class System_common(Message_format):
                 assert self.Offset_lengths[self.code] == (length, offset), \
                   f"{self.setting} system_common ({length}, {offset}): " \
                   f"Conflict with other key_on setting {self.Offset_lengths[self.code]}"
+            System_common.Offset = offset
+            System_common.Length = length
+
+    def keys(self):
+        if self.key_on is not None:
+            return [(self.my_code, self.param.value)]
+        if self.Length:
+            return [(self.my_code, value) for value in range(2**self.Length)]
+        return [self.my_code]
 
 
 class Group:
@@ -258,6 +289,7 @@ class Parameter:
 
     def __init__(self, name, location, setting, **args):
         self.name = name
+        self.python_name = name
         self.full_name = f"{location}^{name}"
         self.setting = setting
         seen = set()
@@ -274,6 +306,8 @@ class Parameter:
                     raise TypeError(f"{self.__class__.__name__}: {self.full_name}, "
                                     f"unexpected argument {key}")
                 setattr(self, lkey, value)
+                if lkey == 'python_arg_name':
+                    self.python_name = value
                 seen.add(lkey)
         for key, default in self.kw_args.items():
             if key not in seen:
@@ -285,6 +319,55 @@ class Parameter:
 
     def dump(self, indent=''):
         print(indent, f"{self.__class__.__name__}: {self.name}", sep='')
+
+    def unpack(self, exp, body):
+        r'''Appends line(s) to body to unpack the parameter.
+        '''
+        # value = self.step_size*param + self.start
+        indent = ''
+        if self.step_size != 1:
+            exp += f' * {self.step_size}'
+        if self.start != 0:
+            exp += f' + {self.start}'
+        if self.null_value is not None:
+            body.append(f"t = {exp}")
+            body.append(f"if t == {self.null_value}:")
+            if self.kills_value is None:
+                body.append(f"    kill = True")
+            else:
+                body.append(f"    params[{self.python_name!r}] = None")
+            body.append(f"else:")
+            indent = '    '
+            exp = "t"
+        if self.kills_value != () and self.kills_value is not None:
+            if exp != 't':
+                body.append(f"{indent}t = {exp}")
+            body.append(f"{indent}if t == {self.kills_value}:")
+            body.append(f"{indent}    kill = True")
+            body.append(f"{indent}else:")
+            indent += '    '
+            exp = "t"
+        if self.to_python is not None:
+            # as_index_in: List, Hz_to_freq, sub1, as_percent_of: N
+            if self.to_python == "Hz_to_freq":
+                exp = f"Hz_to_freq({exp})"
+            elif self.to_python == "sub1":
+                exp += ' - 1'
+            else:
+                assert isinstance(self.to_python, dict), \
+                  f"{self.full_name}: unknown to_python value {self.to_python}"
+                if 'as_index_in' in self.to_python:
+                    new_values = {choice: (self.to_python['as_index_in'].index(choice)
+                                           if choice is not None
+                                           else None)
+                                  for choice in self.choices}
+                    exp = f"{new_values}[{exp}]"
+                elif 'as_percent_of' in self.to_python:
+                    exp = f"{self.to_python['as_percent_of']} / ({exp})"
+                else:
+                    raise AssertionError(
+                            f"{self.full_name}: unknown to_python value {self.to_python}")
+        body.append(f"{indent}params[{self.python_name!r}] = {exp}")
 
 
 class Lin_param(Parameter):
@@ -302,18 +385,14 @@ class Lin_param(Parameter):
                    max_steps=None,     # has range
                    null_value=None,
                    kills_value=(),     # () can't be a legal value
-                   to_python=None,     # ignore, as_index_in: List, Hz_to_cents, sub1,
-                                       # to_cents, add_closest_semitone, as_percent_of: N
-                   center_value=None,  # param: <name>, what: <known_name>
-                                       # + show: true/false (incl in value displayed on
-                                       #                     exp console?)
-                                       # this gets added to signed value, so doesn't affect
-                                       # the m/b calculations.
+                   to_python=None,     # as_index_in: List, Hz_to_freq, sub1,
+                                       # as_percent_of: N
+                   for_display=None,   # label, add, for, alt_display (fn, label)
                    python_arg_name=None,
               )
 
     def init(self):
-        # value = self.step_size*param + self.start + <center_value>
+        # value = self.step_size*param + self.start
         if self.range is not None:
             assert self.start is None, \
               f"{self}: start not None while range is not None"
@@ -329,6 +408,10 @@ class Lin_param(Parameter):
                 self.step_size = 1/self.steps_per_unit
 
         if self.limit is not None:
+            assert self.alignment is None, \
+              f"{self}: alignment not None while limit is not None"
+            assert self.max_steps is None, \
+              f"{self}: max_steps not None while limit is not None"
             #assert self.start is None or self.bits is None, \
             #  f"{self}: start not None and bits not None while limit is not None"
             assert self.start is not None or self.bits is not None, \
@@ -364,6 +447,10 @@ class Lin_param(Parameter):
         else: # self.limit is None
             # self.limit is None, need to set this!
             if self.start is not None:
+                assert self.alignment is None, \
+                  f"{self}: alignment not None while start is not None, limit is None"
+                assert self.max_steps is None, \
+                  f"{self}: max_steps not None while start is not None, limit is None"
                 assert self.bits is not None, \
                   f"{self}: bits is None while start is not None, limit is None"
                 max_param = 2**self.bits - 1
@@ -380,18 +467,33 @@ class Lin_param(Parameter):
                         self.step_size = 1
                     self.limit = self.start + max_param * self.step_size
             else:
-                # self.start is None, need to set this!
-                assert self.bits is not None, \
-                  f"{self}: bits is None while start and limit are None"
-                max_param = 2**self.bits - 1
-                if self.step_size is None:
-                    self.step_size = 1
-                if self.signed:
-                    self.limit = max_param/2 * self.step_size
-                    self.start = -self.limit
-                else:
-                    self.start = 0
-                    self.limit = max_param * self.step_size
+                # self.start and self.limit are None, need to set these!
+                assert self.bits is not None or self.max_steps is not None, \
+                  f"{self}: bits and max_steps are None while start and limit are None"
+                if self.max_steps is not None:
+                    assert self.bits is None, \
+                      f"{self}: bits not None while max_steps not None"
+                    self.bits = math.ceil(math.log2(self.max_steps))
+                if self.alignment is not None:
+                    assert self.step_size is not None, \
+                      f"{self}: step_size None while alignment not None"
+                    self.start = \
+                      self.alignment['value'] - self.alignment['steps'] * self.step_size
+                    if self.max_steps is not None:
+                        self.limit = self.start + self.step_size * self.max_steps
+                    else:
+                        self.limit = self.start + self.step_size * 2**(self.bits - 1)
+                else:  # alignment is None
+                    max_param = 2**self.bits - 1
+                    if self.step_size is None:
+                        self.step_size = 1
+                    if self.signed:
+                        self.limit = max_param/2 * self.step_size
+                        self.start = -self.limit
+                    else:
+                        self.start = 0
+                        self.limit = max_param * self.step_size
+
         assert self.start is not None
         assert self.limit is not None
         assert self.bits is not None
@@ -407,8 +509,7 @@ class Geom_param(Parameter):
                    kills_value=(),     # () can't be a legal value
 
                    default=(),         # () can't be a legal value
-                   to_python=None,     # ignore, as_index_in: List, Hz_to_cents, sub1,
-                                       # to_cents, add_closest_semitone, as_percent_of: N
+                   to_python=None,     # Hz_to_freq, sub1, as_percent_of: N
                    python_arg_name=None,
               )
 
@@ -417,12 +518,48 @@ class Geom_param(Parameter):
         assert self.progression == "geom"
         self.m, self.c = calc_geom(self.bits, self.limit, self.b, self.start)
 
+    def unpack(self, exp, body):
+        # value = e**(m*param + b) + c
+        if self.b == 0:
+            exp = f"math.exp({self.m} * {exp}) + {self.c}"
+        else:
+            exp = f"math.exp({self.m} * {exp} + {self.b}) + {self.c}"
+        indent = ''
+        if self.kills_value != () and self.kills_value is not None:
+            if exp != 't':
+                body.append(f"{indent}t = {exp}")
+            body.append(f"{indent}if t == {self.kills_value}:")
+            body.append(f"{indent}    kill = True")
+            body.append(f"{indent}else:")
+            indent += '    '
+            exp = "t"
+        if self.to_python is not None:
+            # Hz_to_freq, sub1, as_percent_of: N
+            if self.to_python == "Hz_to_freq":
+                exp = f"Hz_to_freq({exp})"
+            elif self.to_python == "sub1":
+                exp += ' - 1'
+            else:
+                assert isinstance(self.to_python, dict), \
+                  f"{self.full_name}: unknown to_python value {self.to_python}"
+                if 'as_percent_of' in self.to_python:
+                    exp = f"{self.to_python['as_percent_of']} / ({exp})"
+                else:
+                    raise AssertionError(
+                            f"{self.full_name}: unknown to_python value {self.to_python}")
+        body.append(f"{indent}params[{self.python_name!r}] = {exp}")
+
 
 class Constant_param(Parameter):
     is_constant = True
     required = frozenset("bits,value".split(','))
 
     def init(self):
+        self.start = 0
+        self.limit = 2**self.bits - 1
+        self.kills_value = ()
+
+    def unpack(self, exp, body):
         pass
 
 
@@ -434,13 +571,14 @@ class Choices_param(Parameter):
                    default=(),         # () can't be a legal value
                    null_value=None,
                    kills_value=(),     # () can't be a legal value
-                   to_python=None,     # ignore, as_index_in: List, Hz_to_cents, sub1,
+                   to_python=None,     # ignore, as_index_in: List, Hz_to_freq, sub1,
                                        # to_cents, add_closest_semitone, as_percent_of: N
                    python_arg_name=None,
               )
 
     def init(self):
         self.start = 0
+        self.step_size = 1
         self.bits = math.ceil(math.log2(len(self.choices)))
         if self.null_value is None:
             self.limit = len(self.choices) - 1
@@ -467,8 +605,8 @@ def get_settings(filename="synth_settings.yaml"):
     synth = top_level["Synth"]
     return synth, Settings
 
-def parse_things(things, location=None):
-    return {name: Thing(name, location, **arguments)
+def parse_things(things, location=None, parent=None):
+    return {name: Thing(name, location, parent, **arguments)
             for name, arguments in things.items()}
 
 def parse_settings(settings, location, thing, group=None):
