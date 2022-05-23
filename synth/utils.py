@@ -6,7 +6,7 @@ r'''
 
 import math
 
-from .channel import Var, Actor
+from .notify import Var, Notify_actors, Actor
 
 
 
@@ -49,21 +49,26 @@ class Largest_value_calculator:
 
 
 class Target_time_actor(Actor):
+    target_time = Notify_actors()
+
     def __init__(self):
         super().__init__(Num_harmonics, name="Target_time")
 
     def set_target_time(self, target_time, harmonic_gen_time):
         self.dac_target_time = target_time
         self.harmonic_gen_time = harmonic_gen_time
-        self.set('target_time',
-                 self.dac_target_time - Num_harmonics.value * self.harmonic_gen_time)
+        self.target_time = \
+          self.dac_target_time - Num_harmonics.value * self.harmonic_gen_time
 
     def recalc(self):
-        self.set('target_time',
-                 self.dac_target_time - Num_harmonics.value * self.harmonic_gen_time)
+        self.target_time = \
+          self.dac_target_time - Num_harmonics.value * self.harmonic_gen_time)
 
 
-Num_harmonics = Var('Num_harmonics', value=0)
+class Num_harmonics_class(Var):
+    value = Notify_actors()
+Num_harmonics = Num_harmonics_class()
+Num_harmonics.value = 0
 print(f"{id(Num_harmonics)=}, {Num_harmonics.value=}")
 Target_time = Target_time_actor()
 

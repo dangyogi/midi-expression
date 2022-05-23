@@ -16,8 +16,8 @@ from queue import SimpleQueue, Empty
 import rtmidi
 import rtmidi.midiutil
 
-from .utils import Largest_value_calculator, Actor, Target_time
-from .channel import recalc_actors
+from .utils import Largest_value_calculator, Target_time
+from .notify import Actor, recalc_actors
 
 
 #def sig_handler(signum, stackframe):

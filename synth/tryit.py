@@ -28,7 +28,7 @@ from .pyaud import Soundcard
 from . import fill_sound_blocks
 from .synth import Synth, Instrument, Harmonic
 from .midi_in import Midi_in
-from . import channel
+from . import notify
 
 
 def init(idle_fun=None):
@@ -67,8 +67,8 @@ def fini():
     midiin.report()
     print("Calling synth.report()")
     synth.report()
-    print("Calling channel.report()")
-    channel.report()
+    print("Calling notify.report()")
+    notify.report()
 
     print("tryit.fini doing closes")
     midiin.close()

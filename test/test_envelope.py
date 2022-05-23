@@ -3,9 +3,6 @@
 from synth.envelope import *
 
 
-def scale_unity(x):
-    return x
-
 def test_constant():
-    c = Constant(4, 3, scale_unity)
+    c = Constant(4, 3, None)
 

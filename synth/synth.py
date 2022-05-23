@@ -5,7 +5,7 @@ import numpy as np
 import math
 from itertools import repeat
 
-from .channel import Var, Actor
+from .notify import Var, Notify_actors, Actor
 from .utils import Num_harmonics, two_byte_value
 from .tuning_systems import freq_to_Hz
 
@@ -14,6 +14,10 @@ class Synth(Var):
     r'''
     Reports changes in key_signature, tuning_system, and volume.
     '''
+
+    volume = Notify_actors()
+    key_signature = Notify_actors()
+    tuning_system = Notify_actors()
 
     def __init__(self, soundcard, volume=0.3, tuning_system=None, key_signature=None):
         super().__init__("My synth")
@@ -264,11 +268,11 @@ class Instrument(Actor):
 
     def recalc(self):
         if self.volume_from_synth:
-            self.set('volume', self.synth.volume)
+            self.volume = self.synth.volume
         if self.key_sig_from_synth:
-            self.set('key_signature', self.synth.key_signature)
+            self.key_signature = self.synth.key_signature
         if self.tuning_system_from_synth:
-            self.set('tuning_system', self.synth.tuning_system)
+            self.tuning_system = self.synth.tuning_system
 
     def add_harmonic(self, harmonic):
         self.harmonics.append(harmonic)
@@ -294,7 +298,7 @@ class Instrument(Actor):
             if midi_note in self.notes_playing:
                 print(f"killing {midi_note=}: already playing")
                 self.num_notes_already_playing += 1
-                Num_harmonics.dec('value', len(self.notes_playing[midi_note]))
+                Num_harmonics.value -= len(self.notes_playing[midi_note])
                 for ph in self.notes_playing[midi_note]:
                     ph.delete()
                 del self.notes_playing[midi_note]
@@ -312,7 +316,7 @@ class Instrument(Actor):
                 self.synth.idle_fun_caught_running += 1
             if harmonics_added:
                 self.velocities[midi_note] = my_velocity
-                Num_harmonics.inc('value', harmonics_added)
+                Num_harmonics.value += harmonics_added
             #print("note_on", midi_note, len(self.harmonics), harmonics_added,
             #      self.synth.idle_fun_running, Num_harmonics.value)
 
@@ -486,7 +490,7 @@ class Instrument(Actor):
                     del self.velocities[note]
             #print(f"populate_sound_block: {num_harmonics_deleted=}, {note_deletes=}")
             if num_harmonics_deleted:
-                Num_harmonics.dec('value', num_harmonics_deleted)
+                Num_harmonics.value -= num_harmonics_deleted
             instrument_block *= self.volume
             # FIX: add panning
             block += instrument_block

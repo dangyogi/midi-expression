@@ -2,26 +2,84 @@
 
 r'''Envelopes change a value over time.  That value could be a freq, or an amplitude.
 
-The values are generated in blocks.
+The values are generated in soundcard numpy blocks.
 
-The length of envelope may be scaled by giving it a base freq.
+The duration of the envelope (how many blocks it will generate) may be scaled by a base freq.
 '''
 
-from .channel import Block_generator
+import math
+
+from .notify import Var, Actor
+from .tuning_systems import C4_freq
 
 
-class Envelope:
-    def for_period(self, base_freq, start=None):
-        r'''Returns a generator yielding value(s), duration (in samples), end.
+class Envelope(Var):
+    r'''Derived classes must define "generator" class variable.
+    '''
+    def __init__(self, name, scale_3):
+        super().__init__(name=name)
+        if scale_3 is None:
+            self.scale_base = 0
+        else:
+            self.scale_base = math.log(scale_3) / (3 * 1200)  # scale by cents
+        self.number_of_generators = 0
 
-        The generator yields up to Output.block_size samples per iteration.
+    def start(self, base_freq, start=None):
+        r'''Returns a generator yielding soundcard block-sized numpy arrays.
 
-        The base_freq is used to scale the period of the envelope.  This is done by giving
-        each Envelope a scale_fn that takes a base_freq and returns a scale (1 is no
-        change, 0.5 cuts the period in half, 2 doubles it, etc).
+        The base_freq is an internal absolute freq (in cents) and is used to scale the
+        period of the envelope.  This is done by giving each Envelope a scale_fn that
+        takes a base_freq and returns a scale (1 is no change, 0.5 cuts the period in
+        half, 2 doubles it, etc).
 
-        The start indicates a starting value.  Not used by all Envelopes...
+        The start indicates a starting value for the iteration.  Not used by all
+        Envelopes...
         '''
+        self.number_of_generators += 1
+        return self.generator(self, self.scale(base_freq), start)
+
+    def scale(self, base_freq):
+        return math.exp(self.scale_base * (C4_freq - base_freq))
+
+
+class Block_generator(Actor):
+    r'''Derived class must provide recalc and __iter__ methods.
+
+    __iter__ must set self.next to the value following the next yield.  This should be done
+    immediately before the yield statement.  It should also call self.delete in a finally
+    block.
+
+    recalc must recalc self.scale, along with anything else needed.
+    '''
+    def __init__(self, envelope, base_freq, start):
+        super().__init__(envelope, name=f"{envelope.name}_{envelope.number_of_generators}")
+        self.envelope = envelope
+        self.base_freq = base_freq
+        self.next = start
+        self.recalc()
+
+    def recalc(self):
+        self.scale = self.envelope.scale(self.base_freq)
+
+    def next_value(self):
+        return self.next
+
+
+class Constant_generator(Block_generator):
+    def recalc(self):
+        super().recalc()
+        if self.envelope.duration is None:
+            self.duration = None   # forever...
+        else:
+            self.duration = self.envelope.duration * self.envelope.scale(self.base_freq)
+        self.value = self.envelope.value
+        self.next = self.value
+
+    def __iter__(self):
+        try:
+            yield from Flat_generator(self)
+        finally:
+            self.delete()
 
 
 class Constant(Envelope):
@@ -29,37 +87,13 @@ class Constant(Envelope):
 
     The duration is scaled.
     '''
-    def __init__(self, value, duration=None, scale_fn=None):
+    generator = Constant_generator
+
+    def __init__(self, name, value, scale_3=None, duration=None):
+        super().__init__(name, scale_3)
         self.value = value
         self.duration = duration
-        self.scale_fn = scale_fn
 
-    def for_period(self, base_freq, start=None):
-        r'''start is not used.
-        '''
-        return Constant_generator(self, base_freq)
-
-
-class Constant_generator(Block_generator):
-    def __init__(self, constant, base_freq):
-        super().__init__(constant)
-        self.constant = constant  # has value, duration (may be None) and scale_fn
-        self.base_freq = base_freq
-        self.recalc()
-
-    def recalc(self):
-        if self.constant.duration is None:
-            self.set('length', None)
-        else:
-            self.set('length',
-                     self.constant.duration * self.constant.scale_fn(self.base_freq))
-        self.set('value', self.constant.value)
-
-    def __iter__(self):
-        try:
-            yield from Flat_generator(self)
-        finally:
-            self.delete()
 
 
 class Flat_generator(Block_generator):

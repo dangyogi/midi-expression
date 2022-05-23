@@ -17,7 +17,6 @@ import math
 import numpy as np
 
 from .notes import Notes, nat
-from .channel import Channel, Channel_setting
 
 
 
@@ -26,14 +25,14 @@ Cent = math.pow(2, 1/1200)  # 1.0005777895065548
 Ln_cent = math.log(Cent)
 
 
-C4 = 1200 * 4   # offset from C0
-A4 = C4 + 900   # offset from C0
-A4_freq = 440
-C4_freq = A4_freq / Cent**900   # 261.6256
-C0_freq = A4_freq / Cent**A4    # 16.3516
-#print(f"{C4_freq=}")
-#print(f"{C0_freq=}")
-Freq_offset = math.log(C0_freq) / Ln_cent - 1200  # Offset to C-1
+C4_freq = 1200 * 5               # offset from C-1 in cents
+A4_freq = C4_freq + 900          # offset from C-1 in cents
+A4_Hz = 440
+C4_Hz = A4_Hz / Cent**900        # 261.6256
+C_1_Hz = A4_Hz / Cent**A4_freq   # 8.1758  C-1, lowest MIDI note
+#print(f"{C4_Hz=}")
+#print(f"{C_1_Hz=}")
+Freq_offset = math.log(C_1_Hz) / Ln_cent   # Offset to C-1
 
 def freq_to_Hz(freq):
     r'''Translate internal absolute freq value to Hz.
@@ -45,7 +44,7 @@ def Hz_to_freq(Hz):
     '''
     return math.log(Hz) / Ln_cent - Freq_offset
 
-#print(f"{Freq_offset=}, {A4=}, {freq_to_Hz(A4 + 1200)=}")
+#print(f"{Freq_offset=}, {A4_freq=}, {freq_to_Hz(A4_freq + 1200)=}")
 
 def format_list(l, format="{:.2f}"):
     str_elements = ', '.join(format.format(n) for n in l)
@@ -344,26 +343,6 @@ class Equal_temperament(Base_tuning_system):
     def __init__(self, cents_per_semitone=100):
         self.notes_to_freq = [n * cents_per_semitone for n in range(12)]
         self.cents_per_octave = 12 * cents_per_semitone
-
-
-class Tuning_system(Channel_setting):
-    name = 'tuning_system'
-    midi_config_number = 0x02  # FIX
-
-    def set_midi_value(self, value):
-        if value == 22:
-            tuning_system = Equal_temperament()
-        elif value & 0x20 == 0x00:
-            tuning_system = Well_temperament(Notes[value & 0x1F])  # value up to 21
-        elif value & 0x20 == 0x10:
-            tuning_system = Just_temperament(Notes[value & 0x1F])  # value up to 21
-        elif value & 0x40 == 0x40:
-            tuning_system = Meantone((value & 0x30) / (value & 0x0F))
-        self.set('tuning_system', tuning_system)
-        # FIX: Add tuning to match another channel's tuning_system based on key_signature.
-
-
-Channel.Settings.append(Tuning_system)
 
 
 
