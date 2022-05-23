@@ -72,3 +72,37 @@ def two_byte_value(msb, lsb):
     r'''Combines two 7-bit MIDI data bytes to produce a 14-bit result.
     '''
     return ((msb & 0x7F) << 7) | (lsb & 0x7F)
+
+
+class AbortGenerator(Exception):
+    pass
+
+class Linked_chain:
+    r'''Like itertools.chain, but passes the last value returned from one iter to the next.
+
+    Expects each iter to have a start method to accept the last value of the preceeding
+    iter.  This a generator method that replaces the __iter__ method.  These generators
+    must catch AbortGenerator, ignore it, and return the final value generated.
+    '''
+    def __init__(self, *iters):
+        self.iters = iters
+
+    def start(self, start):
+        r'''iter already called on generator.
+        '''
+        self.iter = self.start2(start)
+        return self.iter
+
+    def start_iter(self, start):
+        next = start
+        for iter in self.iters:
+            next = yield from iter.start(next)
+        return next
+
+    def abort(self):
+        r'''Returns last value.
+        '''
+        try:
+            return self.iter.throw(AbortGenerator)
+        except StopIteration as exc:
+            return exc.value
