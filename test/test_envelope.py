@@ -1,5 +1,6 @@
 # test_envelope.py
 
+import math
 from itertools import tee
 
 import numpy as np
@@ -7,6 +8,7 @@ import pytest
 from unittest.mock import Mock
 
 from synth.envelope import *
+from synth.tuning_systems import Hz_to_freq
 
 
 @pytest.fixture
@@ -64,21 +66,21 @@ def ramp(request, harmonic, duration, scale_3, bend):
     return request.param(harmonic, duration, scale_3, bend)
 
 def sin_cycle1(harmonic, duration, scale_3):
-    return Sin("test_sin_cycle1", harmonic, 1, 100, 50, duration, scale_3)
+    return Sin("test_sin_cycle1", harmonic, 0.4, 100, 50, duration, scale_3)
 
 @pytest.fixture(name="sin_cycle1")
 def sin_cycle1_fixture(harmonic, duration, scale_3):
-    return sin_cycle(harmonic, duration, scale_3)
+    return sin_cycle1(harmonic, duration, scale_3)
 
 def sin_cycle2(harmonic, duration, scale_3):
-    return Sin("test_sin_cycle1", harmonic, 1, 'base_freq', 50, duration, scale_3)
+    return Sin("test_sin_cycle2", harmonic, 0.4, 'base_freq', 50, duration, scale_3)
 
 @pytest.fixture(name="sin_cycle2")
 def sin_cycle2_fixture(harmonic, duration, scale_3):
     return sin_cycle2(harmonic, duration, scale_3)
 
 def sin(harmonic, duration, scale_3):
-    return Sin("test_sin_cycle1", harmonic, duration=duration, scale_3=scale_3)
+    return Sin("test_sin", harmonic, duration=duration, scale_3=scale_3)
 
 @pytest.fixture(name="sin")
 def sin_fixture(harmonic, duration, scale_3):
@@ -160,7 +162,11 @@ def test_synth(synth):
 def test_duration(harmonic, env, duration, exp_count, base_freq, start):
     if env is not None:
         #print("env", env, "duration", duration, "base_freq", base_freq, "start", start)
-        assert count_blocks(env.start(base_freq, start))[1] == exp_count
+        assert len(env.actors) == 0
+        gen = env.start(base_freq, start)
+        assert len(env.actors) == 1
+        assert count_blocks(gen)[1] == exp_count
+        assert len(env.actors) == 0
 
 @pytest.mark.parametrize("duration", (None, 0.5))
 @pytest.mark.parametrize("start_value", (None, 1))
@@ -318,3 +324,123 @@ def test_ramp_down2(ramp_down, bend, first_step, last_step):
     with pytest.raises(StopIteration):
         next(it)
 
+
+# return Sin("test_sin", harmonic, duration=duration, scale_3=scale_3)
+@pytest.mark.parametrize("duration", (0.4,))              # 4 blocks
+@pytest.mark.parametrize("base_freq", (Hz_to_freq(2.5), ))
+def test_sin(sin, duration, base_freq):
+    gen = sin.start(base_freq)
+    assert gen.next_value() == pytest.approx(0, abs=1e-5)
+    assert gen.target_value() == 0
+    it = iter(gen)
+
+    radians_per_sample = math.pi * 2 / 20
+
+    block = next(it)
+    assert block[0] == pytest.approx(math.sin(radians_per_sample), abs=1e-5)
+    assert block[-1] == 1
+    assert gen.next_value() == pytest.approx(math.pi/2, abs=1e-5)
+    assert gen.target_value() == 0
+
+    block = next(it)
+    assert block[0] == pytest.approx(math.sin(math.pi/2 + radians_per_sample), abs=1e-5)
+    assert block[-1] == pytest.approx(0, abs=1e-5)
+    assert gen.next_value() == pytest.approx(math.pi, abs=1e-5)
+    assert gen.target_value() == 0
+
+    block = next(it)
+    assert block[0] == pytest.approx(-math.sin(radians_per_sample), abs=1e-5)
+    assert block[-1] == pytest.approx(-1, abs=1e-5)
+    assert gen.next_value() == pytest.approx(math.pi*3/2, abs=1e-5)
+    assert gen.target_value() == 0
+
+    block = next(it)
+    assert block[0] == pytest.approx(-math.sin(math.pi/2 + radians_per_sample), abs=1e-5)
+    assert block[-1] == pytest.approx(0, abs=1e-5)
+    assert gen.next_value() == pytest.approx(0, abs=1e-5)
+    assert gen.target_value() == 0
+
+    with pytest.raises(StopIteration):
+        next(it)
+
+# cycle_time, center_ampl, ampl_swing
+# return Sin("test_sin_cycle1", harmonic, 0.4, 100, 50, duration, scale_3)
+@pytest.mark.parametrize("duration", (0.4,))              # 4 blocks
+@pytest.mark.parametrize("base_freq", (6000, 2400))
+def test_sin_cycle1(sin_cycle1, duration, base_freq):
+    gen = sin_cycle1.start(base_freq)
+    assert gen.next_value() == pytest.approx(0, abs=1e-5)
+    assert gen.target_value() == 100
+    it = iter(gen)
+
+    radians_per_sample = math.pi * 2 / 20
+
+    block = next(it)
+    assert block[0] == pytest.approx(50*math.sin(radians_per_sample) + 100, abs=1e-4)
+    assert block[-1] == pytest.approx(150, abs=1e-4)
+    assert gen.next_value() == pytest.approx(math.pi/2, abs=1e-4)
+    assert gen.target_value() == 100
+
+    block = next(it)
+    assert block[0] == pytest.approx(50*math.sin(math.pi/2 + radians_per_sample)+100,
+                                     abs=1e-4)
+    assert block[-1] == pytest.approx(100, abs=1e-4)
+    assert gen.next_value() == pytest.approx(math.pi, abs=1e-5)
+    assert gen.target_value() == 100
+
+    block = next(it)
+    assert block[0] == pytest.approx(-50*math.sin(radians_per_sample)+100, abs=1e-4)
+    assert block[-1] == pytest.approx(50, abs=1e-4)
+    assert gen.next_value() == pytest.approx(math.pi*3/2, abs=1e-4)
+    assert gen.target_value() == 100
+
+    block = next(it)
+    assert block[0] == pytest.approx(-50*math.sin(math.pi/2 + radians_per_sample)+100,
+                                     abs=1e-4)
+    assert block[-1] == pytest.approx(100, abs=1e-4)      # This needed a little more slop
+    assert gen.next_value() == pytest.approx(0, abs=1e-5)
+    assert gen.target_value() == 100
+
+    with pytest.raises(StopIteration):
+        next(it)
+
+# cycle_time, center_ampl, ampl_swing
+# return Sin("test_sin_cycle2", harmonic, 0.4, 'base_freq', 50, duration, scale_3)
+@pytest.mark.parametrize("duration", (0.4,))              # 4 blocks
+@pytest.mark.parametrize("base_freq", (1000, 2000))
+def test_sin_cycle2(sin_cycle2, duration, base_freq):
+    gen = sin_cycle2.start(base_freq)
+    assert gen.next_value() == pytest.approx(0, abs=1e-5)
+    assert gen.target_value() == base_freq
+    it = iter(gen)
+
+    radians_per_sample = math.pi * 2 / 20
+
+    block = next(it)
+    assert block[0] == pytest.approx(50*math.sin(radians_per_sample) + base_freq, abs=1e-3)
+    assert block[-1] == pytest.approx(50 + base_freq, abs=1e-3)
+    assert gen.next_value() == pytest.approx(math.pi/2, abs=1e-5)
+    assert gen.target_value() == base_freq
+
+    block = next(it)
+    assert block[0] == pytest.approx(50*math.sin(math.pi/2 + radians_per_sample)+base_freq,
+                                     abs=1e-3)
+    assert block[-1] == pytest.approx(base_freq, abs=1e-3)
+    assert gen.next_value() == pytest.approx(math.pi, abs=1e-5)
+    assert gen.target_value() == base_freq
+
+    block = next(it)
+    assert block[0] == pytest.approx(-50*math.sin(radians_per_sample)+base_freq, abs=1e-3)
+    assert block[-1] == pytest.approx(-50 + base_freq, abs=1e-3)
+    assert gen.next_value() == pytest.approx(math.pi*3/2, abs=1e-5)
+    assert gen.target_value() == base_freq
+
+    block = next(it)
+    assert block[0] == pytest.approx(-50*math.sin(math.pi/2 + radians_per_sample)+base_freq,
+                                     abs=1e-3)
+    assert block[-1] == pytest.approx(base_freq, abs=1e-3)
+    assert gen.next_value() == pytest.approx(0, abs=1e-5)
+    assert gen.target_value() == base_freq
+
+    with pytest.raises(StopIteration):
+        next(it)
