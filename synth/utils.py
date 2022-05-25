@@ -69,7 +69,8 @@ class Num_harmonics_class(Var):
     value = Notify_actors()
 Num_harmonics = Num_harmonics_class()
 Num_harmonics.value = 0
-print(f"{id(Num_harmonics)=}, {Num_harmonics.value=}")
+
+#print(f"{id(Num_harmonics)=}, {Num_harmonics.value=}")
 Target_time = Target_time_actor()
 
 

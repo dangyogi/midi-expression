@@ -29,6 +29,7 @@ class Synth(Var):
         self.block_duration = soundcard.block_duration
         self.block_size = soundcard.block_size
         self.dtype = soundcard.dtype
+        self.delta_times = soundcard.delta_times
         self.volume = volume
         if tuning_system is not None:
             self.tuning_system = tuning_system
