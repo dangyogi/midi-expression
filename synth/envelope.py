@@ -8,41 +8,71 @@ The duration of the envelope (how many blocks it will generate) may be scaled by
 '''
 
 import math
+from itertools import count
+import numpy as np
 
-from .notify import Var, Actor
-from .tuning_systems import C4_freq
+from .notify import Notify_actors, Var, Actor
+from .tuning_systems import C4_freq, freq_to_Hz
+from .utils import Cross_setter
 
 
+# FIX: Should this be an Actor based on Harmonic?
 class Envelope(Var):
-    r'''Derived classes must define "generator" class variable.
+    r'''Base class for the various types of Envelopes.
+
+    These objects last long-term and are used many times over and over again.  The
+    generator objects created by the `start` method are only used once.
+
+    Derived classes must define the "generator" class variable.
     '''
-    def __init__(self, name, scale_3):
+    duration = Notify_actors()
+    scale_base = Notify_actors()
+
+    def __init__(self, name, harmonic, duration, scale_3):
         super().__init__(name=name)
-        if scale_3 is None:
-            self.scale_base = 0
-        else:
-            self.scale_base = math.log(scale_3) / (3 * 1200)  # scale by cents
+        self.harmonic = harmonic
+        self.duration = duration
+        self.block_duration = harmonic.instrument.synth.block_duration
+        self.block_size = harmonic.instrument.synth.block_size
+        self.dtype = harmonic.instrument.synth.dtype
+        self.scale_3 = scale_3
         self.number_of_generators = 0
 
+    @Cross_setter
+    def scale_3(self, value):
+        if value is None:
+            self.scale_base = 0
+        else:
+            self.scale_base = math.log(value) / (3 * 1200)  # scale by cents
+
     def start(self, base_freq, start=None):
-        r'''Returns a generator yielding soundcard block-sized numpy arrays.
+        r'''Returns a Block_generator yielding soundcard block-sized numpy arrays.
 
         The base_freq is an internal absolute freq (in cents) and is used to scale the
-        period of the envelope.  This is done by giving each Envelope a scale_fn that
-        takes a base_freq and returns a scale (1 is no change, 0.5 cuts the period in
-        half, 2 doubles it, etc).
+        duration of the envelope.  This is done by giving each Envelope a scale_3 that
+        takes a base_freq and returns a scale that gets multiplied by the duration.
 
         The start indicates a starting value for the iteration.  Not used by all
-        Envelopes...
+        Envelopes...  None means to use the start cooked into the envelope.
         '''
-        self.number_of_generators += 1
-        return self.generator(self, self.scale(base_freq), start)
+        self.number_of_generators += 1   # becomes part of their name...
+        return self.generator(self, base_freq, start)
 
     def scale(self, base_freq):
         return math.exp(self.scale_base * (C4_freq - base_freq))
 
 
-class Block_generator(Actor):
+class Base_block_generator:
+    def __init__(self, envelope, base_freq, start):
+        self.envelope = envelope
+        self.base_freq = base_freq
+        if start is None and hasattr(envelope.start):
+            self.next = envelope.start
+        else:
+            self.next = start
+        self.blocks_sent = 0
+
+class Block_generator(Base_block_generator, Actor):
     r'''Derived class must provide recalc and __iter__ methods.
 
     __iter__ must set self.next to the value following the next yield.  This should be done
@@ -52,14 +82,16 @@ class Block_generator(Actor):
     recalc must recalc self.scale, along with anything else needed.
     '''
     def __init__(self, envelope, base_freq, start):
-        super().__init__(envelope, name=f"{envelope.name}_{envelope.number_of_generators}")
-        self.envelope = envelope
-        self.base_freq = base_freq
-        self.next = start
+        Base_block_generator.__init__(self, envelope, base_freq, start)
+        Actor.__init__(self, envelope, name=f"{envelope.name}_{envelope.number_of_generators}")
         self.recalc()
 
     def recalc(self):
         self.scale = self.envelope.scale(self.base_freq)
+        if self.envelope.duration is None:
+            self.duration = None
+        else:
+            self.duration = self.envelope.duration * self.scale
 
     def next_value(self):
         return self.next
@@ -67,17 +99,29 @@ class Block_generator(Actor):
 
 class Constant_generator(Block_generator):
     def recalc(self):
-        super().recalc()
+        super().recalc()  # recalcs self.scale
         if self.envelope.duration is None:
             self.duration = None   # forever...
+            self.num_blocks = None
         else:
-            self.duration = self.envelope.duration * self.envelope.scale(self.base_freq)
-        self.value = self.envelope.value
-        self.next = self.value
+            self.duration = self.envelope.duration * self.scale
+            self.num_blocks = round(self.duration / self.envelope.block_duration)
 
     def __iter__(self):
         try:
-            yield from Flat_generator(self)
+            if self.next == self.envelope.start or self.num_blocks == 0:
+                self.blocks_sent = 0
+            else:
+                # quick one block linear ramp to adjust start given to my value.
+                start = self.next
+                self.next = self.envelope.start
+		yield np.linspace(start, self.next, self.envelope.block_size, 
+                                  endpoint=False, dtype=self.envelope.dtype)
+                self.blocks_sent = 1
+            for self.blocks_sent in count(self.blocks_sent):
+                if self.num_blocks is not None and self.blocks_sent >= self.num_blocks:
+                    break
+                yield self.next
         finally:
             self.delete()
 
@@ -89,305 +133,282 @@ class Constant(Envelope):
     '''
     generator = Constant_generator
 
-    def __init__(self, name, value, scale_3=None, duration=None):
-        super().__init__(name, scale_3)
-        self.value = value
-        self.duration = duration
+    value = Notify_actors()
+
+    def __init__(self, name, harmonic, value, duration=None, scale_3=None):
+        super().__init__(name, harmonic, duration, scale_3)
+        self.start = value
 
 
-
-class Flat_generator(Block_generator):
-    def __init__(self, user):
-        r'''user must define: length (may be None) and value.
-        '''
-        super().__init__(user)
-        self.user = user  # has value and length (may be None)
+class Sequence_generator(Base_block_generator):
+    def __init__(self, envelope, base_freq, start):
+        super().__init__(envelope, base_freq, start)
+        self.generator = None
 
     def __iter__(self):
-        amount_sent = 0
-        try:
-            while self.user.length is None or \
-                  self.user.length - amount_sent >= Output.block_size:
-                yield self.user.value, Output.block_size, self.user.value
-                amount_sent += Output.block_size
-            if self.user.length - amount_sent > 0:
-                yield self.user.value, self.user.length - amount_sent, self.user.value
+        #try:
+            for i in count():
+                if i >= len(self.envelope_list):
+                    break
+                self.generator = \
+                  self.envelope.envelope_list[i].start(self.base_freq, self.next)
+                yield from self.generator
+                self.next = self.generator.next_value()
+        #finally:
+        #    self.delete()
+
+    def next_value(self):
+        if self.generator is None:
+            return self.next
+        return self.generator.next_value()
+
+
+class Sequence:
+    r'''Like itertools.chain, but for Envelopes.
+
+    Takes a list of Envelopes and waits until it needs the next Envelope before getting
+    it from the list.  So if the later list contents change while earlier contents are
+    being generated, the changes will be seen.  This includes the length of
+    the list changing in flight.
+
+    Passes the next value from one generator to the next Envelope's start method.
+    '''
+    def __init__(self, envelope_list):
+        self.envelope_list = envelope_list
+        #self.number_of_generators = 0
+
+    def start(self, base_freq, start):
+        #self.number_of_generators += 1   # becomes part of their name...
+        return self.Sequence_generator(self, base_freq, start)
+
+
+class Ramp_generator(Block_generator):
+    def recalc(self):
+        super().recalc()
+
+        # slope from start to stop
+        self.S = (self.envelope.stop - self.next) \
+               / (self.duration - self.blocks_sent * self.envelope.block_duration)
+
+        # change in slope based on bend
+        self.X = abs(self.S) * self.envelope.bend
+
+        # the starting slope (at t0).
+        self.S0 = self.S + self.X
+
+        self.num_blocks = round(self.duration / self.envelope.block_duration)
+
+        # change in slope per block iteration
+        self.delta = 2*(self.S - self.S0) / ((self.num_blocks - self.blocks_sent) - 1)
+
+        self.start_at = self.blocks_sent
+
+    def __iter__(self):
+	try:
+            for self.blocks_sent in count():
+                if self.blocks_sent >= self.num_blocks:
+                    break
+                start = self.next
+                self.next = \
+                  start + (self.S0 + self.delta * (self.blocks_sent - self.start_at)) \
+                        * self.block_duration
+		yield np.linspace(start, self.next, self.envelope.block_size,
+                                  endpoint=False, dtype=self.envelope.dtype)
         finally:
             self.delete()
 
 
-class Line(Envelope):
-    r'''One-shot line generation.
-
-    The line is specified by start, stop and duration.  The duration is scaled.  The
-    duration is also affected by the start value given on generation.  This may increase or
-    decrease the duration (before scaling) depending on whether it lies before the
-    specified start, or after it.
-    '''
-    def __init__(self, start, stop, duration, scale_fn):
-        self.start = start
-        self.stop = stop
-        self.duration = duration
-        self.scale_fn = scale_fn
-
-    def for_period(self, base_freq, start=None):
-        if start is None:
-            start = self.start
-        length_remaining = self.duration * (self.stop - start) / (self.stop - self.start) \
-                             * self.scale_fn(base_freq)
-        step = (self.stop - start) / length_remaining
-        while length_remaining >= Output.block_size:
-            stop = start + step * Output.block_size
-            yield (np.linspace(start, stop, Output.block_size, endpoint=False),
-                   Output.block_size,
-                   stop)
-            start = stop
-            length_remaining -= Output.block_size
-        if length_remaining > 0:
-            yield (np.linspace(start, self.stop, length_remaining, endpoint=False),
-                   length_remaining,
-                   self.stop)
-
-
-class Line_generator(Block_generator):
-    def __init__(self, line, base_freq, start):
-        super().__init__(line)
-        self.line = line  # has start, stop, duration and scale_fn
-        self.base_freq = base_freq
-        if start is None:
-            self.start = self.line.start
-        else:
-            self.start = start
-        self.recalc()
-
-    def recalc(self):
-        percent_remaining =   (self.line.stop - self.start) \
-                            / (self.line.stop - self.line.start)
-        self.length =   self.line.duration \
-                      * percent_remaining \
-                      * self.line.scale_fn(self.base_freq)
-        self.step = (self.line.stop - self.start) / self.length
-        self.amount_sent = 0
-
-    def __iter__(self):
-        while self.length - self.amount_sent >= Output.block_size:
-            stop = self.start + self.step * Output.block_size
-            yield (np.linspace(start, stop, Output.block_size, endpoint=False),
-                   Output.block_size,
-                   stop)
-            self.start = stop
-            self.amount_sent += Output.block_size
-        if self.length - self.amount_sent > 0:
-            yield (np.linspace(self.start, self.line.stop,
-                               self.length - self.amount_sent,
-                               endpoint=False),
-                   self.length - self.amount_sent,
-                   self.line.stop)
-        self.delete()
-
-
-class Sequence(Envelope):
-    r'''Concatenates several envelope segments.
-    '''
-
 
 class Ramp(Envelope):
-    r'''Has a base rate, implied by geom and lin, which is scaled by the base_freq.
+    r'''Ramp up or down.
 
-    If start < limit, it's ramping up.  geom must be >= 1 and lin must be >= 0.  In this
-    case ramping is initially down by lin, until the geom step size >= lin.  Then the
-    ramping is done by geom.
+    Specified by start, stop, duration and bend (a +/- % of max).
 
-    If start > limit, it's ramping down.  geom must be <= 1 and lin must be <= 0.
-    In this case ramping is initially down by geom, until the geom step size <= lin.
-    Then the ramping is done by lin.
+    Fitting a quadratic (A*t**2 + B*t + C) to those parameters:
 
-    The geom is scaled so that geom**X == geom'**(X * scale).
-    Thus, geom' == geom**(X / (X * scale))
-                == geom**(1/scale)
+        - C = start
 
-    The lin is scaled so that lin*X == lin'*(X * scale).
-    Thus, lin' == lin*X/(X * scale)
-               == lin/scale
+    To simplify a bit, we'll introduce a few variables:
+
+        - D = duration
+        - S = (stop-start)/D    # the slope of the line from start to stop
+        - X = S * bend          # the offset of the starting slope from S (max S).
+        - S0 = S + X            # the starting slope (at t0).
+
+    Now we can tackle B:
+
+        - derivative is 2*A*t + B, which at t=0 is simply B, so:
+
+        - B = S0 = S + X
+
+    Then we pick A to bring us to stop at D:
+
+        - A*D**2 + B*D + start == stop 
+
+        - A*D + B = (stop-start)/D = S
+
+        - A*D + S + X = S
+
+        - A = -X/D
+
+    This will always result in a final slope, SD, that is the same offset from flat_slope.
+
+        - slope at t=D is 2*A*D + B = SD
+        - SD = -2X + S + X
+        - SD = S - X
+
+    We'll approximate the quadratic by using line segments for each generated block.  The
+    slope of these lines starts at S0, and change by a constant delta (derivative of
+    quadratic is linear).  Thus,
+
+        - Db = block_duration
+        - D/Db = N
+        - stop = start + sum((S0+delta*i)*Db, i=0 to N-1)
+        - stop - start = Db*sum(S0+delta*i, i=0 to N-1)
+        - (stop - start) / Db = N*S0 + delta*sum(i, i=0 to N-1)
+        - (stop - start) / Db - N*S0 = delta*N*(N-1)/2
+        - delta = ((stop - start) / Db - N*S0) / (N*(N-1)/2)
+        - delta = ((stop - start) / Db - D/Db*S0) / (D/Db*(D/Db-1)/2)
+        - delta = (((stop - start) - D*S0)/Db) / (D/Db*(D/Db-1)/2)
+        - delta = ((stop - start) - D*S0) / Db*(D/Db*(D/Db-1)/2)
+        - delta = ((stop - start) - D*S0) / (D*(D/Db-1)/2)
+        - delta = ((stop - start) - D*S0) / (D^2/Db-D)/2)
+        - delta = 2*((stop - start) - D*S0) / (D^2/Db-D)
+        - delta = 2*((stop - start)/D - S0) / (D/Db-1))
+        - delta = 2*(S - S0) / (N-1)
     '''
-    def __init__(self, scale_fn, geom=1.0, lin=0.0, start=None, limit=None):
-        assert geom != 1 or lin != 0
-        self.geom = geom
-        self.lin = lin
-        self.scale_fn = scale_fn
+    generator = Ramp_generator
+
+    start = Notify_actors()
+    stop = Notify_actors()
+    bend = Notify_actors()
+
+    def __init__(self, name, harmonic, duration, scale_3, start, stop, bend):
+        super().__init__(name, harmonic, duration, scale_3)
         self.start = start
-        self.limit = limit
-        if geom > 1 or lin > 0:
-            # ramping up
-            if start is None:
-                self.start = 2**-15
-            if limit is None:
-                self.limit = 1
-        else:
-            # ramping down
-            if start is None:
-                self.start = 1
-            if limit is None:
-                self.limit = 2**-15
-        assert self.start != self.limit
-        if self.start > self.limit:
-            # ramping up
-            assert geom >= 1
-            assert lin >= 0
-        else:
-            # ramping down
-            assert geom <= 1
-            assert lin <= 0
-
-    def for_period(self, base_freq, start=None):
-        if start is None:
-            start = self.start
-        return Ramp_generator(self, base_freq, start)
-
-        # FIX: Rewrite with new self.num_samples(...)
-        if geom == 1:
-            if lin == 0:
-                while True:
-                    yield start, Output.block_size
-            else:
-                samples_left = self.num_samples(start, lin=lin)
-                while samples_left >= Output.block_size:
-                    stop = start + lin * Output.block_size
-                    yield (np.linspace(start, stop, Output.block_size, endpoint=False),
-                           Output.block_size)
-                    start = stop
-                    samples_left -= Output.block_size
-                if samples_left > 0:
-                    stop = start + lin * samples_left
-                    yield (np.linspace(start, stop, samples_left, endpoint=False),
-                           samples_left)
-        elif lin == 0:
-            samples_left = self.num_samples(start, geom=geom)
-            while samples_left >= Output.block_size:
-                stop = start * geom ** Output.block_size
-                yield (np.geomspace(start, stop, Output.block_size, endpoint=False),
-                       Output.block_size)
-                start = stop
-                samples_left -= Output.block_size
-            if samples_left > 0:
-                stop = start * geom ** samples_left
-                yield (np.geomspace(start, stop, samples_left, endpoint=False),
-                       samples_left)
-        else:
-            samples_left = self.num_samples(start, geom=geom, lin=lin)
-            lin_stop = lin * Output.block_size
-            lin_adj = np.linspace(0, lin_stop, Output.block_size, endpoint=False)
-            while samples_left >= Output.block_size:
-                geom_stop = start * geom ** Output.block_size
-                yield (np.geomspace(start, geom_stop, Output.block_size, endpoint=False)
-                         + lin_adj, \
-                       Output.block_size)
-                start = geom_stop + lin_stop
-                samples_left -= Output.block_size
-            if samples_left > 0:
-                stop = start * geom ** samples_left
-                yield (np.geomspace(start, stop, samples_left, endpoint=False)
-                         + np.linspace(0, lin * samples_left, samples_left, endpoint=False),
-                      samples_left)
-
-    def num_samples(self, start, geom, lin):
-        r'''Returns lin_samples, geom_samples, lin_samples.
-
-        Calculates the number of samples until the delta produced by geom <= the delta
-        produced by lin.  If this is past limit, then the number of samples until limit is
-        reached is returned.
-        '''
-        if lin == 0:
-            # start * geom**X < limit
-            # geom**X < limit / start
-            # math.log(limit / start, geom)
-            return 0, round(math.log(self.limit / start, geom)), 0
-
-        if geom == 0:
-            # start + lin*X < limit
-            # lin*X < limit - start
-            # X < (limit - start) / lin
-            return round((self.limit - start) / lin), 0, 0
-
-        if lin > 0:
-            # ramping up, start lin, end geom, geom > 1, lin > 0
-            #
-            # (start + lin * X) * (geom - 1) >= lin
-            # start + lin * X >= lin / (geom - 1)
-            # lin * X >= lin / (geom - 1) - start
-            # X >= 1 / (geom - 1) - start / lin
-            lin_samples = math.ceil(1 / (geom - 1) - start / lin - 1e-4)
-            transition = start + lin * lin_samples
-            if transition > self.limit:
-                return round((self.limit - start) / lin)
-            geom_samples = round(math.log(self.limit / transition, geom))
-            return lin_samples, geom_samples, 0
-
-        # else ramping down, start geom, end lin.  geom < 1, lin < 0
-        #
-        # start * geom**X + delta_X == start * geom**(X + 1)
-        # delta_X = start * geom**(X + 1) - start * geom**X
-        # delta_X = start * (geom**(X + 1) - geom**X)
-        # delta_X = start * geom**X * (geom - 1)
-        #
-        # delta_X >= lin
-        # start * geom**X * (geom - 1) >= lin
-        # geom**X >= lin / start / (geom - 1)
-        geom_samples = math.floor(math.log(lin / start / (geom - 1), geom))
-        transition = start * geom**geom_samples
-        if transition < self.limit:
-            return round(math.log(self.limit / start, geom))
-        return 0, geom_samples, round((self.limit - start) / lin)
+        self.stop = stop
+        self.bend = bend
 
 
-class Ramp_generator(Block_generator):
-    def __init__(self, ramp, base_freq, start):
-        super().__init__(ramp)
-        self.ramp = ramp   # has start, stop, geom, lin and scale_fn
-        self.base_freq = base_freq
-        if start is None:
-            self.start = self.ramp.start
-        else:
-            self.start = start
-        self.recalc()
+class Sin_Generator(Block_generator):
+    r'''The Block_generator for the Sin envelope.
+
+    The next_value(), at end of the generator, is the radian_offset for the next Sin
+    envelope.  This should work with any freq.
+    '''
+    def __init__(self, envelope, base_freq, start):
+        super().__init__(envelope, base_freq, start)
+        self.delta_times = self.envelope.harmonic.instrument.synth.soundcard.delta_times
+        self.waveform = None
+        if self.next is None:
+            self.next = 0
 
     def recalc(self):
-        scale = self.ramp.scale_fn(self.base_freq)
-        self.geom = self.ramp.geom**(1/scale)
-        self.lin = self.ramp.lin / scale
-
-        percent_remaining =   (self.ramp.stop - self.start) \
-                            / (self.ramp.stop - self.ramp.start)
-        self.length =   self.ramp.duration \
-                      * percent_remaining \
-                      * self.ramp.scale_fn(self.base_freq)
-        self.step = (self.ramp.stop - self.start) / self.length
-        self.amount_sent = 0
+        super().recalc()
+        if self.envelope.duration is None:
+            self.duration = None   # forever...
+            self.num_blocks = None
+        else:
+            self.duration = self.envelope.duration * self.scale
+            self.num_blocks = round(self.duration / self.envelope.block_duration)
+        if self.cycle_time is not None:
+            if self.envelope.cycle_time is not None:
+                self.cycle_time = self.envelope.cycle_time * self.scale
+                radians_per_sec = freq_to_Hz(1/self.cycle_time) * 2.0 * np.pi
+                self.radians = np.cumsum(radians_per_sec * self.delta_times,
+                                         dtype=self.envelope.dtype)
+                self.radians_inc = \
+                  (radians_per_sec * self.envelope.block_duration) % (2 * np.pi)
+                if self.envelope.center_ampl is not None:
+                    self.add_to_output = self.envelope.center_ampl
+                else:
+                    self.add_to_output = self.base_freq
+                self.have_iter = False
+        else:
+            self.add_to_output = 0
+            if isinstance(self.base_freq, Base_block_generator):
+                self.freq_iter = iter(self.base_freq)
+                self.have_iter = True
+            else:
+                radians_per_sec = freq_to_Hz(self.base_freq) * 2.0 * np.pi
+                self.radians = np.cumsum(radians_per_sec * self.delta_times,
+                                         dtype=self.envelope.dtype)
+                self.radians_inc = \
+                  (radians_per_sec * self.envelope.block_duration) % (2 * np.pi)
+                self.have_iter = False
 
     def __iter__(self):
-        while self.length - self.amount_sent >= Output.block_size:
-            stop = self.start + self.step * Output.block_size
-            yield (np.linspace(start, stop, Output.block_size, endpoint=False),
-                   Output.block_size,
-                   stop)
-            self.start = stop
-            self.amount_sent += Output.block_size
-        if self.length - self.amount_sent > 0:
-            yield (np.linspace(self.start, self.ramp.stop,
-                               self.length - self.amount_sent,
-                               endpoint=False),
-                   self.length - self.amount_sent,
-                   self.ramp.stop)
-        self.delete()
+        try:
+            for self.blocks_sent in count():
+                if self.num_blocks is not None and self.blocks_sent >= self.num_blocks:
+                    break
+                if self.have_iter:
+                    try:
+                        freq_block = next(self.freq_iter)
+                    except StopIteration:
+                        # continue with self.base_freq.base_freq
+                        radians_per_sec = \
+                          freq_to_Hz(self.base_freq.base_freq) * 2.0 * np.pi
+                        self.radians = np.cumsum(radians_per_sec * self.delta_times,
+                                                 dtype=self.envelope.dtype)
+                        self.radians_inc = \
+                          (radians_per_sec * self.envelope.block_duration) % (2 * np.pi)
+                        self.add_to_output = 0
+                        self.have_iter = False
+                    else:
+                        radians_per_sec = \
+                          (freq_to_Hz(freq_block) + self.add_to_output) * 2.0 * np.pi
+                        self.radians = np.cumsum(radians_per_sec * self.delta_times,
+                                                 dtype=self.envelope.dtype)
+                        # FIX: I think that this off by 1, but am hoping that it is
+                        # undetectable.
+                        self.radians_inc = radians[-1] % (2 * np.pi)
+
+                radians_per_sample = self.radians + self.next
+                #print(f"{radians_per_sample[0]=}, {radians_per_sample[1]=}, " \
+                #      f"{radians_per_sample[-1]=}")
+
+                self.next = (self.next + self.radians_inc) % (2 * np.pi)
+
+                # takes ~15 uSec with dtype='f4'
+                if self.add_to_output:
+                    yield np.sin(radians_per_sample, dtype=self.envelope.dtype) \
+                        + self.add_to_output
+                else:
+                    yield np.sin(radians_per_sample, dtype=self.envelope.dtype)
+        finally:
+            self.delete()
 
 
 class Sin(Envelope):
-    def __init__(self, freq_Hz=1.0, scale_fn=lambda x: x):
-        self.freq_Hz = freq_Hz
-        self.scale_fn = scale_fn
+    r'''Can be used in one of two ways:
 
-    def for_period(self, base_freq, start=None):
-        r'''start is not used.
-        '''
-        freq = self.freq_Hz * self.scale_fn(base_freq)
+    1. passing cycle_time to envelope ctor.  This will always use the same cycle_time
+       (but scales it based on the base_freq passed to start).  Also base_freq is
+       added to the generated output.  Example:
+
+           - harmonic.freq_envelope = Sin('vibrato', harmonic, 1/3)
+           - harmonic.freq_gen = Sin('gen', harmonic)
+           
+       When note_on is received:
+
+           - env_gen = harmonic.freq_envelope.start(base_freq)
+             - will add base_freq to output generated
+           - sample_gen = haronic.freq_gen.start(env_gen)
+             - env_gen.base_freq used when env_gen runs out
+
+    2. not passing cycle_time to envelope ctor.  In this case, it uses base_freq directly.
+       Base_freq may be a scalar or a generator (in which case, one kind of generator could
+       be from another Sin envelope with cycle_time set).  If base_freq is a generator and
+       it stops generating, the Sin_generator using it will continue on with a fixed freq
+       (the final next_value reported).
+    '''
+    generator = Sin_generator
+    cycle_time = Notify_actors()
+
+    def __init__(self, name, harmonic, cycle_time=None, center_ampl=None,
+                 duration=None, scale_3=None):
+        super().__init__(name, harmonic, duration, scale_3):
+        self.cycle_time = cycle_time
+        self.center_ampl = center_ampl
 

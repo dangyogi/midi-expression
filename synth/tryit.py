@@ -6,17 +6,16 @@ Overall control flow:
 fill_sound_blocks.fill_sound_block is registered as Soundcard callback.
 
 Soundcard.callback automatically called to get another sound segment:
-    - calls fill_sound_blocks.fill_sound_block
-       - fill_sound_blocks.fill_sound_block
-          - sets Target_time
-          - calls Midiin.process_until(target_time, synth.process_MIDI)
-             - sets midi callback to self.call_callback
-                - call_callback calls synth.process_MIDI for each midi event
-             - sleeps for Target_time - fudge
-             - cancels midi callback
-          - calls synth.fill_sound_block
-             - calls instrument.populate_sound_block
-                - calls Play_harmonic.populate_sound_block
+    - calls fill_sound_blocks.fill_sound_block, which:
+      - sets Target_time
+      - calls Midiin.process_until(target_time, synth.process_MIDI)
+         - sets midi callback to self.call_callback
+            - call_callback calls synth.process_MIDI for each midi event
+         - sleeps for Target_time - fudge
+         - cancels midi callback
+      - calls synth.fill_sound_block
+         - calls instrument.populate_sound_block
+            - calls Play_harmonic.populate_sound_block
 '''
 
 import time

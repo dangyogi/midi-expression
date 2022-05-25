@@ -17,26 +17,18 @@ class Notify_actors:
             y = Notify_actors()
     '''
     def __get__(self, instance, owner=None):
-        try:
-            return instance.var_attrs[self.name]
-        except KeyError:
-            raise AttributeError(f"{instance.name} has no attribute {self.name!r}") \
-                  from None
+        return getattr(instance, self.name)
 
     def __set__(self, instance, value):
-        if self.name not in instance.var_attrs or instance.var_attrs[self.name] != value:
-            instance.var_attrs[self.name] = value
+        if not hasattr(instance, self.name) or getattr(instance, self.name) != value:
+            setattr(instance, self.name, value)
             instance.changed()
 
     def __delete__(self, instance):
-        try:
-            del instance.var_attrs[self.name]
-        except KeyError:
-            raise AttributeError(f"{instance.name} has no attribute {self.name!r}") \
-                  from None
+        delattr(instance, self.name)
 
     def __set_name__(self, owner, name):
-        self.name = name
+        self.name = '_' + name
 
 
 Num_vars = 0
@@ -60,7 +52,6 @@ class Var:
         global Num_vars
         self.name = name
         self.actors = set()   # {Actor}
-        self.var_attrs = {}
         Num_vars += 1
 
     def __str__(self):

@@ -62,7 +62,7 @@ class Target_time_actor(Actor):
 
     def recalc(self):
         self.target_time = \
-          self.dac_target_time - Num_harmonics.value * self.harmonic_gen_time)
+          self.dac_target_time - Num_harmonics.value * self.harmonic_gen_time
 
 
 class Num_harmonics_class(Var):
@@ -79,23 +79,29 @@ def two_byte_value(msb, lsb):
     return ((msb & 0x7F) << 7) | (lsb & 0x7F)
 
 
-class Linked_chain:
-    r'''Like itertools.chain, but passes the last value from one iter to the next.
+class Cross_setter:
+    r'''Example:
 
-    Expects each iter to have a start method to accept the next value from the preceeding
-    iter.  This a generator method that replaces the __iter__ method.  These generators
-    must have a next_value() method that will return the next value to use after the last
-    value yielded.
+    class foo:
+        @Cross_setter
+        def a(self, value):  # self.a is set automatically
+            self.b = value * 10
+            self.c = value / 10
     '''
-    def __init__(self, *iters):
-        self.iters = iters
+    def __init__(self, set_fn):
+        self.set_fn = set_fn
 
-    def start(self, start):
-        next = start
-        for iter in self.iters:
-            self.current_iter = iter
-            yield from iter.start(next)
-            next = self.current_iter.next_value()
+    def __get__(self, instance, owner=None):
+        return getattr(instance, self.name)
+                  
+    def __set__(self, instance, value):
+        if not hasattr(instance, self.name) or getattr(instance, self.name) != value:
+            setattr(instance, self.name, value)
+            self.set_fn(instance, value)
 
-    def next_value(self):
-        return self.current_iter.next_value()
+    def __delete__(self, instance):
+        raise AssertionError(f"del not allowed on {self.name}")
+
+    def __set_name__(self, owner, name):
+        self.name = '_' + name
+

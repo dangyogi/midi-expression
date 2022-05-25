@@ -11,8 +11,11 @@ from .tuning_systems import freq_to_Hz
 
 
 class Synth(Var):
-    r'''
-    Reports changes in key_signature, tuning_system, and volume.
+    r'''This is the top-level object representing the entire synthesizer.
+
+    Only expect one instance of this for the entire program.
+
+    This includes all channels for the synth.
     '''
 
     volume = Notify_actors()
@@ -23,6 +26,9 @@ class Synth(Var):
         super().__init__("My synth")
         self.channels = {}  # {channel_number: Instrument}
         self.soundcard = soundcard
+        self.block_duration = soundcard.block_duration
+        self.block_size = soundcard.block_size
+        self.dtype = soundcard.dtype
         self.volume = volume
         if tuning_system is not None:
             self.tuning_system = tuning_system
@@ -150,6 +156,10 @@ class Instrument(Actor):
     '''
     #scale_volume = 1/12 * 0.5
     scale_volume = 0
+
+    volume = Notify_actors()
+    key_signature = Notify_actors()
+    tuning_system = Notify_actors()
 
     def __init__(self, name, synth, volume=None, tuning_system=None, key_signature=None):
         super().__init__(synth, name=name)
@@ -615,12 +625,12 @@ class Harmonic(Var):
         return [Play_harmonic(self, note, velocity)]
 
     def get_waveform(self, base_freq):
-        # FIX
+        # FIX: Don't forget synth.dtype!!!!!!!
         freq_Hz = freq_to_Hz(base_freq)
         rad_cycle = freq_Hz * 2 * np.pi
         delta_times = self.instrument.synth.soundcard.delta_times
         waveform = np.cumsum(rad_cycle * delta_times)
-        block_duration = self.instrument.synth.soundcard.block_duration
+        block_duration = self.instrument.synth.block_duration
         inc = waveform[-1]       # freq_Hz * 2*pi * block_duration
 
         #print(f"get_waveform: {block_duration=}, {np.sum(delta_times)=}, {freq_Hz=}, "
@@ -638,7 +648,7 @@ class Harmonic(Var):
 
     def get_note_on_envelope(self, base_freq, velocity):
         # FIX: add ADS envelope, this is just contant ampl for now...
-        return repeat(np.full(self.instrument.synth.soundcard.block_size,
+        return repeat(np.full(self.instrument.synth.block_size,
                               self.ampl_offset * velocity))
 
     def get_note_off_envelope(self, base_freq, velocity):
@@ -655,7 +665,7 @@ class Play_harmonic(Actor):
         '''
         super().__init__(harmonic.instrument, harmonic)
         self.harmonic = harmonic
-        self.block_size = self.harmonic.instrument.synth.soundcard.block_size
+        self.block_size = self.harmonic.instrument.synth.block_size
         self.note = note
         self.velocity = velocity
         for key, value in other_attrs.items():
@@ -701,7 +711,7 @@ class Play_harmonic(Actor):
         # num_samples = min(len(base_waveform), len(ampl_envelope))
         # np.multiply(base_waveform[:num_samples], ampl_envelope[:num_samples],
         #             out=block[:num_samples])
-        # return num_samples == soundcard.block_size
+        # return num_samples == synth.block_size
         try:
             #print(f"populate_sound_block {self.waveform=}")
             base_waveform = next(self.waveform)

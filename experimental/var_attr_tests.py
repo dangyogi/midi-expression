@@ -1,7 +1,7 @@
 # var_attr_test.py
 
 
-from synth.channel import Var, Notify_actors
+from synth.notify import Var, Notify_actors
 
 
 class foo(Var):
@@ -26,3 +26,4 @@ f.x = 2
 print("after setting to 2, f.x", f.x, "var_attrs", f.var_attrs)
 #print("f.x", f.x)
 del f.x
+#del f.x

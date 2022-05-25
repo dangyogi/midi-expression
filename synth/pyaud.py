@@ -50,11 +50,12 @@ class Soundcard:
         self.sample_rate = sample_rate
         self.block_duration = block_duration
         self.bits = bits
+        self.dtype = 'f8'
 
         self.max_sound_level = 2**(bits - 1) - 1
         self.delta_t = 1/sample_rate
         self.block_size = round(block_duration * sample_rate)   # samples/block as int
-        self.delta_times = np.full(self.block_size, self.delta_t)
+        self.delta_times = np.full(self.block_size, self.delta_t, dtype=self.dtype)
         print(f"{self.channels=}, {self.sample_rate=}, {self.delta_t=}, {self.bits=}")
         print(f"{self.max_sound_level=}, {self.block_duration=}, {self.block_size=}")
 
@@ -160,7 +161,7 @@ class Soundcard:
                (pyaudio.paContinue if cont else pyaudio.paComplete)
 
     def new_block(self):
-        return np.zeros(self.block_size, dtype='f8')
+        return np.zeros(self.block_size, dtype=self.dtype)
 
 
 

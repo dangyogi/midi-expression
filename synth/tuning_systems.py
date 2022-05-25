@@ -36,11 +36,15 @@ Freq_offset = math.log(C_1_Hz) / Ln_cent   # Offset to C-1
 
 def freq_to_Hz(freq):
     r'''Translate internal absolute freq value to Hz.
+
+    `freq` may be a scalar or a numpy array.
     '''
     return np.exp((freq + Freq_offset) * Ln_cent)
 
 def Hz_to_freq(Hz):
     r'''Translate Hz to internal absolute freq value.
+
+    Only takes scalar Hz values...
     '''
     return math.log(Hz) / Ln_cent - Freq_offset
 

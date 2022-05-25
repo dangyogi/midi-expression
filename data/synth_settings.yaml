@@ -265,6 +265,7 @@ Synth:
                                                 units: cents
                                                 step_size: 50
                                                 bits: 4
+                                            # stop is base_freq
                                             - duration:   # targeting 0-5 seconds
                                                 kills_value: 0
                                                 units: sec
@@ -294,7 +295,7 @@ Synth:
                                                 start: 0.05
                                                 step_size: 0.05
                                                 bits: 4
-                                            - ampl:       # targeting 0 - 400
+                                            - ampl_swing: # targeting 0 - 400
                                                 kills_value: 0
                                                 units: cents
                                                 bits: 7

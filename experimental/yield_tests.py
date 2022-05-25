@@ -48,9 +48,12 @@ class foo_gen:
         self.start = start
 
     def __iter__(self):
-        for x in range(self.start, self.start + self.foo.n):
-            self.next = x + 1  # This has to come before the yield statement!
-            yield x
+        try:
+            for x in range(self.start, self.start + self.foo.n):
+                self.next = x + 1  # This has to come before the yield statement!
+                yield x
+        finally:
+            print("foo_gen.__iter__ finally called")
 
     def next_value(self):
         return self.next
@@ -60,7 +63,7 @@ lc = Linked_chain(foo(5), foo(3))
 lc_gen = lc.start(44)
 lc_iter = iter(lc_gen)
 
-for i in range(5):
+for i in range(9):
     print(i, next(lc_iter, "done"))
 
 print("done", lc_gen.next_value())
