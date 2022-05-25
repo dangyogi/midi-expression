@@ -115,7 +115,7 @@ class Constant_generator(Block_generator):
                 # quick one block linear ramp to adjust start given to my value.
                 start = self.next
                 self.next = self.envelope.start
-		yield np.linspace(start, self.next, self.envelope.block_size, 
+                yield np.linspace(start, self.next, self.envelope.block_size, 
                                   endpoint=False, dtype=self.envelope.dtype)
                 self.blocks_sent = 1
             for self.blocks_sent in count(self.blocks_sent):
@@ -204,7 +204,7 @@ class Ramp_generator(Block_generator):
         self.start_at = self.blocks_sent
 
     def __iter__(self):
-	try:
+        try:
             for self.blocks_sent in count():
                 if self.blocks_sent >= self.num_blocks:
                     break
@@ -212,7 +212,7 @@ class Ramp_generator(Block_generator):
                 self.next = \
                   start + (self.S0 + self.delta * (self.blocks_sent - self.start_at)) \
                         * self.block_duration
-		yield np.linspace(start, self.next, self.envelope.block_size,
+                yield np.linspace(start, self.next, self.envelope.block_size,
                                   endpoint=False, dtype=self.envelope.dtype)
         finally:
             self.delete()
@@ -290,7 +290,7 @@ class Ramp(Envelope):
         self.bend = bend
 
 
-class Sin_Generator(Block_generator):
+class Sin_generator(Block_generator):
     r'''The Block_generator for the Sin envelope.
 
     The next_value(), at end of the generator, is the radian_offset for the next Sin
@@ -408,7 +408,7 @@ class Sin(Envelope):
 
     def __init__(self, name, harmonic, cycle_time=None, center_ampl=None,
                  duration=None, scale_3=None):
-        super().__init__(name, harmonic, duration, scale_3):
+        super().__init__(name, harmonic, duration, scale_3)
         self.cycle_time = cycle_time
         self.center_ampl = center_ampl
 
