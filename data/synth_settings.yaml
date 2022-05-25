@@ -296,6 +296,7 @@ Synth:
                                                 step_size: 0.05
                                                 bits: 4
                                             - ampl_swing: # targeting 0 - 400
+                                              # added to base_freq
                                                 kills_value: 0
                                                 units: cents
                                                 bits: 7
