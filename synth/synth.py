@@ -6,7 +6,7 @@ import math
 from itertools import repeat
 
 from .notify import Var, Notify_actors, Actor
-from .utils import Num_harmonics, two_byte_value
+from .utils import Num_harmonics, two_byte_value, Cross_setter
 from .tuning_systems import freq_to_Hz
 from .envelope import *
 
@@ -512,10 +512,13 @@ class Harmonic(Var):
 
         self.ampl_offset = ampl_offset   # multiplied by note_on/off_envelope
         self.note_on_sequence = [None, None, None]  # attack, decay, sustain
-        self.note_on_env = Sequence(f"{self.name}-note_on", self, self.note_on_sequence)
+        self.note_on_env = Sequence(self.note_on_sequence)
         self.attack_env = attack_env
         self.decay_env = decay_env
-        self.sustain_env = sustain_env
+        if attack_env is None and decay_env is None and sustain_env is None:
+            self.sustain_env = Constant(f"{self.name}-Constant", self, self.ampl_offset)
+        else:
+            self.sustain_env = sustain_env
         self.release_env = release_env
 
         self.freq_offset = freq_offset   # multiplied into freq_to_Hz(base_freq) for note
@@ -558,9 +561,9 @@ class Harmonic(Var):
         base_freq = self.instrument.tuning_system.note_to_freq(note)
         if self.freq_env is not None:
             freq_gen = self.freq_env.start(self.base_freq)
-            waveform_gen = self.sin_gen.start(freq_gen)
+            waveform_gen = self.sin_env.start(freq_gen)
         else:
-            waveform_gen = self.sin_gen.start(base_freq)
+            waveform_gen = self.sin_env.start(base_freq)
         ampl_gen = self.note_on_env.start(base_freq)
         return [Play_harmonic(self, base_freq, velocity, waveform_gen, ampl_gen)]
 
@@ -579,7 +582,7 @@ class Play_harmonic(Actor):
         self.base_freq = base_freq
         self.velocity = velocity
         self.waveform_gen = waveform_gen
-        self.waveform_it = iter(self.waveform)
+        self.waveform_it = iter(self.waveform_gen)
         self.ampl_gen = ampl_gen
         self.ampl_it = iter(self.ampl_gen)
         self.recalc()
@@ -595,7 +598,10 @@ class Play_harmonic(Actor):
         r'''velocity ignored...
         '''
         start = self.ampl_gen.next_value()
-        self.ampl_gen = self.harmonic.release_env.start(self.base_freq, start)
+        if self.harmonic.release_env is not None:
+            self.ampl_gen = self.harmonic.release_env.start(self.base_freq, start)
+        else:
+            self.ampl_gen = ()
         self.ampl_it = iter(self.ampl_gen)
 
     def populate_sound_block(self, block):
