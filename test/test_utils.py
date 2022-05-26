@@ -5,7 +5,7 @@ import math
 import pytest
 
 from synth.utils import *
-from synth.notify import recalc_actors
+from synth.notify import recalc_actors, Actors_to_recalc
 
 
 
@@ -24,6 +24,7 @@ def test_lv_calc():
 
 
 def test_target_time():
+    Actors_to_recalc.clear()  # prevent other test files from dirtying this test.
     Target_time.set_target_time(4, 1)
     assert Target_time.target_time == 4
     Num_harmonics.value += 2
