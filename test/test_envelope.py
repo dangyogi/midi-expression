@@ -27,7 +27,7 @@ def instrument(synth):
 
 @pytest.fixture
 def harmonic(instrument):
-    return Mock(instrument=instrument)
+    return Mock(instrument=instrument, recalc_order=0, freq_offset=1)
 
 
 @pytest.fixture
@@ -73,7 +73,8 @@ def sin_cycle1_fixture(harmonic, duration, scale_3):
     return sin_cycle1(harmonic, duration, scale_3)
 
 def sin_cycle2(harmonic, duration, scale_3):
-    return Sin("test_sin_cycle2", harmonic, 0.4, 'base_freq', 50, duration, scale_3)
+    return Sin("test_sin_cycle2", harmonic, 0.4, 0, 50, duration, scale_3,
+               add_base_freq=True)
 
 @pytest.fixture(name="sin_cycle2")
 def sin_cycle2_fixture(harmonic, duration, scale_3):

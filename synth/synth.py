@@ -509,15 +509,21 @@ class Harmonic(Var):
         super().__init__(name=f"{instrument.name}-H{harmonic}")
         self.instrument = instrument
         self.harmonic = harmonic
+
         self.ampl_offset = ampl_offset   # multiplied by note_on/off_envelope
-        self.freq_offset = freq_offset   # cents; added to base_freq for note
         self.note_on_sequence = [None, None, None]  # attack, decay, sustain
         self.note_on_env = Sequence(f"{self.name}-note_on", self, self.note_on_sequence)
         self.attack_env = attack_env
         self.decay_env = decay_env
         self.sustain_env = sustain_env
         self.release_env = release_env
-        self.freq_env = freq_env
+
+        self.freq_offset = freq_offset   # multiplied into freq_to_Hz(base_freq) for note
+        self.sin_env = Sin(f"{self.name}-sin", self)
+        if freq_env is not None:
+            assert freq_env.add_base_freq, \
+              f"{self.name}: freq_env must have add_base_freq set"
+        self.freq_env = freq_env         # must have center_ampl = 'base_freq'
 
     ampl_offset = Notify_actors()   # 0 turns off this Harmonic
     freq_offset = Notify_actors()
@@ -547,40 +553,16 @@ class Harmonic(Var):
         r'''Returns a (possibly empty) list of Play_harmonics.
         '''
         if self.ampl_offset == 0:
+            # I'm turned off right now..
             return []
         base_freq = self.instrument.tuning_system.note_to_freq(note)
-        return [Play_harmonic(self, base_freq, velocity)]
-
-    def get_waveform(self, base_freq):
-        # FIX: Don't forget synth.dtype!!!!!!!
-        freq_Hz = freq_to_Hz(base_freq)
-        rad_cycle = freq_Hz * 2 * np.pi
-        delta_times = self.instrument.synth.soundcard.delta_times
-        waveform = np.cumsum(rad_cycle * delta_times)
-        block_duration = self.instrument.synth.block_duration
-        inc = waveform[-1]       # freq_Hz * 2*pi * block_duration
-
-        #print(f"get_waveform: {block_duration=}, {np.sum(delta_times)=}, {freq_Hz=}, "
-        #      f"{inc=}, {inc % (2 * np.pi)=}")
-        do_it = True
-        if not do_it:
-            yield from repeat(np.sin(waveform))
+        if self.freq_env is not None:
+            freq_gen = self.freq_env.start(self.base_freq)
+            waveform_gen = self.sin_gen.start(freq_gen)
         else:
-            start = 0
-            while True:
-                cycle_samples = waveform + start
-                #print(f"{cycle_samples[0]=}, {cycle_samples[1]=}, {cycle_samples[-1]=}")
-                yield np.sin(cycle_samples)
-                start = (start + inc) % (2 * np.pi)
-
-    def get_note_on_envelope(self, base_freq, velocity):
-        # FIX: add ADS envelope, this is just contant ampl for now...
-        return repeat(np.full(self.instrument.synth.block_size,
-                              self.ampl_offset * velocity))
-
-    def get_note_off_envelope(self, base_freq, velocity):
-        # FIX: kill note immediately for now...
-        return iter(())
+            waveform_gen = self.sin_gen.start(base_freq)
+        ampl_gen = self.note_on_env.start(base_freq)
+        return [Play_harmonic(self, base_freq, velocity, waveform_gen, ampl_gen)]
 
 
 class Play_harmonic(Actor):
@@ -591,7 +573,8 @@ class Play_harmonic(Actor):
     def __init__(self, harmonic, base_freq, velocity, waveform_gen, ampl_gen):
         r'''Neither base_freq nor velocity can later be changed...
         '''
-        super().__init__(harmonic.instrument)
+        super().__init__(harmonic.instrument,
+                         name=f"Play_harmonic_{harmonic.instrument.num_note_ons}")
         self.harmonic = harmonic
         self.base_freq = base_freq
         self.velocity = velocity

@@ -93,7 +93,8 @@ class Block_generator(Base_block_generator, Actor):
     '''
     def __init__(self, envelope, base_freq, start_value):
         Base_block_generator.__init__(self, envelope, base_freq, start_value)
-        Actor.__init__(self, envelope, name=f"{envelope.name}_{envelope.number_of_generators}")
+        Actor.__init__(self, envelope, envelope.harmonic,
+                       name=f"{envelope.name}_{envelope.number_of_generators}")
         self.recalc()
 
     def recalc(self):
@@ -210,8 +211,14 @@ class Ramp_generator(Block_generator):
     def recalc(self):
         super().recalc()
 
+        start = self.next
+        self.stop = self.envelope.stop_value
+        if self.envelope.add_base_freq:
+            start += self.base_freq
+            self.stop += self.base_freq
+
         # slope from start_value to stop_value
-        self.S = (self.envelope.stop_value - self.next) \
+        self.S = (self.stop - start) \
                / (self.duration - self.blocks_sent * self.envelope.block_duration)
 
         # change in slope based on bend
@@ -242,7 +249,7 @@ class Ramp_generator(Block_generator):
             self.delete()
 
     def target_value(self):
-        return self.envelope.stop_value
+        return self.stop
 
 
 
@@ -311,12 +318,13 @@ class Ramp(Envelope):
     bend = Notify_actors()
 
     def __init__(self, name, harmonic, start_value, stop_value, duration, bend=0,
-                 scale_3=None):
+                 scale_3=None, add_base_freq=False):
         assert duration is not None, f"{name}: infinate durations not allowed"
         super().__init__(name, harmonic, duration, scale_3)
         self.start_value = start_value
         self.stop_value = stop_value
         self.bend = bend
+        self.add_base_freq = add_base_freq
 
 
 class Sin_generator(Block_generator):
@@ -358,13 +366,11 @@ class Sin_generator(Block_generator):
                 else:
                     self.ampl_swing = 1
                 if self.envelope.center_ampl is not None:
-                    if isinstance(self.envelope.center_ampl, str):
-                        assert self.envelope.center_ampl == 'base_freq'
-                        self.target = self.base_freq
-                    else:
-                        self.target = self.envelope.center_ampl
+                    self.target = self.envelope.center_ampl
                 else:
                     self.target = 0
+                if self.envelope.add_base_freq:
+                    self.target += self.base_freq
                 self.have_iter = False
                 print(f"{self.name}: radians[0] {self.radians[0]},",
                       f"radians[-1] {self.radians[-1]},",
@@ -379,7 +385,9 @@ class Sin_generator(Block_generator):
                 self.freq_iter = iter(self.base_freq)
                 self.have_iter = True
             else:
-                radians_per_sec = freq_to_Hz(self.base_freq) * 2.0 * np.pi
+                radians_per_sec = \
+                  freq_to_Hz(self.base_freq) \
+                  * (self.envelope.harmonic.freq_offset * 2.0 * np.pi)
                 self.radians = np.cumsum(radians_per_sec * self.delta_times,
                                          dtype=self.envelope.dtype)
                 self.radians_inc = \
@@ -404,20 +412,23 @@ class Sin_generator(Block_generator):
                     try:
                         freq_block = next(self.freq_iter)
                     except StopIteration:
-                        # continue with self.base_freq.base_freq
+                        # continue with self.base_freq.target_value
                         radians_per_sec = \
-                          freq_to_Hz(self.base_freq.target_value()) * 2.0 * np.pi
+                          freq_to_Hz(self.base_freq.target_value()) \
+                          * (self.envelope.harmonic.freq_offset * 2.0 * np.pi)
                         self.radians = np.cumsum(radians_per_sec * self.delta_times,
                                                  dtype=self.envelope.dtype)
                         self.radians_inc = \
                           (radians_per_sec * self.envelope.block_duration) % (2 * np.pi)
                         self.have_iter = False
                     else:
-                        radians_per_sec = freq_to_Hz(freq_block) * 2.0 * np.pi
+                        radians_per_sec = freq_to_Hz(freq_block) \
+                          * (self.envelope.harmonic.freq_offset * 2.0 * np.pi)
                         self.radians = np.cumsum(radians_per_sec * self.delta_times,
                                                  dtype=self.envelope.dtype)
                         # FIX: I think that this is off by 1, but am hoping that it is
-                        # undetectable.
+                        # undetectable.  I guess it could stretch the waveform out a bit
+                        # and slightly lower the freq?
                         self.radians_inc = self.radians[-1] % (2 * np.pi)
 
                 radians_per_sample = self.radians + self.next
@@ -444,18 +455,18 @@ class Sin(Envelope):
     r'''Can be used in one of two ways:
 
     1. passing cycle_time to envelope ctor.  This will always use the same cycle_time
-       (but scales it based on the base_freq passed to start).  If center_ampl ==
-       'base_freq', base_freq is added to the generated output.  Example:
+       (but scales it based on the base_freq passed to start).  If add_base_freq is
+       True, base_freq is added to the generated output.  Example:
 
-           - harmonic.freq_envelope = Sin('vibrato', harmonic, 1/3,
-                                          center_ampl='base_freq', ampl_swing=50)
+           - harmonic.freq_envelope = Sin('vibrato', harmonic, 1/3, ampl_swing=50,
+                                          add_base_freq=true)
            - harmonic.freq_gen = Sin('gen', harmonic)
 
        When note_on is received:
 
            - env_gen = harmonic.freq_envelope.start(base_freq)
-             - will add base_freq to output generated (because center_ampl is 'base_freq')
-           - sample_gen = haronic.freq_gen.start(env_gen)
+             - will add base_freq to output generated (because add_base_freq is True)
+           - sample_gen = harmonic.freq_gen.start(env_gen)
              - env_gen.target_value() used when env_gen runs out
 
     2. not passing cycle_time to envelope ctor.  In this case, it uses base_freq directly.
@@ -468,9 +479,12 @@ class Sin(Envelope):
     cycle_time = Notify_actors()
 
     def __init__(self, name, harmonic, cycle_time=None, center_ampl=None, ampl_swing=None,
-                 duration=None, scale_3=None):
+                 duration=None, scale_3=None, add_base_freq=False):
         super().__init__(name, harmonic, duration, scale_3)
+        assert cycle_time is not None or not add_base_freq, \
+          f"{name}: add_base_freq only allowed with cycle_time"
         self.cycle_time = cycle_time
         self.ampl_swing = ampl_swing
         self.center_ampl = center_ampl
+        self.add_base_freq = add_base_freq
 
