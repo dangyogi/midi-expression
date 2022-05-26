@@ -8,6 +8,7 @@ from itertools import repeat
 from .notify import Var, Notify_actors, Actor
 from .utils import Num_harmonics, two_byte_value
 from .tuning_systems import freq_to_Hz
+from .envelope import *
 
 
 class Synth(Var):
@@ -185,7 +186,6 @@ class Instrument(Actor):
             self.tuning_system_from_synth = False
             self.tuning_system = tuning_system
         self.notes_playing = defaultdict(list)  # {midi_note: [Play_harmonic]}
-        self.velocities = {}                    # {midi_note: velocity}  # velocity is %
         self.num_notes_already_playing = 0
         self.num_notes_not_playing = 0
         self.num_note_ons = 0
@@ -286,6 +286,7 @@ class Instrument(Actor):
             self.tuning_system = self.synth.tuning_system
 
     def add_harmonic(self, harmonic):
+        # FIX: Should these all just be created at the beginning?
         self.harmonics.append(harmonic)
 
     def note_on(self, midi_note, velocity):             # 0x90
@@ -300,9 +301,8 @@ class Instrument(Actor):
             #scaled_velocity = velocity / ((midi_note - 21) * self.scale_volume + 1)
 
             scaled_velocity = velocity - (midi_note - 21) * self.scale_volume
-            my_note = self.key_signature.MIDI_to_note(midi_note)
             my_velocity = scaled_velocity / 127
-            print(f"note_on {midi_note=}, {my_note=}, {velocity=}, {scaled_velocity=:.0f}, "
+            print(f"note_on {midi_note=}, {velocity=}, {scaled_velocity=:.0f}, "
                   f"{my_velocity=:.3f}")
 
             # kill note if already playing...
@@ -313,10 +313,9 @@ class Instrument(Actor):
                 for ph in self.notes_playing[midi_note]:
                     ph.delete()
                 del self.notes_playing[midi_note]
-                del self.velocities[midi_note]
             harmonics_added = 0
             for h in self.harmonics:
-                ph_list = h.play(my_note, my_velocity)
+                ph_list = h.play(midi_note, my_velocity)
                 #print("note_on got ph_list", ph_list)
                 if ph_list:
                     self.notes_playing[midi_note].extend(ph_list)
@@ -326,15 +325,13 @@ class Instrument(Actor):
             if self.synth.idle_fun_running:
                 self.synth.idle_fun_caught_running += 1
             if harmonics_added:
-                self.velocities[midi_note] = my_velocity
                 Num_harmonics.value += harmonics_added
             #print("note_on", midi_note, len(self.harmonics), harmonics_added,
             #      self.synth.idle_fun_running, Num_harmonics.value)
 
     def note_off(self, midi_note, velocity):            # 0x80
         self.num_note_offs += 1
-        my_note = self.key_signature.MIDI_to_note(midi_note)
-        #print(f"note_off {midi_note=}, {my_note=}, {velocity=}")
+        #print(f"note_off {midi_note=}, {velocity=}")
         if midi_note in self.notes_playing:
             for ph in self.notes_playing[midi_note]:
                 ph.note_off(velocity)
@@ -481,16 +478,13 @@ class Instrument(Actor):
             #print(f"populate_sound_block: {self.synth.idle_fun_running=}")
             if self.synth.idle_fun_running:
                 self.synth.idle_fun_caught_running += 1
-            instrument_block = self.synth.soundcard.new_block()
             num_harmonics_deleted = 0
             note_deletes = defaultdict(list)  # {note: [ph_list indexes to delete]}
             for midi_note, ph_list in self.notes_playing.items():
                 assert ph_list
-                note_block = self.synth.soundcard.new_block()
                 for i, ph in enumerate(ph_list):
-                    if not ph.populate_sound_block(note_block):
+                    if not ph.populate_sound_block(block):
                         note_deletes[midi_note].append(i)
-                instrument_block += note_block * self.velocities[midi_note]
             for note, ph_indexes in note_deletes.items():
                 ph_list = self.notes_playing[note]
                 for i in sorted(ph_indexes, reverse=True):
@@ -498,132 +492,64 @@ class Instrument(Actor):
                 num_harmonics_deleted += len(ph_indexes)
                 if not ph_list:
                     del self.notes_playing[note]
-                    del self.velocities[note]
             #print(f"populate_sound_block: {num_harmonics_deleted=}, {note_deletes=}")
             if num_harmonics_deleted:
                 Num_harmonics.value -= num_harmonics_deleted
-            instrument_block *= self.volume
-            # FIX: add panning
-            block += instrument_block
 
 
 class Harmonic(Var):
     r'''Represents a single harmonic for an Instrument.
 
-    Reports changes in ampl_offset, freq_offset, ampl_envelope, and freq_envelope.
+    Reports changes in ampl_offset, freq_offset, attack_env, decay_env, sustain_env,
+    release_env and freq_env.
     '''
     def __init__(self, instrument, harmonic, ampl_offset, freq_offset,
-                 note_on_envelope=None, note_off_envelope=None, freq_envelope=None):
+                 attack_env=None, decay_env=None, sustain_env=None, release_env=None,
+                 freq_env=None):
         super().__init__(name=f"{instrument.name}-H{harmonic}")
         self.instrument = instrument
         self.harmonic = harmonic
-        self.ampl_offset = ampl_offset
-        self.freq_offset = freq_offset
-        if note_on_envelope is None:
-            self.note_on_envelope = 1.0
-        else:
-            self.note_on_envelope = note_on_envelope
-        if note_off_envelope is None:
-            self.note_off_envelope = 1.0
-        else:
-            self.note_off_envelope = note_off_envelope
-        if freq_envelope is None:
-            self.freq_envelope = 1.0
-        else:
-            self.freq_envelope = freq_envelope
+        self.ampl_offset = ampl_offset   # multiplied by note_on/off_envelope
+        self.freq_offset = freq_offset   # cents; added to base_freq for note
+        self.note_on_sequence = [None, None, None]  # attack, decay, sustain
+        self.note_on_env = Sequence(f"{self.name}-note_on", self, self.note_on_sequence)
+        self.attack_env = attack_env
+        self.decay_env = decay_env
+        self.sustain_env = sustain_env
+        self.release_env = release_env
+        self.freq_env = freq_env
 
-        self.control_numbers = {
-            0x66: self.set_freq_scalefn,
-            0x67: self.set_freq_type,
-            0x68: self.set_freq_param1,
-            0x69: self.set_freq_param2,
-            0x6A: self.set_freq_param3,
+    ampl_offset = Notify_actors()   # 0 turns off this Harmonic
+    freq_offset = Notify_actors()
 
-            0x51: self.set_ampl_scalefn,
-            0x52: self.set_ampl_attack_duration,
-            0x53: self.set_ampl_attack_bend,
-            0x54: self.set_ampl_attack_start,
-            0x55: self.set_ampl_decay_duration,
-            0x56: self.set_ampl_decay_bend,
-            0x57: self.set_ampl_tremolo_level,
-            0x58: self.set_ampl_tremolo_cycle_time,
-            0x59: self.set_ampl_tremolo_scalefn,
-            0x5A: self.set_ampl_tremolo_ampl,
-            0x6B: self.set_ampl_release_duration,
-            0x6C: self.set_ampl_release_bend,
-        }
+    attack_env = Notify_actors()
 
-    def set_freq_offset(self, value):
-        # immediate
-        pass
+    @Cross_setter
+    def _attack_env(self, value):
+        self.note_on_sequence[0] = value
 
-    def set_ampl_offset(self, value):
-        # immediate
-        pass
+    decay_env = Notify_actors()
 
-    def set_freq_scalefn(self, value):
-        pass
+    @Cross_setter
+    def _decay_env(self, value):
+        self.note_on_sequence[1] = value
 
-    def set_freq_type(self, value):
-        pass
+    sustain_env = Notify_actors()
 
-    def set_freq_param1(self, value):
-        # immediate for vibrato
-        pass
+    @Cross_setter
+    def _sustain_env(self, value):
+        self.note_on_sequence[2] = value
 
-    def set_freq_param2(self, value):
-        # immediate for vibrato
-        pass
-
-    def set_freq_param3(self, value):
-        pass
-
-    def set_ampl_scalefn(self, value):
-        pass
-
-    def set_ampl_attack_duration(self, value):
-        pass
-
-    def set_ampl_attack_bend(self, value):
-        pass
-
-    def set_ampl_attack_start(self, value):
-        pass
-
-    def set_ampl_decay_duration(self, value):
-        pass
-
-    def set_ampl_decay_bend(self, value):
-        pass
-
-    def set_ampl_tremolo_level(self, value):
-        # immediate
-        pass
-
-    def set_ampl_tremolo_cycle_time(self, value):
-        # immediate
-        pass
-
-    def set_ampl_tremolo_scalefn(self, value):
-        # immediate
-        pass
-
-    def set_ampl_tremolo_ampl(self, value):
-        # immediate
-        pass
-
-    def set_ampl_release_duration(self, value):
-        # immediate, but not if note has already been released
-        pass
-
-    def set_ampl_release_bend(self, value):
-        # immediate, but not if note has already been released
-        pass
+    release_env = Notify_actors()
+    freq_env = Notify_actors()
 
     def play(self, note, velocity):
         r'''Returns a (possibly empty) list of Play_harmonics.
         '''
-        return [Play_harmonic(self, note, velocity)]
+        if self.ampl_offset == 0:
+            return []
+        base_freq = self.instrument.tuning_system.note_to_freq(note)
+        return [Play_harmonic(self, base_freq, velocity)]
 
     def get_waveform(self, base_freq):
         # FIX: Don't forget synth.dtype!!!!!!!
@@ -661,61 +587,40 @@ class Play_harmonic(Actor):
     r'''
     Doesn't report changes to any variables, only acts as Actor...
     '''
-    def __init__(self, harmonic, note, velocity, **other_attrs):
+    # FIX: add panning
+    def __init__(self, harmonic, base_freq, velocity, waveform_gen, ampl_gen):
         r'''Neither base_freq nor velocity can later be changed...
         '''
-        super().__init__(harmonic.instrument, harmonic)
+        super().__init__(harmonic.instrument)
         self.harmonic = harmonic
-        self.block_size = self.harmonic.instrument.synth.block_size
-        self.note = note
+        self.base_freq = base_freq
         self.velocity = velocity
-        for key, value in other_attrs.items():
-            setattr(self, key, value)
-        self.state = 'note_on'
+        self.waveform_gen = waveform_gen
+        self.waveform_it = iter(self.waveform)
+        self.ampl_gen = ampl_gen
+        self.ampl_it = iter(self.ampl_gen)
         self.recalc()
 
     def recalc(self):
-        self.base_freq = self.harmonic.instrument.tuning_system.note_to_freq(self.note)
-        self.waveform = iter(self.harmonic.get_waveform(self.base_freq))
-        #print(f"recalc, {self.waveform=}")
-        #print(f"recalc, {next(self.waveform)=}")
-        if self.state == 'note_on':
-            # FIX: This won't work, need to rely on envelope recalc
-            self.ampl_env = iter(self.harmonic.get_note_on_envelope(self.base_freq,
-                                                                    self.velocity))
-        else:
-            # FIX: This won't work, need to rely on envelope recalc
-            self.ampl_env = iter(self.harmonic.get_note_off_envelope(self.base_freq,
-                                                                     self.velocity))
+        self.volume = self.harmonic.instrument.volume * self.velocity
 
     def aftertouch(self, pressure):
         # FIX
         pass
 
     def note_off(self, velocity):
-        self.state = 'note_off'
-        self.ampl_env = self.harmonic.get_note_off_envelope(self.base_freq, velocity)
+        r'''velocity ignored...
+        '''
+        start = self.ampl_gen.next_value()
+        self.ampl_gen = self.harmonic.release_env.start(self.base_freq, start)
+        self.ampl_it = iter(self.ampl_gen)
 
     def populate_sound_block(self, block):
         r'''Returns True to continue, False if done.
         '''
-        # FIX
-        # try:
-        #   base_waveform = next(waveform)
-        #     freq_envelope = select freq slice
-        #     cycle_over_time = \
-        #       np.cumsum(freq_envelope * self.period * soundcard.delta_times)
-        #     return np.sin(cycle_over_time)
-        #   ampl_envelope = next(ampl_env)
-        # except StopIteration:
-        #   return False
-        # num_samples = min(len(base_waveform), len(ampl_envelope))
-        # np.multiply(base_waveform[:num_samples], ampl_envelope[:num_samples],
-        #             out=block[:num_samples])
-        # return num_samples == synth.block_size
         try:
             #print(f"populate_sound_block {self.waveform=}")
-            base_waveform = next(self.waveform)
+            base_waveform = next(self.waveform_it)
             #print("populate_sound_block got base_waveform")
         except StopIteration:
             #print(f"populate_sound_block: got StopIteration for note {self.note} "
@@ -723,22 +628,14 @@ class Play_harmonic(Actor):
             self.delete()
             return False
         try:
-            ampl_envelope = next(self.ampl_env)
+            ampl_envelope = next(self.ampl_it)
             #print("populate_sound_block got ampl_envelope")
         except StopIteration:
             #print(f"populate_sound_block: got StopIteration for note {self.note} "
             #      f"on ampl_envelope, returning", False)
             self.delete()
             return False
-        num_samples = min(len(base_waveform), len(ampl_envelope))
-        if num_samples == self.block_size:
-            np.multiply(base_waveform, ampl_envelope, out=block)
-            #print("populate_sound_block, num_samples", num_samples, True)
-            return True
-        #print("populate_sound_block, num_samples", num_samples, False)
-        if num_samples > 0:
-            np.multiply(base_waveform[:num_samples], ampl_envelope[:num_samples],
-                        out=block[:num_samples])
-        self.delete()
-        return False
+        block += base_waveform * ampl_envelope * self.volume
+        #print("populate_sound_block, num_samples", num_samples, True)
+        return True
 

@@ -1,7 +1,7 @@
 # test_envelope.py
 
 import math
-from itertools import tee
+from itertools import tee, count
 
 import numpy as np
 import pytest

@@ -15,6 +15,16 @@ class Notify_actors:
             ...
             x = Notify_actors()
             y = Notify_actors()
+
+    Can be combined with Cross_setter as follows (note the "_" on def _x):
+
+        class foo(Var):
+            ...
+            x = Notify_actors()
+
+            @Cross_setter
+            def _x(self, value):
+                ...
     '''
     def __get__(self, instance, owner=None):
         return getattr(instance, self.name)

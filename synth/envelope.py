@@ -15,15 +15,17 @@ from .notify import Notify_actors, Var, Actor
 from .tuning_systems import C4_freq, freq_to_Hz
 from .utils import Cross_setter
 
+__all__ = ("Constant", "Sequence", "Ramp", "Sin")
 
-# FIX: Should this be an Actor based on Harmonic?
+
 class Envelope(Var):
     r'''Base class for the various types of Envelopes.
 
     These objects last long-term and are used many times over and over again.  The
     generator objects created by the `start` method are only used once.
 
-    Derived classes must define the "generator" class variable.
+    Derived classes must define the "generator" class variable as the class to instantiate
+    by the `start` method.
     '''
     duration = Notify_actors()
     scale_base = Notify_actors()

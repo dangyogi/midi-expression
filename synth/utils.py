@@ -88,6 +88,17 @@ class Cross_setter:
         def a(self, value):  # self.a is set automatically
             self.b = value * 10
             self.c = value / 10
+
+    To use with Notify_actors(), put the Cross_setter on _name:
+
+    class foo(Var):
+        a = Notify_actors()
+
+        @Cross_setter
+        def _a(self, value):
+            self.b = value * 10
+            self.c = value / 10
+
     '''
     def __init__(self, set_fn):
         self.set_fn = set_fn
