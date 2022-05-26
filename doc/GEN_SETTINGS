@@ -4,7 +4,7 @@ generate the setting commands.
 
 Python settings processing:
 
-    - give MIDI message to process_MIDI_config_setting or process_MIDI_system_common,
+    - give MIDI message to process_MIDI_control_change or process_MIDI_system_common,
       along with the Synth object.
 
     - unpack the arguments, converting them to the proper python value.  Apply to_python

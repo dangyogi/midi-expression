@@ -9,6 +9,7 @@ from .notify import Var, Notify_actors, Actor
 from .utils import Num_harmonics, two_byte_value, Cross_setter
 from .tuning_systems import freq_to_Hz
 from .envelope import *
+from .synth_settings import process_MIDI_control_change, process_MIDI_system_common
 
 
 class Synth(Var):
@@ -44,15 +45,17 @@ class Synth(Var):
         self.unknown_channels = set()
         self.keep_running = True
 
-        self.system_funs = {
+        self.system_funs = {   # these are passed (command, data)
+            # system common:
             0x00: self.sysex,
             0x01: self.unknown_command,         # MIDI Time Code Quarter Frame
             0x02: self.unknown_command,         # Song Position Pointer
             0x03: self.unknown_command,         # Song Select
-            0x04: self.unknown_command,         # <undefined>
-            0x05: self.unknown_command,         # <undefined>
+            0x04: self.system_common,           # <undefined>
+            0x05: self.system_common,           # <undefined>
             0x06: self.tune_request,
             0x07: self.unknown_command,         # <end of sysex>, not a command!
+
             0x08: self.unknown_command,         # Timing Clock
             0x09: self.unknown_command,         # <undefined>
             0x0A: self.start,
@@ -62,7 +65,7 @@ class Synth(Var):
             0x0E: self.unknown_command,         # Active Sensing
             0x0F: self.system_reset,
         }
-        self.channel_funs = {
+        self.channel_funs = {  # these are passed (command, channel, data)
             0x80: "note_off",
             0x90: "note_on",
             0xA0: "aftertouch",
@@ -102,39 +105,43 @@ class Synth(Var):
             first_nibble = command & 0xF0
         if first_nibble == 0xF0:
             # System message:
-            self.system_funs[command & 0x0F] (command, *rest)
+            self.system_funs[command & 0x0F](command, rest)
         else:
             channel = command & 0x0F
             if channel in self.channels:
                 getattr(self.channels[channel],
-                        self.channel_funs[first_nibble]) (*rest)
+                        self.channel_funs[first_nibble])(command, channel, rest)
             else:
                 print("process_MIDI: got command", self.channel_funs[first_nibble],
                       "for unknown channel", channel)
                 self.num_unknown_channels += 1
                 self.unknown_channels.add(channel)
 
-    def unknown_command(self, command, *message):
+    def unknown_command(self, command, data):
         self.num_unknown_MIDI_commands += 1
         self.unknown_MIDI_commands.add(command)
         print("unknown MIDI command:", command, "ignored...")
 
-    def sysex(self, manuf_id, model_id, *message):  # 0xF0
-        print("MIDI sysex:", manuf_id, model_id, "len of message", len(message))
+    def system_common(self, command, data):
+        process_MIDI_system_common(self, command, data)
 
-    def tune_request(self):  # 0xF6, not sure how this works...
+    def sysex(self, command, data):         # 0xF0
+        manuf_id, model_id, *rest = data
+        print("MIDI sysex:", manuf_id, model_id, "len of data", len(data))
+
+    def tune_request(self, command, data):  # 0xF6, not sure how this works...
         print("MIDI tune_request")
 
-    def start(self):         # 0xFA, does this have data?
+    def start(self, command, data):         # 0xFA, does this have data?
         print("MIDI start")
 
-    def cont(self):          # 0xFB, does this have data?
+    def cont(self, command, data):          # 0xFB, does this have data?
         print("MIDI continue")
 
-    def stop(self):          # 0xFC, does this have data?
+    def stop(self, command, data):          # 0xFC, does this have data?
         print("MIDI stop")
 
-    def system_reset(self):  # 0xFF, does this have data?
+    def system_reset(self, command, data):  # 0xFF, does this have data?
         print("MIDI system reset")
 
     def schedule_quit(self):
@@ -202,67 +209,11 @@ class Instrument(Actor):
         self.data_entry_fine = None
 
         self.control_numbers = {
+            # Anything not in here is sent to process_MIDI_control_change()
             # General MIDI level 1 (some, not all that are required):
             0x40: self.sustain,
             0x79: self.reset_all_controllers,
             0x7B: self.all_notes_off,
-
-            # My control changes:
-            0x14: self.set_key_signature,
-
-            0x62: self.set_non_registered_param_LSB,    # value of 0x7F disables
-            0x63: self.set_non_registered_param_MSB,    # value of 0x7F disables
-            0x06: self.set_data_entry_course,
-            0x26: self.set_data_entry_fine,
-
-            # The rest of these are forwarded to Harmonic:
-            0x16: self.set_freq_offset,
-            0x17: self.set_freq_offset,
-            0x18: self.set_freq_offset,
-            0x19: self.set_freq_offset,
-            0x1A: self.set_freq_offset,
-            0x1B: self.set_freq_offset,
-            0x1C: self.set_freq_offset,
-            0x1D: self.set_freq_offset,
-            0x1E: self.set_freq_offset,
-            0x1F: self.set_freq_offset,
-
-            0x36: self.set_ampl_offset,
-            0x37: self.set_ampl_offset,
-            0x38: self.set_ampl_offset,
-            0x39: self.set_ampl_offset,
-            0x3A: self.set_ampl_offset,
-            0x3B: self.set_ampl_offset,
-            0x3C: self.set_ampl_offset,
-            0x3D: self.set_ampl_offset,
-            0x3E: self.set_ampl_offset,
-            0x3F: self.set_ampl_offset,
-
-            0x50: self.set_harmonic_focus,              # value of 0x7F disables
-
-            0x66: self.forward_to_harmonic,
-            0x67: self.forward_to_harmonic,
-            0x68: self.forward_to_harmonic,
-            0x69: self.forward_to_harmonic,
-            0x6A: self.forward_to_harmonic,
-
-            0x51: self.forward_to_harmonic,
-            0x52: self.forward_to_harmonic,
-            0x53: self.forward_to_harmonic,
-            0x54: self.forward_to_harmonic,
-            0x55: self.forward_to_harmonic,
-            0x56: self.forward_to_harmonic,
-            0x57: self.forward_to_harmonic,
-            0x58: self.forward_to_harmonic,
-            0x59: self.forward_to_harmonic,
-            0x5A: self.forward_to_harmonic,
-            0x6B: self.forward_to_harmonic,
-            0x6C: self.forward_to_harmonic,
-        }
-
-        self.non_registered_parameters = {
-            0x0000: self.set_tuning_system,
-            0x0001: self.tune,
         }
 
     def report(self):
@@ -289,9 +240,10 @@ class Instrument(Actor):
         # FIX: Should these all just be created at the beginning?
         self.harmonics.append(harmonic)
 
-    def note_on(self, midi_note, velocity):             # 0x90
+    def note_on(self, command, channel, data):             # 0x90
+        midi_note, velocity = data
         if velocity == 0:
-            self.note_off(midi_note, 0)
+            self.note_off(command, channel, data)
         else:
             self.num_note_ons += 1
 
@@ -329,7 +281,8 @@ class Instrument(Actor):
             #print("note_on", midi_note, len(self.harmonics), harmonics_added,
             #      self.synth.idle_fun_running, Num_harmonics.value)
 
-    def note_off(self, midi_note, velocity):            # 0x80
+    def note_off(self, command, channel, data):            # 0x80
+        midi_note, velocity = data
         self.num_note_offs += 1
         #print(f"note_off {midi_note=}, {velocity=}")
         if midi_note in self.notes_playing:
@@ -339,7 +292,8 @@ class Instrument(Actor):
             self.num_notes_not_playing += 1
             print(f"note_off: note {midi_note=} not playing!")
 
-    def aftertouch(self, midi_note, pressure):          # 0xA0
+    def aftertouch(self, command, channel, data):          # 0xA0
+        midi_note, pressure = data
         # aka, "polyphonic aftertouch" -- rarely implemented by keyboards,
         # see channel_pressure for what's typically provided by keyboards...
         self.num_aftertouches += 1
@@ -350,9 +304,10 @@ class Instrument(Actor):
             self.num_notes_not_playing += 1
             print(f"aftertouch: note {midi_note=} not playing!")
 
-    def control_change(self, control_number, value):    # 0xB0
+    def control_change(self, command, channel, data):    # 0xB0
+        control_number, value = data
         if control_number not in self.control_numbers:
-            print("unknown control change:", hex(control_number), value)
+            process_MIDI_control_change(self.synth, channel, control_number, value)
         else:
             self.control_numbers[control_number](control_number, value)
         self.num_control_changes += 1
@@ -372,96 +327,19 @@ class Instrument(Actor):
         '''
         pass
 
-    def set_key_signature(self, control_number, value):
-        pass
-
-    def set_non_registered_param_LSB(self, control_number, value):
-        r'''value of 0x7F disables.
-        '''
-        self.non_registered_param_LSB = value
-        if value == 0x7F:
-            self.data_entry_course = None
-            self.data_entry_fine = None
-
-    def set_non_registered_param_MSB(self, control_number, value):
-        r'''value of 0x7F disables.
-        '''
-        self.non_registered_param_MSB = value
-        if value == 0x7F:
-            self.data_entry_course = None
-            self.data_entry_fine = None
-
-        self.non_registered_param_LSB = None
-        self.non_registered_param_MSB = 0
-
-    def set_data_entry_course(self, control_number, value):
-        if self.non_registered_param_LSB != 0x7F and \
-           self.non_registered_param_MSB != 0x7F:
-            self.data_entry_course = value
-            if self.data_entry_fine is not None:
-                self.call_non_registered_param()
-
-    def set_data_entry_fine(self, control_number, value):
-        if self.non_registered_param_LSB != 0x7F and \
-           self.non_registered_param_MSB != 0x7F:
-            self.data_entry_fine = value
-            if self.data_entry_course is not None:
-                self.call_non_registered_param()
-
-    def call_non_registered_param(self):
-        key = two_byte_value(self.non_registered_param_MSB, self.non_registered_param_LSB)
-        if key in self.non_registered_parameters:
-            self.non_registered_parameters[key](
-              two_byte_value(self.data_entry_course, self.data_entry_fine))
-        else:
-            print("unknown non-registered param:", hex(key))
-        self.data_entry_course = None
-        self.data_entry_fine = None
-
-    def set_tuning_system(self, value):
-        pass
-
-    def tune(self, value):
-        pass
-
-    # The rest of these are forwarded to Harmonic:
-    def set_freq_offset(self, control_number, value):
-        harmonic = (control_number & 0x0F) - 5
-        if harmonic >= len(self.harmonics) or self.harmonics[harmonic] is None:
-            print(f"control change 0x{control_number:02X}: harmonic {harmonic} not set")
-        else:
-            self.harmonics[harmonic].set_freq_offset(value)
-
-    def set_ampl_offset(self, control_number, value):
-        harmonic = (control_number & 0x0F) - 5
-        if harmonic >= len(self.harmonics) or self.harmonics[harmonic] is None:
-            print(f"control change 0x{control_number:02X}: harmonic {harmonic} not set")
-        else:
-            self.harmonics[harmonic].set_ampl_offset(value)
-
-    def set_harmonic_focus(self, control_number, value):
-        self.harmonic_focus = value
-
-    def forward_to_harmonic(self, control_number, value):
-        if self.harmonic_focus == 0x7F:
-            print(f"control change 0x{control_number:02X}: harmonic_focus not set")
-        elif self.harmonic_focus >= len(self.harmonics) or \
-             self.harmonics[self.harmonic_focus] is None:
-            print(f"control change 0x{control_number:02X}: harmonic_focus, "
-                  f"{self.harmonic_focus}, not a valid harmonic")
-        else:
-            self.harmonics[self.harmonic_focus].control_numbers[control_number](value)
-
-    def patch_change(self, program_number):             # 0xC0
+    def patch_change(self, command, channel, data):             # 0xC0
+        program_number, = data
         print("patch change", program_number)
         self.num_patch_changes += 1
 
-    def channel_pressure(self, pressure):               # 0xD0
+    def channel_pressure(self, command, channel, data):         # 0xD0
+        pressure, = data
         # aka, "Channel aftertouch"... not used
         print("channel pressure", pressure)
         self.num_channel_pressures += 1
 
-    def pitch_bend(self, lsb, msb):                     # 0xE0
+    def pitch_bend(self, command, channel, data):               # 0xE0
+        lsb, msb = data
         # bend_amount is 14 bits (max 16383)
         # 8192 is no bend (the zero value)
         # lower numbers bend down, higher numbers bend up

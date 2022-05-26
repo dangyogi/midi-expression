@@ -55,14 +55,11 @@ class bits:
 Number_of_unknown_control_numbers = 0
 Unknown_control_numbers = set()
 
-def process_MIDI_config_setting(synth, MIDI_message):
+def process_MIDI_control_change(synth, channel, control_number, value):
     global Number_of_unknown_control_numbers
 
-    command, control_number, value = MIDI_message
-    assert command & 0xF0 == 0xB0
-    channel = command & 0x0F
     if control_number not in Control_number_map:
-        print(f"Unknown MIDI Control number: {control_number}")
+        print(f"Unknown MIDI Control number: 0x{control_number:02X}")
         Number_of_unknown_control_numbers += 1
         Unknown_control_numbers.add(control_number)
         return
@@ -161,7 +158,7 @@ def call_NR_fn(channel, course, fine):
     param_number = (NR_params_MSB[channel] << 7) | NR_params_LSB[channel]
     value = (NR_data_entry_course[channel] << 7) | NR_data_entry_fine[channel]
     if param_number not in NR_param_map:
-        print(f"Unknown MIDI NR param number: {param_number}")
+        print(f"Unknown MIDI NR param number: 0x{param_number:04X}")
         Number_of_unknown_NR_params += 1
         Unknown_NR_params.add(param_number)
         return
@@ -188,14 +185,13 @@ NR_param_map = {
 Number_of_unknown_system_commands = 0
 Unknown_system_commands = set()
 
-def process_MIDI_system_common(synth, MIDI_message):
+def process_MIDI_system_common(synth, command, data):
     global Number_of_unknown_system_commands
 
-    command, *rest = MIDI_message
-    value = bits(rest)
+    value = bits(data)
     key = {{ system_common_key }}
     if key not in System_common_map:
-        print(f"Unknown MIDI System Common command: {key}")
+        print(f"Unknown MIDI System Common command: {p_sys_command_key(key)}")
         Number_of_unknown_system_commands += 1
         Unknown_system_commands.add(key)
         return
@@ -216,17 +212,30 @@ System_common_map = {
     {% if key is integer %}
     {{ key|hex }}: {{ name }},
     {% else %}
-    {{ key|map(hex) }}: {{ name }},
+    ({{ key|map('hex')|join(', ') }}): {{ name }},
     {% endif %}
     {% endfor %}
   {% endfor %}
 }
 
 
+def p_tuple(l, d=2):
+    return '(' + ', '.join(f'0x{n:0{d}X}' for n in l) + ')'
+
+def p_sys_command_key(k):
+    if isinstance(k, (list, tuple)):
+        sublists = tuple(p_tuple(sublist) for sublist in k)
+        str = '(' + ', '.join(sublists) + ')'
+    else:
+        str = p_tuple(k)
+
 def report():
-    print(f"{Number_of_unknown_control_numbers=}, {Unknown_control_numbers=}")
-    print(f"{Number_of_unknown_system_commands=}, {Unknown_system_commands=}")
-    print(f"{Number_of_unknown_NR_params=}, {Unknown_NR_params=}")
+    print(f"{Number_of_unknown_control_numbers=},",
+          f"Unknown_control_numbers={p_tuple(Unknown_control_numbers)}")
+    str = ', '.join(p_sys_command_key(k) for k in Unknown_system_commands)
+    print(f"{Number_of_unknown_system_commands=}, Unknown_system_commands=({str})")
+    print(f"{Number_of_unknown_NR_params=},"
+          f"Unknown_NR_params={p_tuple(Unknown_NR_params, d=4)}")
 
 
 {% for line in helpers %}

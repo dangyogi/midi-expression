@@ -350,13 +350,13 @@ class Sin_generator(Block_generator):
         else:
             self.duration = self.envelope.duration * self.scale
             self.num_blocks = round(self.duration / self.envelope.block_duration)
-            print(f"{self.name}: duration {self.duration}, num_blocks {self.num_blocks}")
+            #print(f"{self.name}: duration {self.duration}, num_blocks {self.num_blocks}")
         if self.first_recalc or self.cycle_time is not None:
             if self.envelope.cycle_time is not None:
                 self.cycle_time = self.envelope.cycle_time * self.scale
                 radians_per_sec = 1/self.cycle_time * 2.0 * np.pi
-                print(f"{self.name}: cycle_time {self.cycle_time},",
-                      f"radians_per_sec {radians_per_sec}")
+                #print(f"{self.name}: cycle_time {self.cycle_time},",
+                #      f"radians_per_sec {radians_per_sec}")
                 self.radians = np.cumsum(radians_per_sec * self.delta_times,
                                          dtype=self.envelope.dtype)
                 self.radians_inc = \
@@ -372,12 +372,12 @@ class Sin_generator(Block_generator):
                 if self.envelope.add_base_freq:
                     self.target += self.base_freq
                 self.have_iter = False
-                print(f"{self.name}: radians[0] {self.radians[0]},",
-                      f"radians[-1] {self.radians[-1]},",
-                      f"radians_inc {self.radians_inc},",
-                      f"ampl_swing {self.ampl_swing},",
-                      f"target {self.target},",
-                      f"have_iter {self.have_iter},")
+                #print(f"{self.name}: radians[0] {self.radians[0]},",
+                #      f"radians[-1] {self.radians[-1]},",
+                #      f"radians_inc {self.radians_inc},",
+                #      f"ampl_swing {self.ampl_swing},",
+                #      f"target {self.target},",
+                #      f"have_iter {self.have_iter},")
         if self.cycle_time is None:
             self.ampl_swing = 1
             self.target = 0
@@ -393,13 +393,13 @@ class Sin_generator(Block_generator):
                 self.radians_inc = \
                   (radians_per_sec * self.envelope.block_duration) % (2 * np.pi)
                 self.have_iter = False
-                print(f"{self.name}: radians_per_sec {radians_per_sec},",
-                      f"radians[0] {self.radians[0]},",
-                      f"radians[-1] {self.radians[-1]},",
-                      f"radians_inc {self.radians_inc},",
-                      f"ampl_swing {self.ampl_swing},",
-                      f"target {self.target},",
-                      f"have_iter {self.have_iter},")
+                #print(f"{self.name}: radians_per_sec {radians_per_sec},",
+                #      f"radians[0] {self.radians[0]},",
+                #      f"radians[-1] {self.radians[-1]},",
+                #      f"radians_inc {self.radians_inc},",
+                #      f"ampl_swing {self.ampl_swing},",
+                #      f"target {self.target},",
+                #      f"have_iter {self.have_iter},")
         self.first_recalc = False
 
     def __iter__(self):
@@ -408,7 +408,7 @@ class Sin_generator(Block_generator):
                 if self.num_blocks is not None and self.blocks_sent >= self.num_blocks:
                     break
                 if self.have_iter:
-                    print(f"{self.name}: have_iter")
+                    #print(f"{self.name}: have_iter")
                     try:
                         freq_block = next(self.freq_iter)
                     except StopIteration:
