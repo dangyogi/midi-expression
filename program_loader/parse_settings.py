@@ -10,11 +10,13 @@ from .utils import read_yaml, calc_geom
 Reserved_control_numbers = frozenset((
     0x01,  # modulation
     0x06,  # data entry (course)
-    0x07,  # channel volume
+   #0x07,  # channel volume
     0x0A,  # pan
     0x0B,  # expression controller
     0x26,  # data entry (fine)
     0x40,  # sustain
+    0x60,  # data entry +1
+    0x61,  # data entry -1
     0x62,  # Non-Reg param number LSB
     0x63,  # Non-Reg param number MSB
     0x64,  # Reg param number LSB
@@ -86,6 +88,7 @@ class Setting:
                    non_registered_parameter=None,
                    control_change=None,
                    system_common=None,
+                   is_object=False,
                    kill_value=None,
               )
 
@@ -144,7 +147,9 @@ class Setting:
         current = self
         while True:
             assert current is not None
-            if current.group is None or current.group.name != 'choices':
+            if current.group is None:
+                return current.name
+            if current.name != 'choices' and current.group.name != 'choices':
                 return current.name
             current = current.group
 
@@ -331,7 +336,7 @@ class Parameter:
             exp += f' + {self.start}'
         if self.null_value is not None:
             body.append(f"t = {exp}")
-            body.append(f"if t == {self.null_value}:")
+            body.append(f"if math.isclose(t, {self.null_value}, abs_tol=1e-9):")
             if self.kills_value is None:
                 body.append(f"    kill = True")
             else:
@@ -342,7 +347,7 @@ class Parameter:
         if self.kills_value != () and self.kills_value is not None:
             if exp != 't':
                 body.append(f"{indent}t = {exp}")
-            body.append(f"{indent}if t == {self.kills_value}:")
+            body.append(f"{indent}if math.isclose(t, {self.kills_value}, abs_tol=1e-9):")
             body.append(f"{indent}    kill = True")
             body.append(f"{indent}else:")
             indent += '    '
@@ -528,7 +533,7 @@ class Geom_param(Parameter):
         if self.kills_value != () and self.kills_value is not None:
             if exp != 't':
                 body.append(f"{indent}t = {exp}")
-            body.append(f"{indent}if t == {self.kills_value}:")
+            body.append(f"{indent}if math.isclose(t, {self.kills_value}, abs_tol=1e-9):")
             body.append(f"{indent}    kill = True")
             body.append(f"{indent}else:")
             indent += '    '

@@ -7,8 +7,10 @@ from jinja2 import Environment, PackageLoader, FileSystemLoader
 from . import parse_settings
 
 
-Global_fns = "Equal_temperament,key_signature,Well_temperament,Just_intonation," \
-             "Meantone,Pythagorean_tuning".split(',')
+Global_fns = \
+    "Key_signature," \
+    "Equal_temperament,Well_temperament,Just_intonation,Meantone,Pythagorean_tuning," \
+    "Constant,Sequence,Ramp,Sin".split(',')
 
 Synth_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "synth")
 #print("Synth_dir", Synth_dir)
@@ -73,7 +75,7 @@ def store_value(self, p_names, has_kill, body):
     attr_name = self.setting.get_attr_name()
     assert len(p_names) > 0
     indent = ''
-    if len(p_names) == 1:
+    if len(p_names) == 1 and not self.setting.is_object:
         if has_kill:
             body.append(f"if kill:")
             body.append(f"    obj.disable()")
@@ -145,6 +147,9 @@ def compile_system_common(self):
     fn_name = f"system_common_0x{self.my_code:02X}"
     body = []
     System_common_fns.append((self.keys(), fn_name, body))
+    assert self.Offset == 0
+    if self.Length:
+        System_common_key = f"(command, value.peek({self.Length}))"
     p_names = []
     body.append('kill = False')
     body.append('params = {}')

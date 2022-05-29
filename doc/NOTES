@@ -14,6 +14,17 @@ MIDI:
               - key of 60 is C4
               - key of 24 is C1
               - key of 21 is A0
+              - velocity (roughly):
+                - pppp = 8
+                - ppp = 20 (8 + 12)
+                - pp = 31 (20 + 11)
+                - p = 42 (31 + 11)
+                - mp = 53 (42 + 11)
+                - mf = 64 (53 + 11)
+                - f = 80 (64 + 16)
+                - ff = 96 (80 + 16)
+                - fff = 112 (96 + 16)
+                - ffff = 127 (112 + 16)
             - 0xA0 Aftertouch: key, touch
             - 0xB0 Continuous controller (control change): control#, control value
               - control#:  * - equip must respond to comply with General MIDI level 1
@@ -24,7 +35,8 @@ MIDI:
                 - 0x04 foot controller
                 - 0x05 portamento time
                 - 0x06 data entry (course) used with registered parameter numbers
-                - 0x07 *channel volume
+                - 0x07 *channel volume  # gain in dB = 40*log10(value/127)
+                                        # multiplied by note_on velocity
                 - 0x08 balance
                 - 0x0A *pan
                 - 0x0B *expression controller
@@ -34,7 +46,7 @@ MIDI:
                 - 0x11 general purpose controller #2
                 - 0x12 general purpose controller #3
                 - 0x13 general purpose controller #4
-                - 0x20 to 0x3F seems to be a repeat of 0x00 to 0x1F
+                - 0x20 to 0x3F (LSB) seems to be a repeat of 0x00 to 0x1F (MSB)
                 - 0x26 data entry (fine) used with registered parameter numbers
                   - not needed if value is 0
                 - 0x40 *sustain pedal on/off, <=63 off; >= 64 on

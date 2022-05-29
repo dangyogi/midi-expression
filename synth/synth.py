@@ -117,31 +117,31 @@ class Synth(Var):
                 self.num_unknown_channels += 1
                 self.unknown_channels.add(channel)
 
-    def unknown_command(self, command, data):
+    def unknown_command(self, command, bytes):
         self.num_unknown_MIDI_commands += 1
         self.unknown_MIDI_commands.add(command)
         print("unknown MIDI command:", command, "ignored...")
 
-    def system_common(self, command, data):
-        process_MIDI_system_common(self, command, data)
+    def system_common(self, command, bytes):
+        process_MIDI_system_common(self, command, bytes)
 
-    def sysex(self, command, data):         # 0xF0
-        manuf_id, model_id, *rest = data
-        print("MIDI sysex:", manuf_id, model_id, "len of data", len(data))
+    def sysex(self, command, bytes):         # 0xF0
+        manuf_id, model_id, *rest = bytes
+        print("MIDI sysex:", manuf_id, model_id, "len of bytes", len(bytes))
 
-    def tune_request(self, command, data):  # 0xF6, not sure how this works...
+    def tune_request(self, command, bytes):  # 0xF6, not sure how this works...
         print("MIDI tune_request")
 
-    def start(self, command, data):         # 0xFA, does this have data?
+    def start(self, command, bytes):         # 0xFA, does this have data?
         print("MIDI start")
 
-    def cont(self, command, data):          # 0xFB, does this have data?
+    def cont(self, command, bytes):          # 0xFB, does this have data?
         print("MIDI continue")
 
-    def stop(self, command, data):          # 0xFC, does this have data?
+    def stop(self, command, bytes):          # 0xFC, does this have data?
         print("MIDI stop")
 
-    def system_reset(self, command, data):  # 0xFF, does this have data?
+    def system_reset(self, command, bytes):  # 0xFF, does this have data?
         print("MIDI system reset")
 
     def schedule_quit(self):
@@ -240,10 +240,10 @@ class Instrument(Actor):
         # FIX: Should these all just be created at the beginning?
         self.harmonics.append(harmonic)
 
-    def note_on(self, command, channel, data):             # 0x90
-        midi_note, velocity = data
+    def note_on(self, command, channel, bytes):             # 0x90
+        midi_note, velocity = bytes
         if velocity == 0:
-            self.note_off(command, channel, data)
+            self.note_off(command, channel, bytes)
         else:
             self.num_note_ons += 1
 
@@ -281,8 +281,8 @@ class Instrument(Actor):
             #print("note_on", midi_note, len(self.harmonics), harmonics_added,
             #      self.synth.idle_fun_running, Num_harmonics.value)
 
-    def note_off(self, command, channel, data):            # 0x80
-        midi_note, velocity = data
+    def note_off(self, command, channel, bytes):            # 0x80
+        midi_note, velocity = bytes
         self.num_note_offs += 1
         #print(f"note_off {midi_note=}, {velocity=}")
         if midi_note in self.notes_playing:
@@ -292,8 +292,8 @@ class Instrument(Actor):
             self.num_notes_not_playing += 1
             print(f"note_off: note {midi_note=} not playing!")
 
-    def aftertouch(self, command, channel, data):          # 0xA0
-        midi_note, pressure = data
+    def aftertouch(self, command, channel, bytes):          # 0xA0
+        midi_note, pressure = bytes
         # aka, "polyphonic aftertouch" -- rarely implemented by keyboards,
         # see channel_pressure for what's typically provided by keyboards...
         self.num_aftertouches += 1
@@ -304,8 +304,8 @@ class Instrument(Actor):
             self.num_notes_not_playing += 1
             print(f"aftertouch: note {midi_note=} not playing!")
 
-    def control_change(self, command, channel, data):    # 0xB0
-        control_number, value = data
+    def control_change(self, command, channel, bytes):    # 0xB0
+        control_number, value = bytes
         if control_number not in self.control_numbers:
             process_MIDI_control_change(self.synth, channel, control_number, value)
         else:
@@ -327,19 +327,19 @@ class Instrument(Actor):
         '''
         pass
 
-    def patch_change(self, command, channel, data):             # 0xC0
-        program_number, = data
+    def patch_change(self, command, channel, bytes):             # 0xC0
+        program_number, = bytes
         print("patch change", program_number)
         self.num_patch_changes += 1
 
-    def channel_pressure(self, command, channel, data):         # 0xD0
-        pressure, = data
+    def channel_pressure(self, command, channel, bytes):         # 0xD0
+        pressure, = bytes
         # aka, "Channel aftertouch"... not used
         print("channel pressure", pressure)
         self.num_channel_pressures += 1
 
-    def pitch_bend(self, command, channel, data):               # 0xE0
-        lsb, msb = data
+    def pitch_bend(self, command, channel, bytes):               # 0xE0
+        lsb, msb = bytes
         # bend_amount is 14 bits (max 16383)
         # 8192 is no bend (the zero value)
         # lower numbers bend down, higher numbers bend up
@@ -353,7 +353,6 @@ class Instrument(Actor):
         r'''Doesn't return anything.
         '''
         if self.notes_playing:
-            #print(f"populate_sound_block: {self.synth.idle_fun_running=}")
             if self.synth.idle_fun_running:
                 self.synth.idle_fun_caught_running += 1
             num_harmonics_deleted = 0
@@ -370,7 +369,6 @@ class Instrument(Actor):
                 num_harmonics_deleted += len(ph_indexes)
                 if not ph_list:
                     del self.notes_playing[note]
-            #print(f"populate_sound_block: {num_harmonics_deleted=}, {note_deletes=}")
             if num_harmonics_deleted:
                 Num_harmonics.value -= num_harmonics_deleted
 
@@ -408,6 +406,14 @@ class Harmonic(Var):
 
     ampl_offset = Notify_actors()   # 0 turns off this Harmonic
     freq_offset = Notify_actors()
+
+    @Cross_setter
+    def freq_offset_course(self, value):
+        self.freq_offset = value + self.freq_offset_fine
+
+    @Cross_setter
+    def freq_offset_find(self, value):
+        self.freq_offset = self.freq_offset_course + value
 
     attack_env = Notify_actors()
 
@@ -452,7 +458,7 @@ class Play_harmonic(Actor):
     '''
     # FIX: add panning
     def __init__(self, harmonic, base_freq, velocity, waveform_gen, ampl_gen):
-        r'''Neither base_freq nor velocity can later be changed...
+        r'''Neither base_freq nor velocity can be changed while the note is playing...
         '''
         super().__init__(harmonic.instrument,
                          name=f"Play_harmonic_{harmonic.instrument.num_note_ons}")
@@ -486,23 +492,15 @@ class Play_harmonic(Actor):
         r'''Returns True to continue, False if done.
         '''
         try:
-            #print(f"populate_sound_block {self.waveform=}")
             base_waveform = next(self.waveform_it)
-            #print("populate_sound_block got base_waveform")
         except StopIteration:
-            #print(f"populate_sound_block: got StopIteration for note {self.note} "
-            #      f"on waveform, returning", False)
             self.delete()
             return False
         try:
             ampl_envelope = next(self.ampl_it)
-            #print("populate_sound_block got ampl_envelope")
         except StopIteration:
-            #print(f"populate_sound_block: got StopIteration for note {self.note} "
-            #      f"on ampl_envelope, returning", False)
             self.delete()
             return False
         block += base_waveform * ampl_envelope * self.volume
-        #print("populate_sound_block, num_samples", num_samples, True)
         return True
 

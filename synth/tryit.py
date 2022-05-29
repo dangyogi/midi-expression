@@ -26,6 +26,7 @@ from .tuning_systems import Equal_temperament
 from .pyaud import Soundcard
 from . import fill_sound_blocks
 from .synth import Synth, Instrument, Harmonic
+from .synth_settings import report as synth_settings_report
 from .midi_in import Midi_in
 from . import notify
 
@@ -66,6 +67,8 @@ def fini():
     midiin.report()
     print("Calling synth.report()")
     synth.report()
+    print("Calling synth_settings.report()")
+    synth_settings_report()
     print("Calling notify.report()")
     notify.report()
 

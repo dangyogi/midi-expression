@@ -155,6 +155,7 @@ class Soundcard:
             self.process_time_overruns += 1
             self.total_process_time_over += now - target_time
         #print(f"{(target_time - now) * 1e3:.2f} mSec time_target margin")
+        self.block.clip(-1.0, 1.0, out=self.block)
         self.block *= self.max_sound_level
         self.in_callback = False
         return self.block.astype(np.int16), \

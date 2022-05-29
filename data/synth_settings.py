@@ -21,7 +21,13 @@
 #}
 import math
 
-from .tuning_systems import Hz_to_freq
+from .utils import two_byte_value
+from .notes import Key_signature
+from .tuning_systems import (
+    Hz_to_freq, Meantone, Pythagorean_tuning, Just_intonation,
+    Well_temperament, Equal_temperament,
+)
+from .envelope import *
 
 
 def pack(bytes):
@@ -33,14 +39,21 @@ def pack(bytes):
 
 
 class bits:
-    def __init__(self, bytes):
-        self.num_bits = 7 * len(bytes)
-        self.value = pack(bytes)
+    def __init__(self, num_bits, value):
+        self.num_bits = num_bits
+        self.value = value
+
+    @classmethod
+    def from_bytes(cls, bytes):
+        return cls(7 * len(bytes), pack(bytes))
+
+    def __str__(self):
+        return f"bits({self.num_bits}, {self.value})"
 
     def peek(self, num_bits):
         r'''Returns least significant num_bits without shifting them out.
         '''
-        assert num_bits > self.num_bits, f"bits: ran out of data"
+        assert num_bits >= self.num_bits, f"bits: ran out of data"
         return self.value & ((1 << num_bits) - 1)
 
     def pop(self, num_bits):
@@ -63,7 +76,7 @@ def process_MIDI_control_change(synth, channel, control_number, value):
         Number_of_unknown_control_numbers += 1
         Unknown_control_numbers.add(control_number)
         return
-    Control_number_map[control_number](synth, channel, control_number, value)
+    Control_number_map[control_number](synth, channel, control_number, bits(7, value))
 
 
 # These are all indexed by channel:
@@ -155,14 +168,14 @@ Unknown_NR_params = set()
 def call_NR_fn(channel, course, fine):
     global Number_of_unknown_NR_params
 
-    param_number = (NR_params_MSB[channel] << 7) | NR_params_LSB[channel]
-    value = (NR_data_entry_course[channel] << 7) | NR_data_entry_fine[channel]
+    param_number = two_byte_value(NR_params_MSB[channel], NR_params_LSB[channel])
+    value = two_byte_value(NR_data_entry_course[channel], NR_data_entry_fine[channel])
     if param_number not in NR_param_map:
         print(f"Unknown MIDI NR param number: 0x{param_number:04X}")
         Number_of_unknown_NR_params += 1
         Unknown_NR_params.add(param_number)
         return
-    NR_param_map[param_number](synth, channel, param_number, value)
+    NR_param_map[param_number](synth, channel, param_number, bits(14, value))
 
 
 {% for _, name, body in NR_param_fns %}
@@ -185,10 +198,10 @@ NR_param_map = {
 Number_of_unknown_system_commands = 0
 Unknown_system_commands = set()
 
-def process_MIDI_system_common(synth, command, data):
+def process_MIDI_system_common(synth, command, bytes):
     global Number_of_unknown_system_commands
 
-    value = bits(data)
+    value = bits.from_bytes(bytes)
     key = {{ system_common_key }}
     if key not in System_common_map:
         print(f"Unknown MIDI System Common command: {p_sys_command_key(key)}")
@@ -234,7 +247,7 @@ def report():
           f"Unknown_control_numbers={p_tuple(Unknown_control_numbers)}")
     str = ', '.join(p_sys_command_key(k) for k in Unknown_system_commands)
     print(f"{Number_of_unknown_system_commands=}, Unknown_system_commands=({str})")
-    print(f"{Number_of_unknown_NR_params=},"
+    print(f"{Number_of_unknown_NR_params=},",
           f"Unknown_NR_params={p_tuple(Unknown_NR_params, d=4)}")
 
 

@@ -3,27 +3,47 @@
 ---
 
 Synth:
-    Ignore_control_codes: [0x07, 0x0E, 0x0F]
+    Ignore_control_codes: [0x01, 0x06, 0x0A, 0x0B,
+                           # 0x0E, 0x0F,   # What are these???
+                           0x26, 0x40, 0x60, 0x61, 0x62, 0x63, 0x64, 0x65, 0x79, 0x7B]
 
     Subordinates:
         Instrument:
             Identified_by: channel
             Settings:
-                key_signature:
+                volume:
                     parameters:
-                        - minor:
-                            choices: [major, minor]  # major=False, minor=True
-                        - flats_sharps:
-                            range: [-7, 7]
-                            labels:
-                                flats:
-                                    less_than: 0
-                                sharps:
-                                    greater_than: 0
-                                '': 0
-                            python_arg_name: sf
-                    control_change: 0x14
-                    system_common: 0xF4
+                        - sys_common_type:
+                            bits: 3
+                            value: 6
+                        - offset:           # targeting +/- 45 by 2
+                            units: dB
+                            signed: true
+                            bits: 7
+                            to_python:
+                                as_percent_of: 45
+                    control_change: 0x07
+                    system_common:
+                        code: 0xF5
+                        key_on: sys_common_type
+                key_signature:
+                    choices:
+                        Key_signature:
+                            parameters:
+                                - minor:
+                                    choices: [major, minor]  # major=False, minor=True
+                                - flats_sharps:
+                                    range: [-7, 7]
+                                    labels:
+                                        flats:
+                                            less_than: 0
+                                        sharps:
+                                            greater_than: 0
+                                        '': 0
+                                    python_arg_name: sf
+                            control_change: 0x14
+                            system_common: 0xF4
+
                 tuning_system:
                     choices:
                         Equal_temperament:
@@ -41,6 +61,7 @@ Synth:
                                         value: 100
                                     max_steps: 21
                                     python_arg_name: cents_per_semitone
+                            is_object: true
                             non_registered_parameter:
                                 code: 0x0000
                                 add: sys_common_type
@@ -191,50 +212,24 @@ Synth:
                     Identified_by: harmonic
                     Settings:
                         freq_offset:
-                            course_multiple:
-                                immediate: true
-                                parameters:
-                                    - harmonic:  # 1-10
-                                        range: [1, 10]
-                                        to_python: sub1
-                                    - value:     # targeting 0, 12 by 0.1
-                                        bits: 7
-                                        steps_per_unit: 10
-                                        for_display:
-                                            label: mult
-                                            add: fine_multiple
-                                            for: [channel, harmonic]
-                                            alt_display:
-                                                fn: to_cents
-                                                label: cents
-                                control_change:
-                                    code: 0x16
-                                    add: harmonic
-
-                            fine_multiple:
-                                immediate: true
-                                parameters:
-                                    - harmonic: # 1-10
-                                        range: [1, 10]
-                                        to_python: sub1
-                                    - offset:         # +/- 0.050
-                                        units: cent
-                                        bits: 7
-                                        signed: true
-                                        steps_per_unit: 1000
-                                        for_display:
-                                            label: mult
-                                            add: course_multiple
-                                            for: [channel, harmonic]
-                                            alt_display:
-                                                fn: to_cents
-                                                label: cents
-                                control_change:
-                                    code: 0x50
-                                    add: harmonic
+                            parameters:
+                                - harmonic:  # 1-10
+                                    range: [1, 10]
+                                    to_python: sub1
+                                - offset:     # targeting 1/12 to 12 by 0.001
+                                    bits: 14
+                                    start: 0.080
+                                    steps_per_unit: 1000
+                                    for_display:
+                                        label: mult
+                                        alt_display:
+                                            fn: to_cents
+                                            label: cents
+                            non_registered_parameter:
+                                code: 0x0070
+                                add: harmonic
 
                         ampl_offset:
-                            immediate: true
                             parameters:
                                 - harmonic:         # 1-10
                                     range: [1, 10]
@@ -253,7 +248,7 @@ Synth:
                         envelopes:
                             freq_envelope:
                                 choices:
-                                    ramp:
+                                    Ramp:
                                         parameters:
                                             - harmonic:   # 1-10
                                                 range: [1, 10]
@@ -281,10 +276,9 @@ Synth:
                                         non_registered_parameter:
                                             code: 0x0010
                                             add: harmonic
-                                        kill_value: 1.0
+                                        kill_value: null
 
-                                    vibrato:
-                                        immediate: true
+                                    Sin:
                                         parameters:
                                             - harmonic:   # 1-10
                                                 range: [1, 10]
@@ -304,7 +298,7 @@ Synth:
                                         non_registered_parameter:
                                             code: 0x0020
                                             add: harmonic
-                                        kill_value: 1.0
+                                        kill_value: null
 
                             ampl_envelope:
                                 attack:
@@ -360,7 +354,6 @@ Synth:
                                         add: harmonic
                                     kill_value: 1.0
                                 sustain:
-                                    immediate: true
                                     parameters:
                                         - harmonic:     # 1-10
                                             range: [1, 10]
