@@ -183,7 +183,7 @@ Synth:
                                 - octave:
                                     range: [0, 7]
                                     default: 4
-                                - freq_adjustment:
+                                - freq_Hz:
                                     bits: 7
                                     units: Hz
                                     steps_per_unit: 2
@@ -253,7 +253,7 @@ Synth:
                                             - harmonic:   # 1-10
                                                 range: [1, 10]
                                                 to_python: sub1
-                                            - scale:      # targeting 0-5 over 3 octaves
+                                            - scale_3:      # targeting 0-5 over 3 octaves
                                                 bits: 3
                                             - start:      # -400 - 350
                                                 signed: true
@@ -283,7 +283,7 @@ Synth:
                                             - harmonic:   # 1-10
                                                 range: [1, 10]
                                                 to_python: sub1
-                                            - scale:      # targeting 0-5 over 3 octaves
+                                            - scale_3:      # targeting 0-5 over 3 octaves
                                                 bits: 3
                                             - cycle_time: # targeting 0.05 to 1 sec
                                                 start: 0.05
@@ -306,7 +306,7 @@ Synth:
                                         - harmonic:   # 1-10
                                             range: [1, 10]
                                             to_python: sub1
-                                        - scale:      # targeting 0-5 over 3 octaves
+                                        - scale_3:      # targeting 0-5 over 3 octaves
                                             bits: 3
                                         - start:      # targeting -40 to 10, step 5
                                             units: dB
@@ -335,7 +335,7 @@ Synth:
                                         - harmonic:   # 1-10
                                             range: [1, 10]
                                             to_python: sub1
-                                        - scale:      # targeting 0-5 over 3 octaves
+                                        - scale_3:      # targeting 0-5 over 3 octaves
                                             bits: 3
                                         - duration:   # targeting 0-20 seconds
                                             kills_value: 0
@@ -358,7 +358,7 @@ Synth:
                                         - harmonic:     # 1-10
                                             range: [1, 10]
                                             to_python: sub1
-                                        - scale:        # targeting 0-5 over 3 octaves
+                                        - scale_3:        # targeting 0-5 over 3 octaves
                                             bits: 3
                                         - center_ampl:  # targeting 0-20 dB
                                                         # how far off the peak ampl_offset
@@ -389,7 +389,7 @@ Synth:
                                         - harmonic:   # 1-10
                                             range: [1, 10]
                                             to_python: sub1
-                                        - scale:      # targeting 0-5 over 3 octaves
+                                        - scale_3:      # targeting 0-5 over 3 octaves
                                             bits: 3
                                         - duration:   # targeting 0-5 seconds
                                             kills_value: 0  # WARNING: produces clicking

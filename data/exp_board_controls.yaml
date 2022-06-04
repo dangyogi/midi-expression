@@ -1,0 +1,97 @@
+# exp_board_controls.yaml
+
+---
+
+rotary_switches:
+    positions: 12
+    number: 2
+    names: [channel, function]
+
+sliders:          # one Nano, 6 slider analog, 11 shared LCD, 6 LCD enable, 2 I2C
+    number: 6
+    display_chars: 24
+
+rotary_encoders:  # one Nano, 6 A/B, 3 buttons, 11 shared LCD, 3 LCD enable, 2 I2C
+    number: 3
+    display_chars: 24
+    includes_button: true
+
+toggles:
+    number: 5
+    names: [continuous_send, freq/ampl, odd/even]
+
+buttons:
+    number: 5
+    names: [send]
+
+LEDs:
+    number: 5
+
+Char_display:
+    number: 1
+    lines: 1
+    chars: 24
+
+Arduinos:
+    LCD_displays:
+        type: Nano Every
+        purpose: Controls all LCD displays through I2C
+        comment: Are there really 23 GPIO pins?  This uses all 23!
+        GPIO:
+            shared_LCD:
+                number: 11
+                LCD_pins: [RESET, RS, R/W, DB0, DB1, DB2, DB3, DB4, DB5, DB6, DB7]
+            LCD_enables:
+                number: 10
+        I2C: slave
+
+    Inputs:
+        type: Nano Every
+        purpose: Interprets input devices (sliders and rotary encoders) through I2C
+        number_of_encoders: 3
+        number_of_sliders: 6
+        GPIO:
+            A/B encoders:
+                number: 6
+            encoder_buttons:
+                number: 3
+        Analog:
+            number: 6
+        I2C: slave
+
+    Controller:
+        type: Nano 33 IoT
+        I2C: master
+        USB: [MIDI_out, Serial]
+
+
+Debounce:
+    Was open, now closed:
+        state = closed
+    Was closed, now closed:
+        state = closed
+    Was open, now open:
+        pass
+    Was closed, now open:
+        state = opening
+        open_time = current_millis
+    Was opening, now open:
+        if open_time + debouce_delay > current_time:
+            state = open
+
+    code:
+
+        if now closed:
+            if state >= threshold:
+                send_closed
+            state = 0
+        elif state < threshold:
+            state += 1
+            if state >= threshold:
+                send_open
+
+        for 2 I2C devices, threshold ~42 to give 5mSec delay
+        for 9 GPIO devices, threshold ~560 to give 5mSec delay
+
+        state < threshold counts as closed
+        state >= threshold counts as open

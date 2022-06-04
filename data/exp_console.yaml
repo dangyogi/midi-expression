@@ -1,0 +1,321 @@
+# exp_console.yaml
+
+---
+
+layout:
+  top:
+    - [sw-vol-harmonics,       lcd-pot-1a,           lcd-pot-2a,           lcd-pot-3a,           lcd-pot-4a,           lcd-pot-5a    ]
+    - [sw-even-odd,            lcd-pot-1b,           lcd-pot-2b,           lcd-pot-3b,           lcd-pot-4b,           lcd-pot-5b    ]
+    - [                  [  pot-1l,  pot-1r ], [  pot-2l,  pot-2r ], [  pot-3l,  pot-3r ], [  pot-4l,  pot-4r ], [  pot-5l,  pot-5r ]]
+    - [sw-send-top                                                                                                                   ]
+    - [bt-send-top                                                                                                                   ]
+    - [sw-calibrate-pots                                                                                                             ]
+    - [bt-save-calibration                                                                                                           ]
+    - [                  [  led-1l,  led-1r ], [  led-2l,  led-2r ], [  led-3l,  led-3r ], [  led-4l,  led-4r ], [  led-5l,  led-5r ]]
+    - [led-new-old,      [bt-no-1l, bt-no-1r], [bt-no-2l, bt-no-2r], [bt-no-3l, bt-no-3r], [bt-no-4l, bt-no-4r], [bt-no-5l, bt-no-5r]]
+    - [led-crs-fine,     [sw-course_fine-1  ], [sw-course_fine-2  ], [sw-course_fine-3  ], [sw-course_fine-4  ], [sw-course_fine-5  ]]
+    - [led-mult-cents,   [sw-mult-cents-1   ], [sw-mult-cents-2   ], [sw-mult-cents-3   ], [sw-mult-cents-4   ], [sw-mult-cents-5   ]]
+
+  lower-left:
+    - [                                        lcd-lower-left-1a,       lcd-lower-left-2a,      lcd-lower-left-3a,  ]
+    - [rsw-channel,                            lcd-lower-left-1b,       lcd-lower-left-2b,      lcd-lower-left-3b,  ]
+    - [                 sw-inst-synth,  [sw-major-minor,    re-1r  ], [  re-2l,     re-2r  ], [  re-3l,     re-3r  ]]
+    - [rsw-function,    led-inst-synth, [led-major-minor, led-re-1r], [led-re-2l, led-re-2r], [led-re-3l, led-re-3r]] 
+    - [                 bt-send-lower-left                                                                          ]
+
+  lower-right:
+    - [                       pot-lr1,  pot-lr2,  pot-lr3  ]
+    - [sw-send-lower-right                                 ]
+    - [bt-send-lower-right                                 ]
+
+  notes:
+    - [sw-continuous-pulse, sw-A3, sw-C4, sw-E4, sw-G4, sw-Bb4, sw-C5]
+    - [                     bt-A3, bt-C4, bt-E4, bt-G4, bt-Bb4, bt-C5]
+
+
+devices:
+  - type: I/O Expander Input
+    devices:
+      I/O-sw-1:
+        addr: 0x20
+        connects_to:
+          - rsw-channel-0
+          - rsw-channel-1
+          - rsw-channel-2
+          - rsw-channel-3
+          - rsw-channel-4
+          - rsw-channel-5
+          - rsw-channel-6
+          - rsw-channel-7
+          - rsw-channel-8
+          - rsw-channel-9
+          - rsw-channel-10
+          - rsw-channel-11
+          - sw-even-odd
+          - sw-vol-harmonics
+          - sw-send-top
+          - bt-send-top
+
+      I/O-sw-2:
+        addr: 0x21
+        connects_to:
+          - bt-no-1l
+          - bt-no-1r
+          - bt-no-2l
+          - bt-no-2r
+          - bt-no-3l
+          - bt-no-3r
+          - bt-no-4l
+          - bt-no-4r
+          - bt-no-5l
+          - bt-no-5r
+          - sw-course_fine-1
+          - sw-course_fine-2
+          - sw-course_fine-3
+          - sw-course_fine-4
+          - sw-course_fine-5
+
+      I/O-sw-3:
+        addr: 0x22
+        connects_to:
+          - rsw-function-0
+          - rsw-function-1
+          - rsw-function-2
+          - rsw-function-3
+          - rsw-function-4
+          - rsw-function-5
+          - rsw-function-6
+          - rsw-function-7
+          - rsw-function-8
+          - rsw-function-9
+          - rsw-function-10
+          - rsw-function-11
+
+      I/O-sw-4:
+        addr: 0x23
+        connects_to:
+          - re-1r-A
+          - re-1r-B
+          - re-1r-Bt
+          - re-2l-A
+          - re-2l-B
+          - re-2l-Bt
+          - re-2r-A
+          - re-2r-B
+          - re-2r-Bt
+          - re-3l-A
+          - re-3l-B
+          - re-3l-Bt
+          - re-3r-A
+          - re-3r-B
+          - re-3r-Bt
+
+      I/O-sw-5:
+        addr: 0x24
+        connects_to:
+          - sw-mult-cents-1
+          - sw-mult-cents-2
+          - sw-mult-cents-3
+          - sw-mult-cents-4
+          - sw-mult-cents-5
+          - bt-send-lower-left
+          - sw-inst-synth
+          - sw-major-minor
+          - sw-send-lower-right
+          - bt-send-lower-right
+          - sw-calibrate-pots
+          - bt-save-calibration
+
+  - type: I/O Expander Output
+    devices:
+      I/O-led-1:
+        addr: 0x24
+        connects_to:
+          - led-1l
+          - led-1r
+          - led-2l
+          - led-2r
+          - led-3l
+          - led-3r
+          - led-4l
+          - led-4r
+          - led-5l
+          - led-5r
+
+      I/O-led-2:
+        addr: 0x25
+        connects_to:
+          - led-new-old
+          - led-crs-fine
+          - led-mult-cents
+          - led-inst-synth
+          - led-major-minor
+          - led-re-1r
+          - led-re-2l
+          - led-re-2r
+          - led-re-3l
+          - led-re-3r
+
+  - type: Multiplexer
+    devices:
+      lcd-muxes-1:
+        lcds:
+          - lcd-pot-1a
+          - lcd-pot-2a
+          - lcd-pot-3a
+          - lcd-pot-4a
+          - lcd-pot-5a
+          - lcd-pot-1b
+          - lcd-pot-2b
+          - lcd-pot-3b
+        muxes:
+          - lcd-mux-1-E
+          - lcd-mux-1-DB0
+          - lcd-mux-1-DB1
+          - lcd-mux-1-DB2
+          - lcd-mux-1-DB3
+          - lcd-mux-1-DB4
+          - lcd-mux-1-DB5
+          - lcd-mux-1-DB6
+          - lcd-mux-1-DB7
+      lcd-muxes-2:
+        lcds:
+          - lcd-pot-4b
+          - lcd-pot-5b
+          - lcd-lower-left-1a
+          - lcd-lower-left-2a
+          - lcd-lower-left-3a
+          - lcd-lower-left-1b
+          - lcd-lower-left-2b
+          - lcd-lower-left-3b
+        muxes:
+          - lcd-mux-2-E
+          - lcd-mux-2-DB0
+          - lcd-mux-2-DB1
+          - lcd-mux-2-DB2
+          - lcd-mux-2-DB3
+          - lcd-mux-2-DB4
+          - lcd-mux-2-DB5
+          - lcd-mux-2-DB6
+          - lcd-mux-2-DB7
+      pot-mux-1: [pot-1l,  pot-1r, pot-2l,   pot-2r,   pot-3l,  pot-3r,  pot-4l,  pot-4r]
+      pot-mux-2: [pot-5l,  pot-5r, pot-lr1,  pot-lr2,  pot-lr3]
+
+arduinos:
+  controller:
+    type: nano-33-iot
+    i2c_addr: 0x01
+    pins-left:
+      - name: D13
+        comment: Built-in LED
+      - name: 3V3
+      - name: AREF
+      - name: A0
+      - name: A1
+      - name: A2
+      - name: A3
+      - name: A4
+        connect: I2C-SDA
+      - name: A5
+        connect: I2C-SCL
+      - name: A6
+      - name: A7
+      - name: 5V
+      - name: RESET
+      - name: GND
+      - name: VIN
+    pins-right:
+      - name: D12
+      - name: D11
+      - name: D10
+      - name: D9
+      - name: D8
+      - name: D7
+      - name: D6
+      - name: D5
+      - name: D4
+      - name: D3
+      - name: D2
+      - name: GND
+      - name: RESET
+      - name: RX0
+      - name: TX1
+
+  pots:  # 5 pins for pots, 2 for I2C
+    type: nano-every
+    i2c_addr: 0x02
+    pins-left:
+      - name: D13
+        comment: Built-in LED
+      - name: 3V3
+      - name: AREF
+      - name: A0
+      - name: A1
+      - name: A2
+      - name: A3
+      - name: A4
+        connect: I2C-SDA
+      - name: A5
+        connect: I2C-SCL
+      - name: A6
+      - name: A7
+      - name: 5V
+      - name: RESET
+      - name: GND
+      - name: VIN
+    pins-right:
+      - name: D12
+      - name: D11
+      - name: D10
+      - name: D9
+      - name: D8
+      - name: D7
+      - name: D6
+      - name: D5
+      - name: D4
+      - name: D3
+      - name: D2
+      - name: GND
+      - name: RESET
+      - name: RX0
+      - name: TX1
+
+  lcds:  # 14 for LCDs, 2 for I2C
+    type: nano-every
+    i2c_addr: 0x02
+    pins-left:
+      - name: D13
+        comment: Built-in LED
+      - name: 3V3
+      - name: AREF
+      - name: A0
+      - name: A1
+      - name: A2
+      - name: A3
+      - name: A4
+        connect: I2C-SDA
+      - name: A5
+        connect: I2C-SCL
+      - name: A6
+      - name: A7
+      - name: 5V
+      - name: RESET
+      - name: GND
+      - name: VIN
+    pins-right:
+      - name: D12
+      - name: D11
+      - name: D10
+      - name: D9
+      - name: D8
+      - name: D7
+      - name: D6
+      - name: D5
+      - name: D4
+      - name: D3
+      - name: D2
+      - name: GND
+      - name: RESET
+      - name: RX0
+      - name: TX1
+

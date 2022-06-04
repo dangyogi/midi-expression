@@ -1,0 +1,196 @@
+# devices.yaml
+
+---
+
+  I/O Expander:
+    part_number: MCP23016-I/SP
+    current_drive: 25mA
+    supply_voltage: [2, 5.5]
+    I2C:
+      addr: [0, 1, 0, 0, A2, A1, A0]
+      init: []
+      commands:
+        0x00:
+          name: Access GP0
+          value_on_reset: [0, 0, 0, 0, 0, 0, 0, 0]
+        0x01:
+          name: Access GP1
+          value_on_reset: [0, 0, 0, 0, 0, 0, 0, 0]
+        0x02:
+          name: Access OLAT0
+          comment: Output Latch Register
+          value_on_reset: [0, 0, 0, 0, 0, 0, 0, 0]
+        0x03:
+          name: Access OLAT1
+          comment: Output Latch Register
+          value_on_reset: [0, 0, 0, 0, 0, 0, 0, 0]
+        0x04:
+          name: Access IPOL0
+          comment: Input Polarity Register, 1 inverted, 0 not inverted
+          value_on_reset: [0, 0, 0, 0, 0, 0, 0, 0]
+        0x05:
+          name: Access IPOL1
+          comment: Input Polarity Register, 1 inverted, 0 not inverted
+          value_on_reset: [0, 0, 0, 0, 0, 0, 0, 0]
+        0x06:
+          name: Access IODIR0
+          comment: I/O Direction Register, 1 input, 0 output
+          value_on_reset: [1, 1, 1, 1, 1, 1, 1, 1]
+        0x07:
+          name: Access IODIR1
+          comment: I/O Direction Register, 1 input, 0 output
+          value_on_reset: [1, 1, 1, 1, 1, 1, 1, 1]
+        0x08:
+          name: Access INTCAP0
+          comment: Interupt Capture Register -- not needed
+        0x09:
+          name: Access INTCAP1
+          comment: Interupt Capture Register -- not needed
+        0x0A:
+          name: Access IOCON0
+          comment: IARES -- Interrupt Activity Resolution, 1 fast sample rate (200uSec), 0 normal sample rate (32mSec)
+          bits: [-, -, -, -, -, -, -, IARES]
+          value_on_reset: [-, -, -, -, -, -, -, 0]
+        0x0B:
+          name: Access IOCON1
+          bits: [-, -, -, -, -, -, -, IARES]
+          value_on_reset: [-, -, -, -, -, -, -, 0]
+    GPIO-pins: [GP0.0, GP0.1, GP0.2, GP0.3, GP0.4, GP0.5, GP0.6, GP0.7, GP1.0, GP1.1, GP1.2, GP1.3, GP1.4, GP1.5, GP1.6, GP1.7]
+    pins:
+      - name: Vss
+        comment: GND
+      - name: GP1.0
+      - name: GP1.1
+      - name: GP1.2
+      - name: GP1.3
+      - name: INT-not
+        connect: []
+      - name: GP1.4
+      - name: Vss
+        comment: GND
+      - name: CLK
+        connect: [[3.9Kohm, Vdd], [33pF, Vss]]
+      - name: TP
+        connect: []
+      - name: GP1.5
+      - name: GP1.6
+      - name: GP1.7
+      - name: SCL
+      - name: GP0.7
+      - name: GP0.6
+      - name: GP0.5
+      - name: GP0.4
+      - name: GP0.3
+      - name: GP0.2
+      - name: GP0.1
+      - name: GP0.0
+      - name: Vdd
+        - comment: [5V, [.1uF, GND]]
+      - name: Vss
+        comment: [GND]
+      - name: A2
+      - name: A1
+      - name: A0
+      - name: SDA
+  I/O Expander Input:
+    uses: I/O Expander
+    I2C:
+      init: []
+    pins:
+      - name: GP1.0
+        - connect: [[20Kohm, Vdd]]
+      - name: GP1.1
+        - connect: [[20Kohm, Vdd]]
+      - name: GP1.2
+        - connect: [[20Kohm, Vdd]]
+      - name: GP1.3
+        - connect: [[20Kohm, Vdd]]
+      - name: GP1.4
+        - connect: [[20Kohm, Vdd]]
+      - name: GP1.5
+        - connect: [[20Kohm, Vdd]]
+      - name: GP1.6
+        - connect: [[20Kohm, Vdd]]
+      - name: GP1.7
+        - connect: [[20Kohm, Vdd]]
+      - name: GP0.7
+        - connect: [[20Kohm, Vdd]]
+      - name: GP0.6
+        - connect: [[20Kohm, Vdd]]
+      - name: GP0.5
+        - connect: [[20Kohm, Vdd]]
+      - name: GP0.4
+        - connect: [[20Kohm, Vdd]]
+      - name: GP0.3
+        - connect: [[20Kohm, Vdd]]
+      - name: GP0.2
+        - connect: [[20Kohm, Vdd]]
+      - name: GP0.1
+        - connect: [[20Kohm, Vdd]]
+      - name: GP0.0
+        - connect: [[20Kohm, Vdd]]
+  I/O Expander Output:
+    uses: I/O Expander
+    I2C:
+      init: [[Access IODIR0, 0x00, 0x00]]
+    pins:
+      - name: GP1.0
+        - connect: [[120ohm, series]]
+      - name: GP1.1
+        - connect: [[120ohm, series]]
+      - name: GP1.2
+        - connect: [[120ohm, series]]
+      - name: GP1.3
+        - connect: [[120ohm, series]]
+      - name: GP1.4
+        - connect: [[120ohm, series]]
+      - name: GP1.5
+        - connect: [[120ohm, series]]
+      - name: GP1.6
+        - connect: [[120ohm, series]]
+      - name: GP1.7
+        - connect: [[120ohm, series]]
+      - name: GP0.7
+        - connect: [[120ohm, series]]
+      - name: GP0.6
+        - connect: [[120ohm, series]]
+      - name: GP0.5
+        - connect: [[120ohm, series]]
+      - name: GP0.4
+        - connect: [[120ohm, series]]
+      - name: GP0.3
+        - connect: [[120ohm, series]]
+      - name: GP0.2
+        - connect: [[120ohm, series]]
+      - name: GP0.1
+        - connect: [[120ohm, series]]
+      - name: GP0.0
+        - connect: [[120ohm, series]]
+  - Multiplexer
+    part_number: MAX4617CPE+
+    supply_voltage: [2, 5.5]
+    output-pins: [X0, X1, X2, X3, X4, X5, X6, X7]
+    pins:
+      - name: X4
+      - name: X6
+      - name: X
+      - name: X7
+      - name: X5
+      - name: ENABLE
+        connect: [Vcc]
+      - name: N.C.
+        connect: []
+      - name: GND
+        connect: [GND]
+      - name: Vcc
+        connect: [5V, [.1uF, GND]]
+      - name: X2
+      - name: X1
+      - name: X0
+      - name: X3
+      - name: A
+        comment: LSb
+      - name: B
+      - name: C
+        comment: MSb
+

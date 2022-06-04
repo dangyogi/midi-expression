@@ -1,0 +1,152 @@
+Channel: 12 position switch, one for player
+
+Top:
+
+  - Volumes on sliders (from left to right):
+    - synth:
+                 123456789012 1234567890123456
+      - display "Synth=XX.X" "Synth=XX.X>XX.X"
+      - display old/new: switch
+    - channel 1-9
+                 123456789012 1234567890123456
+      - display "CH-10=XX.X" "CH-10=XX.X>XX.X"
+      - display old/new: switch
+                         123456789012345678901234
+    - combined display: "Synth=XX.X || CH-10=XX.X"
+
+  - Haramonics (can be paired with tuning_system)
+    - odd/even: switch
+    - 5 pairs of sliders:
+                        123456789012345678901234
+         - display     "Mult XX.XXX|Ampl XX.X dB"
+         - alt_display "Cents XXX.X|Ampl XX.X dB"
+                        1234567890123456
+         - display     " Mult  | Ampl-db"
+                       "XX.XXX |  XX.X"
+         - alt display "Fund+XXX.X Cents"
+                        1234567890123456
+         - alt display " Cents | Ampl-db"
+                       " XXX.X |  XX.X"
+      - freq_offset
+        - high/low: switch
+        - old/new: switch
+        - mult/cents: switch
+      - ampl_offset
+
+Bottom:
+  Left (Rotary Encoders):
+    Function: 12 position switch
+      1. key_signature
+        - synth/instrument: switch
+        - minor: switch minor down, major up
+        - flats/sharps: rotary encoder
+                    123456789012
+        - display: "Min X Flats"
+        - display: "Min X Sharps"
+                    123456789012345678901234
+        - display: "Key Sig: Minor, X Sharps"
+                    1234567890123456
+        - display: " Key Signature"
+        - display: "Minor | X Sharps"
+      2. tuning_system (needs 4 rotary encoders)
+        - synth/instrument: switch
+        - type: rotary encoder
+                       123456789012345678901234
+            - display "Pythagorean_tuning"
+
+            Equal_temperament                         Well_temperament
+                       1234567890123456
+            - display "EqTemp: Semitone"
+                       1234567890123456
+            - display "   XXX.XXX Cents"
+          - cents/semitone: rotary encoder          - tonic: rotary encoder
+                                                    - tonic_offset: rotary encoder
+                      123456789012345678901234                  123456789012345678901234
+          - display: "Cents/Semitone XXX.XXX"       - display: "Tonic C# || Tonic Off D#"
+
+            123456789012345678901234                  123456789012345678901234
+            Just: Sym 5-limit 2-B
+            Just: Asym 5-limit Std A                    1/X Comma Meantone
+                  1234567890123456
+                  Sym 5-limit 2-B                       1234567890123456
+                  Asym 5-lim Std A                       1/X , Meantone
+                       1234567890123456                          1234567890123456
+            - display "       Tonic C#"               - display "        Tonic C#"
+          - tonic: rotary encoder                   - tonic: rotary encoder
+                       1234567890123456                          1234567890123456
+            - display "Tonic Offset C#"               - display "Offset C#"
+          - tonic_offset: rotary encoder            - tonic_offset: rotary encoder
+                                                    - max_octave_fudge: rotary encoder
+                                                                123456789012345678901234
+                                                    - display: "Max Octave Fudge: XX.X"
+
+            Pythagorean_tuning
+                       1234567890123456
+            - display "Pythagorean"
+                       1234567890123456
+            - display "       Tonic: C#"
+          - tonic: rotary encoder
+                       1234567890123456
+            - display "Max Octave Fudge"
+                      " XX.X"
+          - max_octave_fudge: rotary encoder
+
+      3. tune_absolute (needs 3 rotary encoders)
+          - synth/instrument: switch
+                       123456789012345678901234
+            - display "Tune-Absolute Note: C#X"
+          - note_to_tune: rotary encoder
+          - octave: rotary encoder
+          - freq_Hz: rotary encoder
+                       123456789012345678901234
+            - display "Freq: XXXX.X Hz"
+
+      4. tune_match (needs 2 rotary encoders)
+                       123456789012345678901234
+            - display "Tune-Match CH-XX C#"
+            - note_to_tune: rotary encoder
+            - channel_#_of_other_instrument: rotary encoder
+
+      - Haramonic envelopes (needs 5 rotary encoders):
+        - harmonic#: rotary encoder
+        5. Ramp freq_env
+          - scale_3: rotary encoder
+          - start: rotary encoder
+          - duration: rotary encoder
+          - bend: rotary encoder
+        6. Sin freq_env
+          - scale_3: rotary encoder
+          - cycle_time: rotary encoder
+          - ampl_swing: rotary encoder
+        7. attack env
+          - scale_3: rotary encoder
+          - start: rotary encoder
+          - duration: rotary encoder
+          - bend: rotary encoder
+        8. decay env
+          - scale_3: rotary encoder
+          - duration: rotary encoder
+          - bend: rotary encoder
+        9. sustain env
+          - scale_3: rotary encoder
+          - center_ampl: rotary encoder
+          - cycle_time: rotary encoder
+          - ampl_swing: rotary encoder
+        10. release env
+          - scale_3: rotary encoder
+          - duration: rotary encoder
+          - bend: rotary encoder
+
+  Right (player controls):
+    - send: switch
+    - tempo: slider
+    - note_on delay: slider
+    - note_off delay: slider
+
+  Notes:
+    - A3: button/switch
+    - C4: button/switch
+    - E4: button/switch
+    - G4: button/switch
+    - Bb4: button/switch
+    - C5: button/switch

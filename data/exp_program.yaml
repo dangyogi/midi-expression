@@ -1,0 +1,265 @@
+# exp_program.yaml
+
+---
+
+inputs:
+  top:
+    sw-vol-harmonics:
+      type: toggle-switch
+      up: harmonics
+      down: vol
+
+    sw-even-odd:
+      type: toggle-switch
+      up: even
+      down: odd
+
+    [pot-1l, pot-2l, pot-3l, pot-4l, pot-5l]:
+      type: slide-pot
+      display:
+        label:
+          device: [lcd-pot-1a, lcd-pot-2a, lcd-pot-3a, lcd-pot-4a, lcd-pot-5a]
+          offset: 0
+          length: 7
+          background:
+            str: "||"
+            offset: 7
+        value:
+          device: [lcd-pot-1b, lcd-pot-2b, lcd-pot-3b, lcd-pot-4b, lcd-pot-5b]
+          offset: 0
+          length: 7
+          background:
+            str: "||"
+            offset: 7
+      active-led: [led-1l, led-2l, led-3l, led-4l, led-5l]
+      harmonic:
+        values: [[1, 2], [3, 4], [5, 6], [7, 8], [9, 10]]
+        second-index: [sw-even-odd, odd, even]
+      channel:
+        values: [[null, null], [1, 10], [3], [5], [7]]
+        second-index: [sw-even-odd, odd, even]
+
+    [pot-1r, pot-2r, pot-3r, pot-4r, pot-5r]:
+      type: slide-pot
+      display:
+        label:
+          device: [lcd-pot-1a, lcd-pot-2a, lcd-pot-3a, lcd-pot-4a, lcd-pot-5a]
+          offset: 10
+          length: 7
+          background:
+            str: "||"
+            offset: 7
+        value:
+          device: [lcd-pot-1b, lcd-pot-2b, lcd-pot-3b, lcd-pot-4b, lcd-pot-5b]
+          offset: 10
+          length: 7
+          background:
+            str: "||"
+            offset: 7
+      active-led: [led-1r, led-2r, led-3r, led-4r, led-5r]
+      harmonic:
+        value: [[1, 2], [3, 4], [5, 6], [7, 8], [9, 10]]
+        second-index: [sw-even-odd, odd, even]
+      channel: 
+        value: [[0, 9], [2, 11], [4], [6], [8]]
+        second-index: [sw-even-odd, odd, even]
+
+    [bt-no-1l, bt-no-1r, bt-no-1l, bt-no-1r, bt-no-1l, bt-no-1r, bt-no-1l, bt-no-1r, bt-no-1l, bt-no-1r]:
+      type: button
+      active-led: led-new-old
+
+    [sw-course-fine-1, sw-course-fine-2, sw-course-fine-3, sw-course-fine-4, sw-course-fine-5]: 
+      type: toggle-switch
+      up: fine
+      down: course
+      active-led: led-crs-fine
+
+    [sw-mult-cents-1, sw-mult-cents-2, sw-mult-cents-3, sw-mult-cents-4, sw-mult-cents-5]: 
+      type: toggle-switch
+      up: cents
+      down: mult
+      active-led: led-mult-cents
+
+  lower-left:
+    sw-inst-synth:
+      type: toggle-switch
+      up: inst
+      down: synth
+      active-led: led-inst-synth
+
+    sw-major-minor:
+      type: toggle-switch
+      up: major
+      down: minor
+      display:
+        label:
+          device: lcd-lower-left-1a
+          offset: 0
+          length: 7
+          background:
+            str: "||"
+            offset: 7
+        value:
+          device: lcd-lower-left-1b
+          offset: 0
+          length: 7
+          background:
+            str: "||"
+            offset: 7
+      active-led: led-major-minor
+
+    [re-2l, re-3l]:
+      type: rotary-encoder
+      display:
+        label:
+          device: [lcd-lower-left-2a, lcd-lower-left-3a]
+          offset: 0
+          length: 7
+          background:
+            str: "||"
+            offset: 7
+        value:
+          device: [lcd-lower-left-2b, lcd-lower-left-3b]
+          offset: 0
+          length: 7
+          background:
+            str: "||"
+            offset: 7
+      active-led: [led-re-2l, led-re-3l]
+
+    [re-1r, re-2r, re-3r]:
+      type: rotary-encoder
+      display:
+        label:
+          device: [lcd-lower-left-1a, lcd-lower-left-2a, lcd-lower-left-3a]
+          offset: 0
+          length: 7
+          background:
+            str: "||"
+            offset: 7
+        value:
+          device: [lcd-lower-left-1b, lcd-lower-left-2b, lcd-lower-left-3b]
+          offset: 0
+          length: 7
+          background:
+            str: "||"
+            offset: 7
+      active-led: [led-re-1r, led-re-2r, led-re-3r]
+
+  lower-right: null
+
+  notes:
+    sw-continuous-pulse:
+      type: toggle-switch
+      up: pulse
+      down: continuous
+
+actions:
+  set-up-top-vol:
+    steps:
+      - [led-on, pot-leds]
+      - [led-on, led-new-old]
+      - [led-off, led-crs-fine]
+      - [led-off, led-mult-cents]
+      - [lcd-clear, pot-lcds]
+                                 #  1234567890123456
+      - [lcd-write, lcd-pot-1a, 0, " Synth || CH-1"]
+                                 # "XX.X dB||XX.X dB"
+      - [lcd-write, lcd-pot-2a, 0, " CH-2  || CH-3"]
+      - [lcd-write, lcd-pot-3a, 0, " CH-4  || CH-5"]
+      - [lcd-write, lcd-pot-4a, 0, " CH-6  || CH-7"]
+      - [lcd-write, lcd-pot-5a, 0, " CH-8  || CH-9"]
+
+      - [pot-on-change send-midi synth-volume
+
+  pot-leds:
+    - led-1l
+    - led-1r
+    - led-2l
+    - led-2r
+    - led-3l
+    - led-3r
+    - led-4l
+    - led-4r
+    - led-5l
+    - led-5r
+
+  pot-lcds:
+    - lcd-1a
+    - lcd-1b
+    - lcd-2a
+    - lcd-2b
+    - lcd-3a
+    - lcd-3b
+    - lcd-4a
+    - lcd-4b
+    - lcd-5a
+    - lcd-5b
+
+
+outputs:
+  led-1l: off
+  led-1r: off
+  led-2l: off
+  led-2r: off
+  led-3l: off
+  led-3r: off
+  led-4l: off
+  led-4r: off
+  led-5l: off
+  led-5r: off
+  led-new-old: off
+  led-crs-find: off
+  led-mult-cents: off
+  lcd-pot-1a:
+  lcd-pot-1b:
+  lcd-pot-2a:
+  lcd-pot-2b:
+  lcd-pot-3a:
+  lcd-pot-3b:
+  lcd-pot-4a:
+  lcd-pot-4b:
+  lcd-pot-5a:
+  lcd-pot-5b:
+
+  midi-commands:
+    synth_volume:
+      select: [sw-vol-harmonics, vol]
+      name: volume
+      params:
+        offset: pot-1l
+      type: system_common
+      send: [sw-send-top, bt-send-top]
+      display-label: [write, Synth, [pot-1l, label]]
+      display-value: [write, value, [pot-1l, value]]
+
+    ch_volume:
+      select: [sw-vol-harmonics, vol]
+      name: volume
+      offsets: [slice [pot-1r, pot-2l, pot-2r, pot-3l, pot-3r, pot-4l, pot-4r, pot-5l, pot-5r,
+                       pot-1r, pot-2l, pot-2r]
+                 [if [sw-even-odd odd] 0 9]   # start
+                 [if [sw-even-odd odd] 9 3]]  # number
+      params:
+        offset: [from, offsets]
+        channel: [get-index, offsets]
+      type: control_change
+      send: [sw-send-top, bt-send-top]
+
+    synth_key_sig:
+      select: [sw-inst-synth, synth]
+      name: key_signature
+      params:
+        minor: sw-major-minor
+        flats_sharps: re-1r
+      type: system_common
+      send: bt-send-lower-left
+    inst_key_sig:
+      select: [sw-inst-synth, inst]
+      name: key_signature
+      params:
+        channel: rsw-channel
+        minor: sw-major-minor
+        flats_sharps: re-1r
+      type: control_change
+      send: bt-send-lower-left
