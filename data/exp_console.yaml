@@ -129,7 +129,7 @@ devices:
   - type: I/O Expander Output
     devices:
       I/O-led-1:
-        addr: 0x24
+        addr: 0x25
         connects_to:
           - led-1l
           - led-1r
@@ -143,7 +143,7 @@ devices:
           - led-5r
 
       I/O-led-2:
-        addr: 0x25
+        addr: 0x26
         connects_to:
           - led-new-old
           - led-crs-fine
@@ -204,7 +204,7 @@ devices:
 arduinos:
   controller:
     type: nano-33-iot
-    i2c_addr: 0x01
+    i2c_addr: None   # Master...
     pins-left:
       - name: D13
         comment: Built-in LED
@@ -243,14 +243,16 @@ arduinos:
 
   pots:  # 5 pins for pots, 2 for I2C
     type: nano-every
-    i2c_addr: 0x02
+    i2c_addr: 0x31
     pins-left:
       - name: D13
         comment: Built-in LED
       - name: 3V3
       - name: AREF
       - name: A0
+        - connect: [pot-mux-1 X]
       - name: A1
+        - connect: [pot-mux-2 X]
       - name: A2
       - name: A3
       - name: A4
@@ -267,11 +269,14 @@ arduinos:
       - name: D12
       - name: D11
       - name: D10
+        - connect: [[pot-mux-1, B], [pot-mux-2, B]]
       - name: D9
+        - connect: [[pot-mux-1, A], [pot-mux-2, A]]
       - name: D8
       - name: D7
       - name: D6
       - name: D5
+        - connect: [[pot-mux-1, C], [pot-mux-2, C]]
       - name: D4
       - name: D3
       - name: D2
@@ -282,7 +287,7 @@ arduinos:
 
   lcds:  # 14 for LCDs, 2 for I2C
     type: nano-every
-    i2c_addr: 0x02
+    i2c_addr: 0x32
     pins-left:
       - name: D13
         comment: Built-in LED

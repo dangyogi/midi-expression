@@ -119,7 +119,7 @@ def conv_high(reading): # reading is 512 - 1023
     return 1 - math.log((1023 - reading)/K + 1) / log_X
 
 print()
-print("// Indexed by low reading from analogRead() (0 - 511).
+print("// Indexed by low reading from analogRead() (0 - 511).")
 print("// Gives linear position of slider (0 - 127)")
 print("const uint8_t PROGMEM Slide_pot_translation[] = {")
 first = 0
@@ -147,24 +147,24 @@ print("};")
 print()
 
 print("""
-uint8_t scale_slide_pot(int reading, int calibrated_smallest, int calibrated_halfway) {
+byte scale_slide_pot(int reading, int calibrated_threshold, int calibrated_center) {
   // `reading` is the direct output of analogRead on the slide pot (0 - 1023).
-  // `calibrated_smallest` is the distance from each endpoint of the slide pot to consider
-  // the same as the endpoint.  E.g., calibrated_smallest of 3 would treat 3 as 0, and 1020
+  // `calibrated_threshold` is the distance from each endpoint of the slide pot to consider
+  // the same as the endpoint.  E.g., calibrated_threshold of 3 would treat 3 as 0, and 1020
   // as 1023.
-  // `calibrated_halfway` is the reading at the dedented halfway point on the slide pot.
+  // `calibrated_center` is the reading at the dedented center point on the slide pot.
   //
   // Returns the scaled (linearized) value between 0 and 127.
   //
   // FIX: Should 0.5 be added to the subscripts (to round them)?  Or should they simply be
   //      truncated?
-  if (reading <= calibrated_halfway) {
-    int numerator = min(0, reading - calibrated_smallest);
-    int denominator = calibrated_halfway - calibrated_smallest;
+  if (reading <= calibrated_center) {
+    int numerator = min(0, reading - calibrated_threshold);
+    int denominator = calibrated_center - calibrated_threshold;
     return Slide_pot_translation[(numerator * 511L + denominator / 2) / denominator];
   }
-  int numerator = min(0, 1023 - reading - calibrated_smallest);
-  int denominator = 1023 - calibrated_halfway - calibrated_smallest;
+  int numerator = min(0, 1023 - reading - calibrated_threshold);
+  int denominator = 1023 - calibrated_center - calibrated_threshold;
   return 127 - Slide_pot_translation[(numerator * 511L + denominator / 2) / denominator];
 }
 """)

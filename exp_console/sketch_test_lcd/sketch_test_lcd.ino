@@ -415,8 +415,6 @@ void analog_read(void) {
   num_reads = 0;
 }
 
-const uint8_t PROGMEM table[] = {1,2,3,};
-
 void loop() {
   // put your main code here, to run repeatedly:
 
