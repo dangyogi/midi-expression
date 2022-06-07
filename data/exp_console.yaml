@@ -47,12 +47,12 @@ devices:
     addr: 0x20
     pins:
       - name: A2
-        connect: [GND]
+        connect: [[GND]]
       - name: A1
-        connect: [GND]
+        connect: [[GND]]
       - name: A0
-        connect: [GND]
-    fans-out-to:
+        connect: [[GND]]
+    fans-out-to:                # 16 inputs
       - [rsw-channel, fanout-pins]
       - sw-even-odd
       - sw-vol-harmonics
@@ -64,12 +64,12 @@ devices:
     addr: 0x21
     pins:
       - name: A2
-        connect: [GND]
+        connect: [[GND]]
       - name: A1
-        connect: [GND]
+        connect: [[GND]]
       - name: A0
-        connect: [5V]
-    fans-out-to:
+        connect: [[Vdd]]
+    fans-out-to:                # 15 inputs
       - bt-no-1l
       - bt-no-1r
       - bt-no-2l
@@ -91,12 +91,12 @@ devices:
     addr: 0x22
     pins:
       - name: A2
-        connect: [GND]
+        connect: [[GND]]
       - name: A1
-        connect: [5V]
+        connect: [[Vdd]]
       - name: A0
-        connect: [GND]
-    fans-out-to:
+        connect: [[GND]]
+    fans-out-to:                # 12 inputs
       - [rsw-function, fanout-pins]
 
   I/O-sw-4:
@@ -104,12 +104,12 @@ devices:
     addr: 0x23
     pins:
       - name: A2
-        connect: [GND]
+        connect: [[GND]]
       - name: A1
-        connect: [5V]
+        connect: [[Vdd]]
       - name: A0
-        connect: [5V]
-    fans-out-to:
+        connect: [[Vdd]]
+    fans-out-to:                # 15 inputs
       - [re-1r, fanout-pins]
       - [re-2l, fanout-pins]
       - [re-2r, fanout-pins]
@@ -121,12 +121,12 @@ devices:
     addr: 0x24
     pins:
       - name: A2
-        connect: [5V]
+        connect: [[Vdd]]
       - name: A1
-        connect: [GND]
+        connect: [[GND]]
       - name: A0
-        connect: [GND]
-    fans-out-to:
+        connect: [[GND]]
+    fans-out-to:                # 12 inputs
       - sw-mult-cents-1
       - sw-mult-cents-2
       - sw-mult-cents-3
@@ -145,12 +145,12 @@ devices:
     addr: 0x25
     pins:
       - name: A2
-        connect: [5V]
+        connect: [[Vdd]]
       - name: A1
-        connect: [GND]
+        connect: [[GND]]
       - name: A0
-        connect: [5V]
-    fans-out-to:
+        connect: [[Vdd]]
+    fans-out-to:           # 10 LEDs
       - led-1l
       - led-1r
       - led-2l
@@ -167,12 +167,12 @@ devices:
     addr: 0x26
     pins:
       - name: A2
-        connect: [5V]
+        connect: [[Vdd]]
       - name: A1
-        connect: [5V]
+        connect: [[Vdd]]
       - name: A0
-        connect: [GND]
-    fans-out-to:
+        connect: [[GND]]
+    fans-out-to:           # 10 LEDs
       - led-new-old
       - led-crs-fine
       - led-mult-cents
@@ -232,42 +232,67 @@ devices:
       - name: SDA
       - name: SCL
 
-  level-shifter:
-    type: I2C-level-shifter
+  level-converter-pot-powered:
+    type: I2C-level-converter
     pins:
-      - name: V1.1
+      - name: LV1
         connect: [[master-controller, SCL]]
-      - name: V1.2
+      - name: LV2
         connect: [[master-controller, SDA]]
-      - name: V2.1
+      - name: LV
+        connect: [[master-controller, 3V3]]
+      - name: HV1
+        connect: [[I/O-led-2, SCL], [pot-controller, SCL]]
+      - name: HV2
+        connect: [[I/O-led-2, SDA], [pot-controller, SDA]]
+      - name: HV
+        connect: [[pot-controller, 5V]]
+
+  level-converter-lcd-powered:
+    type: I2C-level-converter
+    pins:
+      - name: LV1
+        connect: [[master-controller, SCL]]
+      - name: LV2
+        connect: [[master-controller, SDA]]
+      - name: LV
+        connect: [[master-controller, 3V3]]
+      - name: HV1
         connect: [[I/O-sw-1, SCL], [I/O-sw-2, SCL], [I/O-sw-3, SCL], [I/O-sw-4, SCL],
-                  [I/O-sw-5, SCL], [I/O-led-1, SCL], [I/O-led-2, SCL]]
-      - name: V2.2
+                  [I/O-sw-5, SCL], [I/O-led-1, SCL], [lcd-controller, SCL]]
+      - name: HV2
         connect: [[I/O-sw-1, SDA], [I/O-sw-2, SDA], [I/O-sw-3, SDA], [I/O-sw-4, SDA],
-                  [I/O-sw-5, SDA], [I/O-led-1, SDA], [I/O-led-2, SDA]]
+                  [I/O-sw-5, SDA], [I/O-led-1, SDA], [lcd-controller, SDA]]
+      - name: HV
+        connect: [[lcd-controller, 5V]]
 
   pot-controller:  # 5 pins for pots, 2 for I2C
     type: nano every
     i2c_addr: 0x31
     pins:
       - name: A0
-        connect: [pot-mux-1 X]
+        connect: [[pot-mux-1, X]]
       - name: A1
-        connect: [pot-mux-2 X]
+        connect: [[pot-mux-2, X]]
       - name: A2
         connect: []
       - name: A3
         connect: []
       - name: SDA
-        connect: [[master-controller, SDA]]
       - name: SCL
-        connect: [[master-controller, SCL]]
       - name: D10
         connect: [[pot-mux-1, B], [pot-mux-2, B]]
       - name: D9
         connect: [[pot-mux-1, A], [pot-mux-2, A]]
       - name: D5
         connect: [[pot-mux-1, C], [pot-mux-2, C]]
+      - name: 5V
+        connect: [[pot-mux-1, Vcc], [pot-mux-2, Vcc],
+                  [pot-1l, high-rail], [pot-1r, high-rail], [pot-2l, high-rail],
+                  [pot-2r, high-rail], [pot-3l,  high-rail], [pot-3r, high-rail],
+                  [pot-4l,  high-rail], [pot-4r, high-rail], [pot-5l,  high-rail],
+                  [pot-5r, high-rail], [pot-lr1,  high-rail], [pot-lr2,  high-rail],
+                  [pot-lr3, high-rail], [I/O-led-2, Vdd]]
 
   lcd-controller:  # 14 for LCDs, 2 for I2C
     type: nano every
@@ -286,9 +311,7 @@ devices:
         connect: [[lcd-mux-1-DB0, X]]
         comment: DB0
       - name: SDA
-        connect: [[master-controller, SDA]]
       - name: SCL
-        connect: [[master-controller, SCL]]
       - name: A6
         connect: [[lcd-mux-1-DB4, X]]
         comment: DB4
@@ -323,4 +346,10 @@ devices:
       - name: TX
         connect: [[lcd-mux-1-E, A]]
         comment: A
+      - name: 5V
+        connect: [[lcd-mux-1-E, Vcc], [lcd-mux-1-DB0, Vcc], [lcd-mux-1-DB1, Vcc],
+                  [lcd-mux-1-DB2, Vcc], [lcd-mux-1-DB3, Vcc], [lcd-mux-1-DB4, Vcc],
+                  [lcd-mux-1-DB5, Vcc], [lcd-mux-1-DB6, Vcc], [lcd-mux-1-DB7, Vcc],
+                  [I/O-sw-1, Vdd], [I/O-sw-2, Vdd], [I/O-sw-3, Vdd], [I/O-sw-4, Vdd],
+                  [I/O-sw-5, Vdd], [I/O-led-1, Vdd]]
 

@@ -3,50 +3,51 @@
 ---
 
 I/O Expander:
-  part_number: MCP23016-I/SP
+  part-number: MCP23016-I/SP
   ordered-from: mouser.com
   price: 
-  current_drive: 25mA
-  supply_voltage: [2, 5.5]
+  current-drive: 25mA
+  supply-voltage: [2, 5.5]
+  num-rows: 2
   socket:
-    part_number: 1-2199298-9
+    part-number: 1-2199298-9
     ordered-from: mouser.com
     price: 0.78
-    number_needed: 1
+    number-needed: 1
   I2C:
     addr: [0, 1, 0, 0, A2, A1, A0]
     init: []
     commands:
       0x00:
         name: Access GP0
-        value_on_reset: [0, 0, 0, 0, 0, 0, 0, 0]
+        value-on-reset: [0, 0, 0, 0, 0, 0, 0, 0]
       0x01:
         name: Access GP1
-        value_on_reset: [0, 0, 0, 0, 0, 0, 0, 0]
+        value-on-reset: [0, 0, 0, 0, 0, 0, 0, 0]
       0x02:
         name: Access OLAT0
         comment: Output Latch Register
-        value_on_reset: [0, 0, 0, 0, 0, 0, 0, 0]
+        value-on-reset: [0, 0, 0, 0, 0, 0, 0, 0]
       0x03:
         name: Access OLAT1
         comment: Output Latch Register
-        value_on_reset: [0, 0, 0, 0, 0, 0, 0, 0]
+        value-on-reset: [0, 0, 0, 0, 0, 0, 0, 0]
       0x04:
         name: Access IPOL0
         comment: Input Polarity Register, 1 inverted, 0 not inverted
-        value_on_reset: [0, 0, 0, 0, 0, 0, 0, 0]
+        value-on-reset: [0, 0, 0, 0, 0, 0, 0, 0]
       0x05:
         name: Access IPOL1
         comment: Input Polarity Register, 1 inverted, 0 not inverted
-        value_on_reset: [0, 0, 0, 0, 0, 0, 0, 0]
+        value-on-reset: [0, 0, 0, 0, 0, 0, 0, 0]
       0x06:
         name: Access IODIR0
         comment: I/O Direction Register, 1 input, 0 output
-        value_on_reset: [1, 1, 1, 1, 1, 1, 1, 1]
+        value-on-reset: [1, 1, 1, 1, 1, 1, 1, 1]
       0x07:
         name: Access IODIR1
         comment: I/O Direction Register, 1 input, 0 output
-        value_on_reset: [1, 1, 1, 1, 1, 1, 1, 1]
+        value-on-reset: [1, 1, 1, 1, 1, 1, 1, 1]
       0x08:
         name: Access INTCAP0
         comment: Interupt Capture Register -- not needed
@@ -57,11 +58,11 @@ I/O Expander:
         name: Access IOCON0
         comment: IARES -- Interrupt Activity Resolution, 1 fast sample rate (200uSec), 0 normal sample rate (32mSec)
         bits: [-, -, -, -, -, -, -, IARES]
-        value_on_reset: [-, -, -, -, -, -, -, 0]
+        value-on-reset: [-, -, -, -, -, -, -, 0]
       0x0B:
         name: Access IOCON1
         bits: [-, -, -, -, -, -, -, IARES]
-        value_on_reset: [-, -, -, -, -, -, -, 0]
+        value-on-reset: [-, -, -, -, -, -, -, 0]
   fanout-pins: [GP0.0, GP0.1, GP0.2, GP0.3, GP0.4, GP0.5, GP0.6, GP0.7,
                 GP1.0, GP1.1, GP1.2, GP1.3, GP1.4, GP1.5, GP1.6, GP1.7]
   pins:
@@ -78,29 +79,31 @@ I/O Expander:
     - name: Vss
       comment: GND
     - name: CLK
-      connect: [[3.9Kohm, 5V], [33pF, GND]]
+      connect: [[3.9Kohm, Vdd], [33pF, GND]]
     - name: TP
       connect: []
     - name: GP1.5
     - name: GP1.6
     - name: GP1.7
     - name: SCL
-    - name: GP0.7
-    - name: GP0.6
-    - name: GP0.5
-    - name: GP0.4
-    - name: GP0.3
-    - name: GP0.2
-    - name: GP0.1
-    - name: GP0.0
-    - name: Vdd
-      connect: [5V, [.1uF, GND]]
-    - name: Vss
-      connect: [GND]
-    - name: A2
-    - name: A1
-    - name: A0
+
     - name: SDA
+    - name: A0
+    - name: A1
+    - name: A2
+    - name: Vss
+      connect: [[GND]]
+    - name: Vdd
+      connect: [[.1uF, GND]]
+    - name: GP0.0
+    - name: GP0.1
+    - name: GP0.2
+    - name: GP0.3
+    - name: GP0.4
+    - name: GP0.5
+    - name: GP0.6
+    - name: GP0.7
+
 
 I/O Expander Input:
   uses: I/O Expander
@@ -179,16 +182,17 @@ I/O Expander Output:
       connect: [[120ohm, series]]
 
 Multiplexer:
-  part_number: MAX4617CPE+
+  part-number: MAX4617CPE+
   ordered-from: mouser.com
   price: 4.48
-  supply_voltage: [2, 5.5]
+  supply-voltage: [2, 5.5]
   output-pins: [X0, X1, X2, X3, X4, X5, X6, X7]
+  num-rows: 2
   socket:
-    part_number: 110-47-316-41-001000
+    part-number: 110-47-316-41-001000
     ordered-from: mouser.com
     price: 1.10
-    number_needed: 1
+    number-needed: 1
   fanout-pins: [X0, X1, X2, X3, X4, X5, X6, X7]
   pins:
     - name: X4
@@ -197,22 +201,23 @@ Multiplexer:
     - name: X7
     - name: X5
     - name: ENABLE
-      connect: [Vcc]
+      connect: [[Vcc]]
     - name: N.C.
       connect: []
     - name: GND
-      connect: [GND]
-    - name: Vcc
-      connect: [5V, [.1uF, GND]]
-    - name: X2
-    - name: X1
-    - name: X0
-    - name: X3
-    - name: A
-      comment: LSb
-    - name: B
+      connect: [[GND]]
+
     - name: C
       comment: MSb
+    - name: B
+    - name: A
+      comment: LSb
+    - name: X3
+    - name: X0
+    - name: X1
+    - name: X2
+    - name: Vcc
+      connect: [[.1uF, GND]]
 
 Slide Pot:
   part-number: SLP-50K
@@ -222,13 +227,13 @@ Slide Pot:
     part-number: KNB-297
     ordered-from: allelectronics.com
     price: 0.40
+  num-rows: 1
   pin-connect: wiper
   pins:
     - name: high-rail
-      connect: [5V]
     - name: wiper
-    - name: low_rail
-      connect: [GND]
+    - name: low-rail
+      connect: [[GND]]
 
 Rotary Switch:
   part-number: RSW-112
@@ -236,6 +241,7 @@ Rotary Switch:
   price: 2.00
   positions: 12
   fanout-pins: [P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12]
+  num-rows: 1
   pins:
     - name: P1
     - name: P2
@@ -250,18 +256,19 @@ Rotary Switch:
     - name: P11
     - name: P12
     - name: wiper
-      connect: [GND]
+      connect: [[GND]]
 
 Toggle Switch:
   part-number: STS-130
   ordered-from: allelectronics.com
   price: 1.75
   type: SPST
+  num-rows: 1
   pin-connect: p1
   pins:
     - name: p1
     - name: p2
-      connect: [GND]
+      connect: [[GND]]
 
 Rotary Encoder:
   part-number: RE-66
@@ -269,14 +276,15 @@ Rotary Encoder:
   price: 1.75
   detents: 20
   fanout-pins: [A, B, Bt]
+  num-rows: 1
   pins:
     - name: A
     - name: center
-      connect: [GND]
+      connect: [[GND]]
     - name: B
     - name: Bt
     - name: Bt2
-      connect: [GND]
+      connect: [[GND]]
 
 LED:
   part-number: LED-10R
@@ -285,22 +293,25 @@ LED:
   color: red
   brightness: brighter
   pin-connect: long
+  num-rows: 1
   pins:
     - name: long
-      connect: [[120 ohm, series]]
+      connect: []
     - name: short
-      connect: [GND]
+      connect: [[GND]]
 
 Button:
   part-number: SB4011NOHC
+  mouser-number: 633-SB4011NOHC
   ordered-from: mouser.com
   price: 4.51
   normally: open
   pin-connect: p1
+  num-rows: 1
   pins:
     - name: p1
     - name: p2
-      connect: [GND]
+      connect: [[GND]]
 
 LCD:
   part-number: HDM16216H-5-S00S
@@ -311,12 +322,13 @@ LCD:
     part-number: 61301611821
     ordered-from: mouser.com
     price: 0.69
-    number_needed: 1
+    number-needed: 1
+  num-rows: 1
   pins:
     - name: Vss
-      connect: [GND]
+      connect: [[GND]]
     - name: Vdd
-      connect: [5V, [.1uF, GND]]
+      connect: [[.1uF, GND]]
     - name: Vl
     - name: RS
     - name: R/W
@@ -342,10 +354,11 @@ Rotary Pot:
   price: 0.86
   ohms: 10k
   taper: linear
+  num-rows: 1
   pins:
     - name: high-rail
     - name: wiper
-    - name: low_rail
+    - name: low-rail
 
 Nano Every:
   ordered-from: arduino.cc
@@ -354,7 +367,7 @@ Nano Every:
   sram: 6KB
   EEPROM: 256B
   voltage: 5V
-  max_total_current: 950mA
+  max-total-current: 950mA
   max-GPIO-current: 15mA
   max-pin-group-current: 100mA at 125C, 200mA at 25C, source or sink
   pull-up-resistor: 35kohm
@@ -362,12 +375,13 @@ Nano Every:
   max-i2c-clock: 1MHz
   clock: 16MHz
   embedded-sensors: []
+  num-rows: 2
   socket:
     part-number: PRT-16279
     ordered-from: mouser.com
     price: 1.50
     type: female header
-    number_needed: 2
+    number-needed: 2
   internal:
     # these skip A4 and A5 because they have two internal pins, can get into trouble...
     PA: [D2, D7]
@@ -415,6 +429,7 @@ Nano Every:
       connect: []
     - name: GND
     - name: VIN
+      connect: [[12V], [.1uF, GND]]
       comment: 7-18VDC
 
     - name: TX
@@ -462,12 +477,13 @@ Nano 33 IoT:
   max-GPIO-current: 7mA
   pull-up-resistor: 40kohm
   embedded-sensors: [LSM6DS3]
+  num-rows: 2
   socket:
     part-number: PRT-16279
     ordered-from: mouser.com
     price: 1.50
     type: female header
-    number_needed: 2
+    number-needed: 2
   pins:
     - name: D13
       comment: built-in LED
@@ -499,6 +515,7 @@ Nano 33 IoT:
     - name: GND
     - name: VIN
       comment: 5-18VDC
+      connect: [[12V], [.1uF, GND]]
 
     - name: TX
       number: 1
@@ -520,19 +537,32 @@ Nano 33 IoT:
     - name: D11
     - name: D12
 
-I2C-level-shifter:
-  socket: null
+I2C-level-converter:
+  num-rows: 2
+  socket:
+    part-number: 310-87-106-41-001101
+    ordered-from: mouser.com
+    price: 0.48
+    type: female header
+    number-needed: 2
   pins:
-    - name: V1
-      connect: [3.3V]
-    - name: V2
-      connect: [5V]
+    - name: LV1
+    - name: LV2
+    - name: LV
+      connect: [[.1uF, GND]]
     - name: GND
-      connect: [GND]
-    - name: V1.1
-    - name: V1.2
-    - name: V2.1
-    - name: V2.2
+      connect: [[GND]]
+    - name: LV3
+    - name: LV4
+
+    - name: HV4
+    - name: HV3
+    - name: GND
+      connect: [[GND]]
+    - name: HV
+      connect: [[.1uF, GND]]
+    - name: HV2
+    - name: HV1
 
 Breadboard:
   part-number: SB404
@@ -540,4 +570,4 @@ Breadboard:
   price: 5.00
   length: 3.75 in
   width: 1.85 in
-  number_of_rows: 36
+  number-of-rows: 36

@@ -10,7 +10,9 @@ class AttrNameError(AttributeError):
 
 
 class Attrs:
+    dont_attrs = frozenset()
     dont_override = frozenset()
+    dont_inherit = frozenset(('name', 'parent', 'uses', '__class__', 'get_my_attr'))
 
     def __init__(self, name, attrs, parent=None, uses=None):
         self.name = name
@@ -21,12 +23,15 @@ class Attrs:
                 pass
                 #print(f"Attrs.__init__ got 'uses' in attrs: {self.uses=}, {value=}")
             elif key != 'name':
-                if self.uses is None:
-                    value_uses = None
+                if key in self.get_my_attr('dont_attrs'):
+                    setattr(self, convert_name(key), value)
                 else:
-                    value_uses = getattr(self.uses, key, None)
-                setattr(self, convert_name(key),
-                        Attrs.to_attrs(key, value, self, uses=value_uses))
+                    if self.uses is None:
+                        value_uses = None
+                    else:
+                        value_uses = getattr(self.uses, key, None)
+                    setattr(self, convert_name(key),
+                            Attrs.to_attrs(key, value, self, uses=value_uses))
 
     @classmethod
     def to_attrs(cls, name, value, parent, uses=None):
@@ -53,28 +58,38 @@ class Attrs:
             return f"<{self.__class__.__name__}: {self.parent}.{self.name}>"
         return f"<{self.__class__.__name__}: {self.name}>"
 
+    def get_my_attr(self, name):
+        return object.__getattribute__(self, name)
+
     def __getattribute__(self, name):
+        dont_inherit = object.__getattribute__(self, 'dont_inherit')
+        if name in dont_inherit:
+            return object.__getattribute__(self, name)
         try:
-            uses = object.__getattribute__(self, 'uses')
+            uses = self.get_my_attr('uses')
         except AttributeError:
             print(f"{self}.__getattribute__: caught AttributeError on 'uses'")
             raise
         if uses is None:
-            return object.__getattribute__(self, name)
-        if name in object.__getattribute__(self, 'dont_override'):
+            return self.get_my_attr(name)
+        assert uses is not self
+        if name in self.get_my_attr('dont_override'):
             #print("__getattribute__ dont_override", name, "uses", uses)
             return getattr(uses, name)
         inherited_value = getattr(uses, name, None)
         try:
-            my_value = object.__getattribute__(self, name)
+            my_value = self.get_my_attr(name)
         except AttributeError:
             if inherited_value is None:
                 raise
             return inherited_value
+
+        # This is basically for 'connect'
         if isinstance(inherited_value, (tuple, list)) and \
            isinstance(my_value, (tuple, list)):
             # concatenate values
             return tuple(inherited_value) + tuple(my_value)
+
         return my_value
 
 
@@ -82,6 +97,7 @@ Devices = {}
 
 class Device(Attrs):
     dont_override = {'pins'}
+    dont_inherit = Attrs.dont_inherit.union(('pins_by_name', 'instances'))
 
     def __init__(self, name, desc):
         global Devices
@@ -91,7 +107,7 @@ class Device(Attrs):
             Attrs.__init__(self, name, desc)
         if 'pins' in desc:
             self.pins_by_name = defaultdict(list)
-            for i, p in enumerate(object.__getattribute__(self, 'pins'), 1):
+            for i, p in enumerate(self.get_my_attr('pins'), 1):
                 if self.uses is None:
                     p.pin_number = i
                 else:
@@ -120,7 +136,7 @@ class Device(Attrs):
         Raises KeyError if none found.
         '''
         try:
-            pins_by_name = object.__getattribute__(self, 'pins_by_name')
+            pins_by_name = self.pins_by_name
         except AttributeError:
             if self.uses is None:
                 raise KeyError(repr(name))
@@ -150,11 +166,11 @@ class Device(Attrs):
                      for pin_number in range(1, self.num_pins + 1))
 
     def add_instance(self, part):
-        instances = object.__getattribute__(self, 'instances')
-        instances.append(part)
+        self.instances.append(part)
 
     def __repr__(self):
         return f"<Device: {self.name}>"
+
 
 class Pin(Attrs):
     inverted = False
@@ -188,6 +204,9 @@ def parse_devices(yaml):
 
 def get_device(name):
     return Devices[name.lower()]
+
+def all_devices():
+    return sorted(Devices.items())
 
 
 if __name__ == "__main__":
