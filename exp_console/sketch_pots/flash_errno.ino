@@ -30,6 +30,7 @@ void errno(byte current_errno) {
   if (current_errno == 0) {
     Last_errno = 0;
     Num_delays = 0;
+    digitalWrite(LED_pin, LOW);
   } else {
     if (Last_errno == 0) {
       // Display this errno!

@@ -1,4 +1,4 @@
-// sketch_pots
+// sketch_pots.ino
 
 #include <EEPROM.h>
 #include <Wire.h>
@@ -20,6 +20,22 @@ extern byte scale_slide_pot(int reading, int calibrated_threshold, int calibrate
 
 byte A_pins[] = {A0, A1, A2, A3};
 byte Num_pots[NUM_A_PINS];    // number of pots on each A_pin
+
+byte EEPROM_num_pots_addr(byte a_pin) {
+  return a_pin;
+}
+
+byte EEPROM_cal_threshold(byte a_pin, byte pot_addr) {
+  return NUM_A_PINS + a_pin * 8 * 2 * sizeof(int) + pot_addr * 2 * sizeof(int);
+}
+
+byte EEPROM_cal_center(byte a_pin, byte pot_addr) {
+  return EEPROM_cal_threshold(a_pin, pot_addr) + sizeof(int);
+}
+
+byte EEPROM_storage_addr(int addr) {
+  return EEPROM_NEEDED + 1 + addr;
+}
 
 struct pot_info_s {   // size 16 bytes
   int a_low;
@@ -54,11 +70,10 @@ void setup() {
   Serial.begin(9600);
   
   byte a_pin, pot_addr;
-  byte EEPROM_cal_addr = 4;
   byte num_pots_msg_seen = 0;
   byte cal_msg_seen = 0;
   for (a_pin = 0; a_pin < NUM_A_PINS; a_pin++) {
-    byte num_pots = EEPROM[a_pin];
+    byte num_pots = EEPROM[EEPROM_num_pots_addr(a_pin)];
     if (num_pots == 0xFF) {
       Num_pots[a_pin] = 1;
       if (!num_pots_msg_seen) {
@@ -78,10 +93,9 @@ void setup() {
       Pot_info[a_pin][pot_addr].a_high = -100000;
       Pot_info[a_pin][pot_addr].last_reported = -1;
       int b;
-      EEPROM.get(EEPROM_cal_addr, b);
+      EEPROM.get(EEPROM_cal_threshold(a_pin, pot_addr), b);
       // Serial.print("int b from EEPROM is ");
       // Serial.println(b);
-      EEPROM_cal_addr += sizeof(int);
       if (b == -1) {
         if (!cal_msg_seen) {
           Serial.print("cal_threshold for a_pin ");
@@ -98,8 +112,7 @@ void setup() {
         b = 0;
       }
       Pot_info[a_pin][pot_addr].cal_threshold = b;
-      EEPROM.get(EEPROM_cal_addr, b);
-      EEPROM_cal_addr += sizeof(int);
+      EEPROM.get(EEPROM_cal_center(a_pin, pot_addr), b);
       if (b == -1) {
         if (!cal_msg_seen) {
           Serial.print("cal_center for a_pin ");
@@ -255,7 +268,7 @@ void calibrate_high(void) {  // errnos 51-59
     for (pot_addr = 0; pot_addr < Num_pots[a_pin]; pot_addr++) {
       if (values[a_pin][pot_addr] > (1023 - 40)) {
         Pot_info[a_pin][pot_addr].cal_high = values[a_pin][pot_addr];
-        Pot_info[a_pin][pot_addr].calibrated |= 3;
+        Pot_info[a_pin][pot_addr].calibrated |= 4;
       } else {
         Errno = 51;
         Err_data = values[a_pin][pot_addr];
@@ -265,7 +278,20 @@ void calibrate_high(void) {  // errnos 51-59
 }
 
 void write_calibrations(void) {  // errnos 61-69
-  // FIX
+  byte i, a_pin, pot_addr;
+  for (a_pin = 0; a_pin < NUM_A_PINS; a_pin++) {
+    for (pot_addr = 0; pot_addr < Num_pots[a_pin]; pot_addr++) {
+      struct pot_info_s *pi = &Pot_info[a_pin][pot_addr];
+      if ((pi->calibrated & 1) && (pi->calibrated & 4)) {
+        pi->cal_threshold = max(pi->cal_low, 1023 - pi->cal_high);
+        EEPROM.put(EEPROM_cal_threshold(a_pin, pot_addr), pi->cal_threshold);
+      }
+      if (pi->calibrated & 2) {
+        EEPROM.put(EEPROM_cal_center(a_pin, pot_addr), pi->cal_center);
+      }
+      pi->calibrated = 0;
+    } // end for (pot_addr)
+  } // end for (a_pin)
 }
 
 void receiveRequest(int how_many) {
@@ -301,7 +327,7 @@ void receiveRequest(int how_many) {
     b2 = Wire.read();
     if (check_ls(b2, 8, 10)) break;
     Num_pots[b1] = b2;
-    EEPROM[b1] = b2;
+    EEPROM[EEPROM_num_pots_addr(b1)] = b2;
     break;
   case 9:  // store EEPROM addr, value
     if (check_eq(how_many, 3, 20)) break;
@@ -309,7 +335,7 @@ void receiveRequest(int how_many) {
     if (check_ls(b1, EEPROM_AVAIL, 21)) break;
     b2 = Wire.read();
     if (b1 > EEPROM[NUM_EEPROM_USED]) EEPROM[NUM_EEPROM_USED] = b1;
-    EEPROM[EEPROM_NEEDED + 1 + b1] = b2;
+    EEPROM[EEPROM_storage_addr(b1)] = b2;
     break;
   case 10:  // calibrate low
     if (check_eq(how_many, 1, 30)) break;
@@ -337,7 +363,7 @@ void receiveRequest(int how_many) {
 void sendReport(void) {
   byte a_pin, pot_addr;
   switch (Report) {
-  case 0:  // 2 + num_pots
+  case 0:  // Errno, Err_data + pot.value * num_pots (2 + num_pots total)
     Wire.write(Errno);
     Wire.write(Err_data);
     for (a_pin = 0; a_pin < NUM_A_PINS; a_pin++) {
@@ -348,7 +374,7 @@ void sendReport(void) {
     Errno = 0;
     Err_data = 0;
     break;
-  case 1:  // 4 bytes
+  case 1:  // num_pots, NUM_A_PINS, EEPROM_AVAIL, EEPROM USED (4 bytes total)
     byte num_pots = 0;
     for (a_pin = 0; a_pin < NUM_A_PINS; a_pin++) {
       num_pots += Num_pots[a_pin];
@@ -358,21 +384,21 @@ void sendReport(void) {
     Wire.write(byte(EEPROM_AVAIL));
     Wire.write(EEPROM[NUM_EEPROM_USED]);
     break;
-  case 2:  // 2 bytes
+  case 2:  // Errno, Err_data (2 bytes total)
     Wire.write(Errno);
     Wire.write(Err_data);
     Errno = 0;
     Err_data = 0;
     break;
-  case 3:  // 4 bytes
+  case 3:  // Num_pots for each a_pin (NUM_A_PINS bytes total)
     for (a_pin = 0; a_pin < NUM_A_PINS; a_pin++) {
       Wire.write(Num_pots[a_pin]);
     }
     break;
-  case 4:  // 4 bytes
+  case 4:  // Cycle_time (4 bytes total)
     Wire.write(Cycle_time);
     break;
-  case 5:  // 4 * Num_pots[a_pin] bytes
+  case 5:  // cal_threshold, cal_center for each pot in a_pins (4 * num_pots for a_pin)
     if (Report_addr < NUM_A_PINS) {
       a_pin = Report_addr++;
       for (pot_addr = 0; pot_addr < Num_pots[a_pin]; pot_addr++) {
@@ -381,9 +407,9 @@ void sendReport(void) {
       }
     }
     break;
-  case 6:  // 1 byte
+  case 6:  // next stored EEPROM byte (1 byte)
     if (Report_addr < EEPROM[NUM_EEPROM_USED]) {
-      Wire.write(EEPROM[Report_addr + EEPROM_NEEDED + 1]);
+      Wire.write(EEPROM[EEPROM_storage_addr(Report_addr)]);
       Report_addr++;
     }
     break;
@@ -425,6 +451,7 @@ void help(void) {
   Serial.println("L - calibrate_low");
   Serial.println("C - calibrate_center");
   Serial.println("H - calibrate_high");
+  Serial.println("W - write_calibrations");
 }
 
 void loop() {
@@ -472,7 +499,11 @@ void loop() {
         n = Serial.parseInt(SKIP_WHITESPACE);
         if (n < 8) {
           Num_pots[a_pin] = n;
-          EEPROM[a_pin] = n;
+          EEPROM[EEPROM_num_pots_addr(a_pin)] = n;
+          Serial.print("Num_pots for a_pin ");
+          Serial.print(a_pin);
+          Serial.print(" set to ");
+          Serial.println(n);
         } else {
           Serial.print("Invalid num_pots ");  
           Serial.print(n);
@@ -488,6 +519,8 @@ void loop() {
     case 'X':
       Errno = Serial.parseInt(SKIP_WHITESPACE);
       Err_data = 0;
+      Serial.print("Errno set to ");
+      Serial.println(Errno);
       break;
     case 'E':
       Serial.print("Errno is ");
@@ -523,6 +556,10 @@ void loop() {
       } else {
         Serial.println("failed to calibrate");
       }
+      break;
+    case 'W':
+      write_calibrations();
+      Serial.println("write_calibrations done");
       break;
     case ' ':
     case '\t':

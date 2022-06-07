@@ -2,195 +2,542 @@
 
 ---
 
-  I/O Expander:
-    part_number: MCP23016-I/SP
-    current_drive: 25mA
-    supply_voltage: [2, 5.5]
-    I2C:
-      addr: [0, 1, 0, 0, A2, A1, A0]
-      init: []
-      commands:
-        0x00:
-          name: Access GP0
-          value_on_reset: [0, 0, 0, 0, 0, 0, 0, 0]
-        0x01:
-          name: Access GP1
-          value_on_reset: [0, 0, 0, 0, 0, 0, 0, 0]
-        0x02:
-          name: Access OLAT0
-          comment: Output Latch Register
-          value_on_reset: [0, 0, 0, 0, 0, 0, 0, 0]
-        0x03:
-          name: Access OLAT1
-          comment: Output Latch Register
-          value_on_reset: [0, 0, 0, 0, 0, 0, 0, 0]
-        0x04:
-          name: Access IPOL0
-          comment: Input Polarity Register, 1 inverted, 0 not inverted
-          value_on_reset: [0, 0, 0, 0, 0, 0, 0, 0]
-        0x05:
-          name: Access IPOL1
-          comment: Input Polarity Register, 1 inverted, 0 not inverted
-          value_on_reset: [0, 0, 0, 0, 0, 0, 0, 0]
-        0x06:
-          name: Access IODIR0
-          comment: I/O Direction Register, 1 input, 0 output
-          value_on_reset: [1, 1, 1, 1, 1, 1, 1, 1]
-        0x07:
-          name: Access IODIR1
-          comment: I/O Direction Register, 1 input, 0 output
-          value_on_reset: [1, 1, 1, 1, 1, 1, 1, 1]
-        0x08:
-          name: Access INTCAP0
-          comment: Interupt Capture Register -- not needed
-        0x09:
-          name: Access INTCAP1
-          comment: Interupt Capture Register -- not needed
-        0x0A:
-          name: Access IOCON0
-          comment: IARES -- Interrupt Activity Resolution, 1 fast sample rate (200uSec), 0 normal sample rate (32mSec)
-          bits: [-, -, -, -, -, -, -, IARES]
-          value_on_reset: [-, -, -, -, -, -, -, 0]
-        0x0B:
-          name: Access IOCON1
-          bits: [-, -, -, -, -, -, -, IARES]
-          value_on_reset: [-, -, -, -, -, -, -, 0]
-    GPIO-pins: [GP0.0, GP0.1, GP0.2, GP0.3, GP0.4, GP0.5, GP0.6, GP0.7, GP1.0, GP1.1, GP1.2, GP1.3, GP1.4, GP1.5, GP1.6, GP1.7]
-    pins:
-      - name: Vss
-        comment: GND
-      - name: GP1.0
-      - name: GP1.1
-      - name: GP1.2
-      - name: GP1.3
-      - name: INT-not
-        connect: []
-      - name: GP1.4
-      - name: Vss
-        comment: GND
-      - name: CLK
-        connect: [[3.9Kohm, Vdd], [33pF, Vss]]
-      - name: TP
-        connect: []
-      - name: GP1.5
-      - name: GP1.6
-      - name: GP1.7
-      - name: SCL
-      - name: GP0.7
-      - name: GP0.6
-      - name: GP0.5
-      - name: GP0.4
-      - name: GP0.3
-      - name: GP0.2
-      - name: GP0.1
-      - name: GP0.0
-      - name: Vdd
-        - comment: [5V, [.1uF, GND]]
-      - name: Vss
-        comment: [GND]
-      - name: A2
-      - name: A1
-      - name: A0
-      - name: SDA
-  I/O Expander Input:
-    uses: I/O Expander
-    I2C:
-      init: []
-    pins:
-      - name: GP1.0
-        - connect: [[20Kohm, Vdd]]
-      - name: GP1.1
-        - connect: [[20Kohm, Vdd]]
-      - name: GP1.2
-        - connect: [[20Kohm, Vdd]]
-      - name: GP1.3
-        - connect: [[20Kohm, Vdd]]
-      - name: GP1.4
-        - connect: [[20Kohm, Vdd]]
-      - name: GP1.5
-        - connect: [[20Kohm, Vdd]]
-      - name: GP1.6
-        - connect: [[20Kohm, Vdd]]
-      - name: GP1.7
-        - connect: [[20Kohm, Vdd]]
-      - name: GP0.7
-        - connect: [[20Kohm, Vdd]]
-      - name: GP0.6
-        - connect: [[20Kohm, Vdd]]
-      - name: GP0.5
-        - connect: [[20Kohm, Vdd]]
-      - name: GP0.4
-        - connect: [[20Kohm, Vdd]]
-      - name: GP0.3
-        - connect: [[20Kohm, Vdd]]
-      - name: GP0.2
-        - connect: [[20Kohm, Vdd]]
-      - name: GP0.1
-        - connect: [[20Kohm, Vdd]]
-      - name: GP0.0
-        - connect: [[20Kohm, Vdd]]
-  I/O Expander Output:
-    uses: I/O Expander
-    I2C:
-      init: [[Access IODIR0, 0x00, 0x00]]
-    pins:
-      - name: GP1.0
-        - connect: [[120ohm, series]]
-      - name: GP1.1
-        - connect: [[120ohm, series]]
-      - name: GP1.2
-        - connect: [[120ohm, series]]
-      - name: GP1.3
-        - connect: [[120ohm, series]]
-      - name: GP1.4
-        - connect: [[120ohm, series]]
-      - name: GP1.5
-        - connect: [[120ohm, series]]
-      - name: GP1.6
-        - connect: [[120ohm, series]]
-      - name: GP1.7
-        - connect: [[120ohm, series]]
-      - name: GP0.7
-        - connect: [[120ohm, series]]
-      - name: GP0.6
-        - connect: [[120ohm, series]]
-      - name: GP0.5
-        - connect: [[120ohm, series]]
-      - name: GP0.4
-        - connect: [[120ohm, series]]
-      - name: GP0.3
-        - connect: [[120ohm, series]]
-      - name: GP0.2
-        - connect: [[120ohm, series]]
-      - name: GP0.1
-        - connect: [[120ohm, series]]
-      - name: GP0.0
-        - connect: [[120ohm, series]]
-  - Multiplexer
-    part_number: MAX4617CPE+
-    supply_voltage: [2, 5.5]
-    output-pins: [X0, X1, X2, X3, X4, X5, X6, X7]
-    pins:
-      - name: X4
-      - name: X6
-      - name: X
-      - name: X7
-      - name: X5
-      - name: ENABLE
-        connect: [Vcc]
-      - name: N.C.
-        connect: []
-      - name: GND
-        connect: [GND]
-      - name: Vcc
-        connect: [5V, [.1uF, GND]]
-      - name: X2
-      - name: X1
-      - name: X0
-      - name: X3
-      - name: A
-        comment: LSb
-      - name: B
-      - name: C
-        comment: MSb
+I/O Expander:
+  part_number: MCP23016-I/SP
+  ordered-from: mouser.com
+  price: 
+  current_drive: 25mA
+  supply_voltage: [2, 5.5]
+  socket:
+    part_number: 1-2199298-9
+    ordered-from: mouser.com
+    price: 0.78
+    number_needed: 1
+  I2C:
+    addr: [0, 1, 0, 0, A2, A1, A0]
+    init: []
+    commands:
+      0x00:
+        name: Access GP0
+        value_on_reset: [0, 0, 0, 0, 0, 0, 0, 0]
+      0x01:
+        name: Access GP1
+        value_on_reset: [0, 0, 0, 0, 0, 0, 0, 0]
+      0x02:
+        name: Access OLAT0
+        comment: Output Latch Register
+        value_on_reset: [0, 0, 0, 0, 0, 0, 0, 0]
+      0x03:
+        name: Access OLAT1
+        comment: Output Latch Register
+        value_on_reset: [0, 0, 0, 0, 0, 0, 0, 0]
+      0x04:
+        name: Access IPOL0
+        comment: Input Polarity Register, 1 inverted, 0 not inverted
+        value_on_reset: [0, 0, 0, 0, 0, 0, 0, 0]
+      0x05:
+        name: Access IPOL1
+        comment: Input Polarity Register, 1 inverted, 0 not inverted
+        value_on_reset: [0, 0, 0, 0, 0, 0, 0, 0]
+      0x06:
+        name: Access IODIR0
+        comment: I/O Direction Register, 1 input, 0 output
+        value_on_reset: [1, 1, 1, 1, 1, 1, 1, 1]
+      0x07:
+        name: Access IODIR1
+        comment: I/O Direction Register, 1 input, 0 output
+        value_on_reset: [1, 1, 1, 1, 1, 1, 1, 1]
+      0x08:
+        name: Access INTCAP0
+        comment: Interupt Capture Register -- not needed
+      0x09:
+        name: Access INTCAP1
+        comment: Interupt Capture Register -- not needed
+      0x0A:
+        name: Access IOCON0
+        comment: IARES -- Interrupt Activity Resolution, 1 fast sample rate (200uSec), 0 normal sample rate (32mSec)
+        bits: [-, -, -, -, -, -, -, IARES]
+        value_on_reset: [-, -, -, -, -, -, -, 0]
+      0x0B:
+        name: Access IOCON1
+        bits: [-, -, -, -, -, -, -, IARES]
+        value_on_reset: [-, -, -, -, -, -, -, 0]
+  fanout-pins: [GP0.0, GP0.1, GP0.2, GP0.3, GP0.4, GP0.5, GP0.6, GP0.7,
+                GP1.0, GP1.1, GP1.2, GP1.3, GP1.4, GP1.5, GP1.6, GP1.7]
+  pins:
+    - name: Vss
+      comment: GND
+    - name: GP1.0
+    - name: GP1.1
+    - name: GP1.2
+    - name: GP1.3
+    - name: INT
+      inverted: true
+      connect: []
+    - name: GP1.4
+    - name: Vss
+      comment: GND
+    - name: CLK
+      connect: [[3.9Kohm, 5V], [33pF, GND]]
+    - name: TP
+      connect: []
+    - name: GP1.5
+    - name: GP1.6
+    - name: GP1.7
+    - name: SCL
+    - name: GP0.7
+    - name: GP0.6
+    - name: GP0.5
+    - name: GP0.4
+    - name: GP0.3
+    - name: GP0.2
+    - name: GP0.1
+    - name: GP0.0
+    - name: Vdd
+      connect: [5V, [.1uF, GND]]
+    - name: Vss
+      connect: [GND]
+    - name: A2
+    - name: A1
+    - name: A0
+    - name: SDA
 
+I/O Expander Input:
+  uses: I/O Expander
+  I2C:
+    init: []
+  pins:
+    - name: GP1.0
+      connect: [[20Kohm, Vdd]]
+    - name: GP1.1
+      connect: [[20Kohm, Vdd]]
+    - name: GP1.2
+      connect: [[20Kohm, Vdd]]
+    - name: GP1.3
+      connect: [[20Kohm, Vdd]]
+    - name: GP1.4
+      connect: [[20Kohm, Vdd]]
+    - name: GP1.5
+      connect: [[20Kohm, Vdd]]
+    - name: GP1.6
+      connect: [[20Kohm, Vdd]]
+    - name: GP1.7
+      connect: [[20Kohm, Vdd]]
+    - name: GP0.7
+      connect: [[20Kohm, Vdd]]
+    - name: GP0.6
+      connect: [[20Kohm, Vdd]]
+    - name: GP0.5
+      connect: [[20Kohm, Vdd]]
+    - name: GP0.4
+      connect: [[20Kohm, Vdd]]
+    - name: GP0.3
+      connect: [[20Kohm, Vdd]]
+    - name: GP0.2
+      connect: [[20Kohm, Vdd]]
+    - name: GP0.1
+      connect: [[20Kohm, Vdd]]
+    - name: GP0.0
+      connect: [[20Kohm, Vdd]]
+
+I/O Expander Output:
+  uses: I/O Expander
+  I2C:
+    init: [[Access IODIR0, 0x00, 0x00]]
+  pins:
+    - name: GP1.0
+      connect: [[120ohm, series]]
+    - name: GP1.1
+      connect: [[120ohm, series]]
+    - name: GP1.2
+      connect: [[120ohm, series]]
+    - name: GP1.3
+      connect: [[120ohm, series]]
+    - name: GP1.4
+      connect: [[120ohm, series]]
+    - name: GP1.5
+      connect: [[120ohm, series]]
+    - name: GP1.6
+      connect: [[120ohm, series]]
+    - name: GP1.7
+      connect: [[120ohm, series]]
+    - name: GP0.7
+      connect: [[120ohm, series]]
+    - name: GP0.6
+      connect: [[120ohm, series]]
+    - name: GP0.5
+      connect: [[120ohm, series]]
+    - name: GP0.4
+      connect: [[120ohm, series]]
+    - name: GP0.3
+      connect: [[120ohm, series]]
+    - name: GP0.2
+      connect: [[120ohm, series]]
+    - name: GP0.1
+      connect: [[120ohm, series]]
+    - name: GP0.0
+      connect: [[120ohm, series]]
+
+Multiplexer:
+  part_number: MAX4617CPE+
+  ordered-from: mouser.com
+  price: 4.48
+  supply_voltage: [2, 5.5]
+  output-pins: [X0, X1, X2, X3, X4, X5, X6, X7]
+  socket:
+    part_number: 110-47-316-41-001000
+    ordered-from: mouser.com
+    price: 1.10
+    number_needed: 1
+  fanout-pins: [X0, X1, X2, X3, X4, X5, X6, X7]
+  pins:
+    - name: X4
+    - name: X6
+    - name: X
+    - name: X7
+    - name: X5
+    - name: ENABLE
+      connect: [Vcc]
+    - name: N.C.
+      connect: []
+    - name: GND
+      connect: [GND]
+    - name: Vcc
+      connect: [5V, [.1uF, GND]]
+    - name: X2
+    - name: X1
+    - name: X0
+    - name: X3
+    - name: A
+      comment: LSb
+    - name: B
+    - name: C
+      comment: MSb
+
+Slide Pot:
+  part-number: SLP-50K
+  ordered-from: allelectronics.com
+  price: 0.50
+  knob:
+    part-number: KNB-297
+    ordered-from: allelectronics.com
+    price: 0.40
+  pin-connect: wiper
+  pins:
+    - name: high-rail
+      connect: [5V]
+    - name: wiper
+    - name: low_rail
+      connect: [GND]
+
+Rotary Switch:
+  part-number: RSW-112
+  ordered-from: allelectronics.com
+  price: 2.00
+  positions: 12
+  fanout-pins: [P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12]
+  pins:
+    - name: P1
+    - name: P2
+    - name: P3
+    - name: P4
+    - name: P5
+    - name: P6
+    - name: P7
+    - name: P8
+    - name: P9
+    - name: P10
+    - name: P11
+    - name: P12
+    - name: wiper
+      connect: [GND]
+
+Toggle Switch:
+  part-number: STS-130
+  ordered-from: allelectronics.com
+  price: 1.75
+  type: SPST
+  pin-connect: p1
+  pins:
+    - name: p1
+    - name: p2
+      connect: [GND]
+
+Rotary Encoder:
+  part-number: RE-66
+  ordered-from: allelectronics.com
+  price: 1.75
+  detents: 20
+  fanout-pins: [A, B, Bt]
+  pins:
+    - name: A
+    - name: center
+      connect: [GND]
+    - name: B
+    - name: Bt
+    - name: Bt2
+      connect: [GND]
+
+LED:
+  part-number: LED-10R
+  ordered-from: allelectronics.com
+  price: 0.10
+  color: red
+  brightness: brighter
+  pin-connect: long
+  pins:
+    - name: long
+      connect: [[120 ohm, series]]
+    - name: short
+      connect: [GND]
+
+Button:
+  part-number: SB4011NOHC
+  ordered-from: mouser.com
+  price: 4.51
+  normally: open
+  pin-connect: p1
+  pins:
+    - name: p1
+    - name: p2
+      connect: [GND]
+
+LCD:
+  part-number: HDM16216H-5-S00S
+  ordered-from: mouser.com
+  price: 10.10
+  controller: HD44780 or equivalent
+  socket:
+    part-number: 61301611821
+    ordered-from: mouser.com
+    price: 0.69
+    number_needed: 1
+  pins:
+    - name: Vss
+      connect: [GND]
+    - name: Vdd
+      connect: [5V, [.1uF, GND]]
+    - name: Vl
+    - name: RS
+    - name: R/W
+    - name: E
+    - name: D0
+    - name: D1
+    - name: D2
+    - name: D3
+    - name: D4
+    - name: D5
+    - name: D6
+    - name: D7
+    - name: NC
+      connect: []
+      comment: no connection
+    - name: NC
+      connect: []
+      comment: no connection
+
+Rotary Pot:
+  part-number: P160KNPD-4FC20B10K
+  ordered-from: mouser.com
+  price: 0.86
+  ohms: 10k
+  taper: linear
+  pins:
+    - name: high-rail
+    - name: wiper
+    - name: low_rail
+
+Nano Every:
+  ordered-from: arduino.cc
+  price: 27.90 for 3 pack
+  flash: 48KB
+  sram: 6KB
+  EEPROM: 256B
+  voltage: 5V
+  max_total_current: 950mA
+  max-GPIO-current: 15mA
+  max-pin-group-current: 100mA at 125C, 200mA at 25C, source or sink
+  pull-up-resistor: 35kohm
+  max-spi-clock: 10MHz master, 5MHz slave
+  max-i2c-clock: 1MHz
+  clock: 16MHz
+  embedded-sensors: []
+  socket:
+    part-number: PRT-16279
+    ordered-from: mouser.com
+    price: 1.50
+    type: female header
+    number_needed: 2
+  internal:
+    # these skip A4 and A5 because they have two internal pins, can get into trouble...
+    PA: [D2, D7]
+    PB: [D9, D10, D5]
+    PC: [TX, RX, D4]
+    PD: [A3, A2, A1, A0, A6, A7, AREF]
+    PE: [D12, D13, D8, D11]
+    PF: [D6, D3]
+  pins:
+    - name: D13
+      comment: built-in LED
+      internal: PE2
+    - name: 3V3
+      comment: max output 200mA
+    - name: AREF
+      internal: PD7
+    - name: A0
+      number: 14
+      internal: PD3
+    - name: A1
+      number: 15
+      internal: PD2
+    - name: A2
+      number: 16
+      internal: PD1
+    - name: A3
+      number: 17
+      internal: PD0
+    - name: A4
+      number: 18
+      aka: SDA
+    - name: A5
+      number: 19
+      aka: SCL
+    - name: A6
+      number: 20
+      internal: PD4
+    - name: A7
+      number: 21
+      internal: PD5
+    - name: 5V
+      comment: max output 1A
+    - name: RESET
+      inverted: true
+      connect: []
+    - name: GND
+    - name: VIN
+      comment: 7-18VDC
+
+    - name: TX
+      number: 1
+      internal: PC4
+    - name: RX
+      number: 0
+      internal: PC5
+    - name: RESET
+      inverted: true
+      connect: []
+    - name: GND
+    - name: D2
+      internal: PA0
+    - name: D3
+      internal: PF5
+    - name: D4
+      internal: PC6
+    - name: D5
+      internal: PB2
+    - name: D6
+      internal: PF4
+    - name: D7
+      internal: PA1
+    - name: D8
+      internal: PE3
+    - name: D9
+      internal: PB0
+    - name: D10
+      internal: PB1
+    - name: D11
+      internal: PE8
+    - name: D12
+      internal: PE1
+
+Nano 33 IoT:
+  ordered-from: arduino.cc
+  price: 19.40
+  flash: 264KB
+  sram: 256KB
+  EEPROM: null
+  voltage: 3.3V
+  clock: 48MHz
+  max-i2c-clock: 3.4MHz
+  max-GPIO-current: 7mA
+  pull-up-resistor: 40kohm
+  embedded-sensors: [LSM6DS3]
+  socket:
+    part-number: PRT-16279
+    ordered-from: mouser.com
+    price: 1.50
+    type: female header
+    number_needed: 2
+  pins:
+    - name: D13
+      comment: built-in LED
+    - name: 3V3
+    - name: AREF
+    - name: A0
+      number: 14
+    - name: A1
+      number: 15
+    - name: A2
+      number: 16
+    - name: A3
+      number: 17
+    - name: A4
+      number: 18
+      aka: SDA
+    - name: A5
+      number: 19
+      aka: SCL
+    - name: A6
+      number: 20
+    - name: A7
+      number: 21
+    - name: 5V
+      comment: ONLY active if both powered by USB and solder bridge is in place
+    - name: RESET
+      inverted: true
+      connect: []
+    - name: GND
+    - name: VIN
+      comment: 5-18VDC
+
+    - name: TX
+      number: 1
+    - name: RX
+      number: 0
+    - name: RESET
+      inverted: true
+      connect: []
+    - name: GND
+    - name: D2
+    - name: D3
+    - name: D4
+    - name: D5
+    - name: D6
+    - name: D7
+    - name: D8
+    - name: D9
+    - name: D10
+    - name: D11
+    - name: D12
+
+I2C-level-shifter:
+  socket: null
+  pins:
+    - name: V1
+      connect: [3.3V]
+    - name: V2
+      connect: [5V]
+    - name: GND
+      connect: [GND]
+    - name: V1.1
+    - name: V1.2
+    - name: V2.1
+    - name: V2.2
+
+Breadboard:
+  part-number: SB404
+  ordered-from: mouser.com
+  price: 5.00
+  length: 3.75 in
+  width: 1.85 in
+  number_of_rows: 36
