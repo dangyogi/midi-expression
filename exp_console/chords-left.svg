@@ -1,0 +1,849 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="11in"
+   height="8.5in"
+   viewBox="0 0 279.4 215.9"
+   version="1.1"
+   id="svg8"
+   inkscape:version="0.92.5 (2060ec1f9f, 2020-04-08)"
+   sodipodi:docname="chords-left.svg">
+  <defs
+     id="defs2" />
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="0.45"
+     inkscape:cx="548.67034"
+     inkscape:cy="202.38815"
+     inkscape:document-units="in"
+     inkscape:current-layer="layer1"
+     showgrid="false"
+     inkscape:window-width="1064"
+     inkscape:window-height="911"
+     inkscape:window-x="8"
+     inkscape:window-y="964"
+     inkscape:window-maximized="0"
+     units="in"
+     showguides="true"
+     inkscape:guide-bbox="true" />
+  <metadata
+     id="metadata5">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title />
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     transform="translate(0,-81.1)">
+    <flowRoot
+       xml:space="preserve"
+       id="flowRoot3729"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:21.33333397px;line-height:1.25;font-family:'Nimbus Sans';-inkscape-font-specification:'Nimbus Sans, Normal';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none"
+       transform="scale(0.26458333)"><flowRegion
+         id="flowRegion3731"><rect
+           id="rect3733"
+           width="43.661972"
+           height="171.83098"
+           x="91.549294"
+           y="240.82954" /></flowRegion><flowPara
+         id="flowPara3735" /></flowRoot>    <g
+       id="g4729-3"
+       transform="translate(66.836565,21.137694)">
+      <g
+         transform="translate(-6.8887994,43.542652)"
+         id="g3772-6">
+        <text
+           xml:space="preserve"
+           style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:5.64444447px;line-height:1.25;font-family:'Nimbus Sans';-inkscape-font-specification:'Nimbus Sans, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+           x="56.390846"
+           y="60.735325"
+           id="text3744-8"><tspan
+             sodipodi:role="line"
+             id="tspan3742-0"
+             x="56.390846"
+             y="60.735325"
+             style="stroke-width:0.26458332">Note-on</tspan></text>
+        <text
+           xml:space="preserve"
+           style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:5.64444447px;line-height:1.25;font-family:'Nimbus Sans';-inkscape-font-specification:'Nimbus Sans, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+           x="59.455753"
+           y="66.82177"
+           id="text3752-2"><tspan
+             sodipodi:role="line"
+             id="tspan3750-1"
+             x="59.455753"
+             y="66.82177"
+             style="stroke-width:0.26458332">Delay</tspan></text>
+      </g>
+      <g
+         transform="translate(-5.0503746,9.6729394)"
+         style="fill:#000000;fill-opacity:0.86666661"
+         id="g4651-0">
+        <rect
+           id="rect3774-5"
+           width="1.5875"
+           height="66.675003"
+           x="64.497192"
+           y="112.9465"
+           style="fill:#000000;fill-opacity:0.86666661;stroke-width:0.43944034" />
+        <circle
+           id="path3776-3-1"
+           cx="65.290947"
+           cy="186.28899"
+           style="opacity:1;fill:#000000;fill-opacity:0.86666661;stroke-width:0.29661265"
+           r="1.4732" />
+        <circle
+           id="path3776-10"
+           cx="65.290932"
+           cy="106.279"
+           style="opacity:1;fill:#000000;fill-opacity:0.86666661;stroke-width:0.29661265"
+           r="1.4732" />
+      </g>
+    </g>
+    <g
+       id="g4718-8"
+       transform="translate(66.836565,21.137694)">
+      <g
+         transform="translate(-16.263448,43.542652)"
+         id="g3766-5">
+        <text
+           xml:space="preserve"
+           style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:5.64444447px;line-height:1.25;font-family:'Nimbus Sans';-inkscape-font-specification:'Nimbus Sans, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+           x="90.190025"
+           y="60.735325"
+           id="text3748-0"><tspan
+             sodipodi:role="line"
+             id="tspan3746-6"
+             x="90.190025"
+             y="60.735325"
+             style="stroke-width:0.26458332">Note-off</tspan></text>
+        <text
+           xml:space="preserve"
+           style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:5.64444447px;line-height:1.25;font-family:'Nimbus Sans';-inkscape-font-specification:'Nimbus Sans, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+           x="93.537155"
+           y="66.82177"
+           id="text3756-4"><tspan
+             sodipodi:role="line"
+             id="tspan3754-6"
+             x="93.537155"
+             y="66.82177"
+             style="stroke-width:0.26458332">Delay</tspan></text>
+      </g>
+      <g
+         transform="translate(19.656378,9.6729394)"
+         style="fill:#000000;fill-opacity:0.86666661"
+         id="g4651-9-2">
+        <rect
+           id="rect3774-4-5"
+           width="1.5875"
+           height="66.675003"
+           x="64.497192"
+           y="112.9465"
+           style="fill:#000000;fill-opacity:0.86666661;stroke-width:0.43944034" />
+        <circle
+           id="path3776-3-8-8"
+           cx="65.290947"
+           cy="186.28899"
+           style="opacity:1;fill:#000000;fill-opacity:0.86666661;stroke-width:0.29661265"
+           r="1.4732" />
+        <circle
+           id="path3776-1-6"
+           cx="65.290932"
+           cy="106.279"
+           style="opacity:1;fill:#000000;fill-opacity:0.86666661;stroke-width:0.29661265"
+           r="1.4732" />
+      </g>
+    </g>
+    <g
+       id="g4737-2"
+       transform="translate(66.836565,21.137694)">
+      <text
+         id="text3760-8"
+         y="104.27798"
+         x="31.416199"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:5.64444447px;line-height:1.25;font-family:'Nimbus Sans';-inkscape-font-specification:'Nimbus Sans, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+         xml:space="preserve"><tspan
+           style="stroke-width:0.26458332"
+           y="104.27798"
+           x="31.416199"
+           id="tspan3758-4"
+           sodipodi:role="line">Vol</tspan></text>
+      <g
+         transform="translate(-29.757127,9.6729394)"
+         style="fill:#000000;fill-opacity:0.86666661"
+         id="g4651-2-7">
+        <rect
+           id="rect3774-9-2"
+           width="1.5875"
+           height="66.675003"
+           x="64.497192"
+           y="112.9465"
+           style="fill:#000000;fill-opacity:0.86666661;stroke-width:0.43944034" />
+        <circle
+           id="path3776-3-3-4"
+           cx="65.290947"
+           cy="186.28899"
+           style="opacity:1;fill:#000000;fill-opacity:0.86666661;stroke-width:0.29661265"
+           r="1.4732" />
+        <circle
+           id="path3776-9-0"
+           cx="65.290932"
+           cy="106.279"
+           style="opacity:1;fill:#000000;fill-opacity:0.86666661;stroke-width:0.29661265"
+           r="1.4732" />
+      </g>
+    </g>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:5.64444447px;line-height:1.25;font-family:'Nimbus Sans';-inkscape-font-specification:'Nimbus Sans, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="115.76942"
+       y="114.72146"
+       id="text4986-6"><tspan
+         sodipodi:role="line"
+         id="tspan4984-2"
+         x="115.76942"
+         y="114.72146"
+         style="stroke-width:0.26458332">2nd Note</tspan></text>
+    <g
+       id="g2694"
+       transform="translate(-10.785092,5.047084)">
+      <g
+         transform="translate(-175.65435,109.07569)"
+         id="g6557-53-2-1-1-1-6-7">
+        <circle
+           style="opacity:1;fill:#000000;fill-opacity:0.99512197;stroke:#000000;stroke-width:0.2435406;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+           id="path6551-38-4-7-7-1-6-9"
+           cx="313.51657"
+           cy="162.77498"
+           r="5.8472295" />
+        <circle
+           style="opacity:1;fill:#fefdff;fill-opacity:0.99512197;stroke:#000000;stroke-width:0.04820995;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+           id="path6553-3-3-4-1-7-2-7"
+           cx="313.51657"
+           cy="162.77498"
+           r="0.61089504" />
+      </g>
+      <text
+         inkscape:transform-center-y="0.80281294"
+         id="text2669"
+         y="261.07413"
+         x="131.02963"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:5.64444447px;line-height:1.25;font-family:'Nimbus Sans';-inkscape-font-specification:'Nimbus Sans, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+         xml:space="preserve"><tspan
+           style="stroke-width:0.26458332"
+           y="261.07413"
+           x="131.02963"
+           id="tspan2667"
+           sodipodi:role="line">Send</tspan></text>
+    </g>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:5.64444447px;line-height:1.25;font-family:'Nimbus Sans';-inkscape-font-specification:'Nimbus Sans, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="117.3687"
+       y="250.66705"
+       id="text2673"><tspan
+         sodipodi:role="line"
+         id="tspan2671"
+         x="117.3687"
+         y="250.66705"
+         style="stroke-width:0.26458332">Manual</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:5.64444447px;line-height:1.25;font-family:'Nimbus Sans';-inkscape-font-specification:'Nimbus Sans, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="117.57754"
+       y="225.98053"
+       id="text2677"><tspan
+         sodipodi:role="line"
+         id="tspan2675"
+         x="117.57754"
+         y="225.98053"
+         style="stroke-width:0.26458332">Stream</tspan></text>
+    <g
+       id="g4729"
+       transform="translate(-14.029411,21.076533)">
+      <g
+         transform="translate(-6.8887994,43.542652)"
+         id="g3772">
+        <text
+           xml:space="preserve"
+           style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:5.64444447px;line-height:1.25;font-family:'Nimbus Sans';-inkscape-font-specification:'Nimbus Sans, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+           x="56.390846"
+           y="60.735325"
+           id="text3744"><tspan
+             sodipodi:role="line"
+             id="tspan3742"
+             x="56.390846"
+             y="60.735325"
+             style="stroke-width:0.26458332">Note-on</tspan></text>
+        <text
+           xml:space="preserve"
+           style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:5.64444447px;line-height:1.25;font-family:'Nimbus Sans';-inkscape-font-specification:'Nimbus Sans, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+           x="59.455753"
+           y="66.82177"
+           id="text3752"><tspan
+             sodipodi:role="line"
+             id="tspan3750"
+             x="59.455753"
+             y="66.82177"
+             style="stroke-width:0.26458332">Delay</tspan></text>
+      </g>
+      <g
+         transform="translate(-5.0503746,9.6729394)"
+         style="fill:#000000;fill-opacity:0.86666661"
+         id="g4651">
+        <rect
+           id="rect3774"
+           width="1.5875"
+           height="66.675003"
+           x="64.497192"
+           y="112.9465"
+           style="fill:#000000;fill-opacity:0.86666661;stroke-width:0.43944034" />
+        <circle
+           id="path3776-3"
+           cx="65.290947"
+           cy="186.28899"
+           style="opacity:1;fill:#000000;fill-opacity:0.86666661;stroke-width:0.29661265"
+           r="1.4732" />
+        <circle
+           id="path3776"
+           cx="65.290932"
+           cy="106.279"
+           style="opacity:1;fill:#000000;fill-opacity:0.86666661;stroke-width:0.29661265"
+           r="1.4732" />
+      </g>
+    </g>
+    <g
+       id="g4718"
+       transform="translate(-14.029411,21.076533)">
+      <g
+         transform="translate(-16.263448,43.542652)"
+         id="g3766">
+        <text
+           xml:space="preserve"
+           style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:5.64444447px;line-height:1.25;font-family:'Nimbus Sans';-inkscape-font-specification:'Nimbus Sans, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+           x="90.190025"
+           y="60.735325"
+           id="text3748"><tspan
+             sodipodi:role="line"
+             id="tspan3746"
+             x="90.190025"
+             y="60.735325"
+             style="stroke-width:0.26458332">Note-off</tspan></text>
+        <text
+           xml:space="preserve"
+           style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:5.64444447px;line-height:1.25;font-family:'Nimbus Sans';-inkscape-font-specification:'Nimbus Sans, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+           x="93.537155"
+           y="66.82177"
+           id="text3756"><tspan
+             sodipodi:role="line"
+             id="tspan3754"
+             x="93.537155"
+             y="66.82177"
+             style="stroke-width:0.26458332">Delay</tspan></text>
+      </g>
+      <g
+         transform="translate(19.656378,9.6729394)"
+         style="fill:#000000;fill-opacity:0.86666661"
+         id="g4651-9">
+        <rect
+           id="rect3774-4"
+           width="1.5875"
+           height="66.675003"
+           x="64.497192"
+           y="112.9465"
+           style="fill:#000000;fill-opacity:0.86666661;stroke-width:0.43944034" />
+        <circle
+           id="path3776-3-8"
+           cx="65.290947"
+           cy="186.28899"
+           style="opacity:1;fill:#000000;fill-opacity:0.86666661;stroke-width:0.29661265"
+           r="1.4732" />
+        <circle
+           id="path3776-1"
+           cx="65.290932"
+           cy="106.279"
+           style="opacity:1;fill:#000000;fill-opacity:0.86666661;stroke-width:0.29661265"
+           r="1.4732" />
+      </g>
+    </g>
+    <g
+       id="g4737"
+       transform="translate(-14.029411,21.076533)">
+      <text
+         id="text3760"
+         y="104.27798"
+         x="31.416199"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:5.64444447px;line-height:1.25;font-family:'Nimbus Sans';-inkscape-font-specification:'Nimbus Sans, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+         xml:space="preserve"><tspan
+           style="stroke-width:0.26458332"
+           y="104.27798"
+           x="31.416199"
+           id="tspan3758"
+           sodipodi:role="line">Vol</tspan></text>
+      <g
+         transform="translate(-29.757127,9.6729394)"
+         style="fill:#000000;fill-opacity:0.86666661"
+         id="g4651-2">
+        <rect
+           id="rect3774-9"
+           width="1.5875"
+           height="66.675003"
+           x="64.497192"
+           y="112.9465"
+           style="fill:#000000;fill-opacity:0.86666661;stroke-width:0.43944034" />
+        <circle
+           id="path3776-3-3"
+           cx="65.290947"
+           cy="186.28899"
+           style="opacity:1;fill:#000000;fill-opacity:0.86666661;stroke-width:0.29661265"
+           r="1.4732" />
+        <circle
+           id="path3776-9"
+           cx="65.290932"
+           cy="106.279"
+           style="opacity:1;fill:#000000;fill-opacity:0.86666661;stroke-width:0.29661265"
+           r="1.4732" />
+      </g>
+    </g>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:5.64444447px;line-height:1.25;font-family:'Nimbus Sans';-inkscape-font-specification:'Nimbus Sans, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="35.472435"
+       y="114.37581"
+       id="text4986"><tspan
+         sodipodi:role="line"
+         id="tspan4984"
+         x="35.472435"
+         y="114.37581"
+         style="stroke-width:0.26458332">1st Note</tspan></text>
+    <g
+       id="g6557-53-2-1-1-1-6-7-4"
+       transform="translate(-267.30542,114.12277)">
+      <circle
+         r="5.8472295"
+         cy="162.77498"
+         cx="313.51657"
+         id="path6551-38-4-7-7-1-6-9-6"
+         style="opacity:1;fill:#000000;fill-opacity:0.99512197;stroke:#000000;stroke-width:0.2435406;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
+      <circle
+         r="0.61089504"
+         cy="162.77498"
+         cx="313.51657"
+         id="path6553-3-3-4-1-7-2-7-2"
+         style="opacity:1;fill:#fefdff;fill-opacity:0.99512197;stroke:#000000;stroke-width:0.04820995;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
+    </g>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:5.64444447px;line-height:1.25;font-family:'Nimbus Sans';-inkscape-font-specification:'Nimbus Sans, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="39.378563"
+       y="266.12122"
+       id="text2669-5"
+       inkscape:transform-center-y="0.80281294"><tspan
+         sodipodi:role="line"
+         id="tspan2667-8"
+         x="39.378563"
+         y="266.12122"
+         style="stroke-width:0.26458332">Send</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:5.64444447px;line-height:1.25;font-family:'Nimbus Sans';-inkscape-font-specification:'Nimbus Sans, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="36.502728"
+       y="250.66705"
+       id="text2673-7"><tspan
+         sodipodi:role="line"
+         id="tspan2671-2"
+         x="36.502728"
+         y="250.66705"
+         style="stroke-width:0.26458332">Manual</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:5.64444447px;line-height:1.25;font-family:'Nimbus Sans';-inkscape-font-specification:'Nimbus Sans, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="36.711567"
+       y="225.98053"
+       id="text2677-4"><tspan
+         sodipodi:role="line"
+         id="tspan2675-0"
+         x="36.711567"
+         y="225.98053"
+         style="stroke-width:0.26458332">Stream</tspan></text>
+    <g
+       id="g4729-2"
+       transform="translate(147.70255,21.422192)">
+      <g
+         transform="translate(-6.8887994,43.542652)"
+         id="g3772-8">
+        <text
+           xml:space="preserve"
+           style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:5.64444447px;line-height:1.25;font-family:'Nimbus Sans';-inkscape-font-specification:'Nimbus Sans, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+           x="56.390846"
+           y="60.735325"
+           id="text3744-2"><tspan
+             sodipodi:role="line"
+             id="tspan3742-9"
+             x="56.390846"
+             y="60.735325"
+             style="stroke-width:0.26458332">Note-on</tspan></text>
+        <text
+           xml:space="preserve"
+           style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:5.64444447px;line-height:1.25;font-family:'Nimbus Sans';-inkscape-font-specification:'Nimbus Sans, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+           x="59.455753"
+           y="66.82177"
+           id="text3752-9"><tspan
+             sodipodi:role="line"
+             id="tspan3750-6"
+             x="59.455753"
+             y="66.82177"
+             style="stroke-width:0.26458332">Delay</tspan></text>
+      </g>
+      <g
+         transform="translate(-5.0503746,9.6729394)"
+         style="fill:#000000;fill-opacity:0.86666661"
+         id="g4651-02">
+        <rect
+           id="rect3774-7"
+           width="1.5875"
+           height="66.675003"
+           x="64.497192"
+           y="112.9465"
+           style="fill:#000000;fill-opacity:0.86666661;stroke-width:0.43944034" />
+        <circle
+           id="path3776-3-6"
+           cx="65.290947"
+           cy="186.28899"
+           style="opacity:1;fill:#000000;fill-opacity:0.86666661;stroke-width:0.29661265"
+           r="1.4732" />
+        <circle
+           id="path3776-13"
+           cx="65.290932"
+           cy="106.279"
+           style="opacity:1;fill:#000000;fill-opacity:0.86666661;stroke-width:0.29661265"
+           r="1.4732" />
+      </g>
+    </g>
+    <g
+       id="g4718-2"
+       transform="translate(147.70255,21.422192)">
+      <g
+         transform="translate(-16.263448,43.542652)"
+         id="g3766-1">
+        <text
+           xml:space="preserve"
+           style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:5.64444447px;line-height:1.25;font-family:'Nimbus Sans';-inkscape-font-specification:'Nimbus Sans, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+           x="90.190025"
+           y="60.735325"
+           id="text3748-5"><tspan
+             sodipodi:role="line"
+             id="tspan3746-9"
+             x="90.190025"
+             y="60.735325"
+             style="stroke-width:0.26458332">Note-off</tspan></text>
+        <text
+           xml:space="preserve"
+           style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:5.64444447px;line-height:1.25;font-family:'Nimbus Sans';-inkscape-font-specification:'Nimbus Sans, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+           x="93.537155"
+           y="66.82177"
+           id="text3756-9"><tspan
+             sodipodi:role="line"
+             id="tspan3754-1"
+             x="93.537155"
+             y="66.82177"
+             style="stroke-width:0.26458332">Delay</tspan></text>
+      </g>
+      <g
+         transform="translate(19.656378,9.6729394)"
+         style="fill:#000000;fill-opacity:0.86666661"
+         id="g4651-9-4">
+        <rect
+           id="rect3774-4-9"
+           width="1.5875"
+           height="66.675003"
+           x="64.497192"
+           y="112.9465"
+           style="fill:#000000;fill-opacity:0.86666661;stroke-width:0.43944034" />
+        <circle
+           id="path3776-3-8-1"
+           cx="65.290947"
+           cy="186.28899"
+           style="opacity:1;fill:#000000;fill-opacity:0.86666661;stroke-width:0.29661265"
+           r="1.4732" />
+        <circle
+           id="path3776-1-0"
+           cx="65.290932"
+           cy="106.279"
+           style="opacity:1;fill:#000000;fill-opacity:0.86666661;stroke-width:0.29661265"
+           r="1.4732" />
+      </g>
+    </g>
+    <g
+       id="g4737-7"
+       transform="translate(147.70255,21.422192)">
+      <text
+         id="text3760-5"
+         y="104.27798"
+         x="31.416199"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:5.64444447px;line-height:1.25;font-family:'Nimbus Sans';-inkscape-font-specification:'Nimbus Sans, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+         xml:space="preserve"><tspan
+           style="stroke-width:0.26458332"
+           y="104.27798"
+           x="31.416199"
+           id="tspan3758-8"
+           sodipodi:role="line">Vol</tspan></text>
+      <g
+         transform="translate(-29.757127,9.6729394)"
+         style="fill:#000000;fill-opacity:0.86666661"
+         id="g4651-2-70">
+        <rect
+           id="rect3774-9-4"
+           width="1.5875"
+           height="66.675003"
+           x="64.497192"
+           y="112.9465"
+           style="fill:#000000;fill-opacity:0.86666661;stroke-width:0.43944034" />
+        <circle
+           id="path3776-3-3-8"
+           cx="65.290947"
+           cy="186.28899"
+           style="opacity:1;fill:#000000;fill-opacity:0.86666661;stroke-width:0.29661265"
+           r="1.4732" />
+        <circle
+           id="path3776-9-04"
+           cx="65.290932"
+           cy="106.279"
+           style="opacity:1;fill:#000000;fill-opacity:0.86666661;stroke-width:0.29661265"
+           r="1.4732" />
+      </g>
+    </g>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:5.64444447px;line-height:1.25;font-family:'Nimbus Sans';-inkscape-font-specification:'Nimbus Sans, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="196.35092"
+       y="115.00597"
+       id="text4986-2"><tspan
+         sodipodi:role="line"
+         id="tspan4984-9"
+         x="196.35092"
+         y="115.00597"
+         style="stroke-width:0.26458332">3rd Note</tspan></text>
+    <g
+       id="g1025"
+       transform="translate(12.64787,1.6391701)">
+      <text
+         id="text1018"
+         y="99.606903"
+         x="175.11238"
+         style="font-style:normal;font-weight:normal;font-size:10.58333302px;line-height:1.25;font-family:sans-serif;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+         xml:space="preserve"><tspan
+           style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:11.28888893px;font-family:'Nimbus Sans';-inkscape-font-specification:'Nimbus Sans, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;writing-mode:lr-tb;text-anchor:start;stroke-width:0.26458332"
+           y="99.606903"
+           x="175.11238"
+           id="tspan1016"
+           sodipodi:role="line">Chords</tspan></text>
+      <path
+         inkscape:connector-curvature="0"
+         id="path1020"
+         d="m 175.46052,100.99946 c 39.33937,0 39.33937,0 39.33937,0"
+         style="fill:none;stroke:#000000;stroke-width:0.26458332px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1" />
+    </g>
+    <g
+       id="g2694-2"
+       transform="translate(70.080898,5.047084)">
+      <g
+         transform="translate(-175.65435,109.07569)"
+         id="g6557-53-2-1-1-1-6-7-9">
+        <circle
+           style="opacity:1;fill:#000000;fill-opacity:0.99512197;stroke:#000000;stroke-width:0.2435406;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+           id="path6551-38-4-7-7-1-6-9-9"
+           cx="313.51657"
+           cy="162.77498"
+           r="5.8472295" />
+        <circle
+           style="opacity:1;fill:#fefdff;fill-opacity:0.99512197;stroke:#000000;stroke-width:0.04820995;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+           id="path6553-3-3-4-1-7-2-7-0"
+           cx="313.51657"
+           cy="162.77498"
+           r="0.61089504" />
+      </g>
+      <text
+         inkscape:transform-center-y="0.80281294"
+         id="text2669-8"
+         y="261.07413"
+         x="131.02963"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:5.64444447px;line-height:1.25;font-family:'Nimbus Sans';-inkscape-font-specification:'Nimbus Sans, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+         xml:space="preserve"><tspan
+           style="stroke-width:0.26458332"
+           y="261.07413"
+           x="131.02963"
+           id="tspan2667-1"
+           sodipodi:role="line">Send</tspan></text>
+    </g>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:5.64444447px;line-height:1.25;font-family:'Nimbus Sans';-inkscape-font-specification:'Nimbus Sans, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="198.2347"
+       y="250.66705"
+       id="text2673-3"><tspan
+         sodipodi:role="line"
+         id="tspan2671-4"
+         x="198.2347"
+         y="250.66705"
+         style="stroke-width:0.26458332">Manual</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:5.64444447px;line-height:1.25;font-family:'Nimbus Sans';-inkscape-font-specification:'Nimbus Sans, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+       x="198.44353"
+       y="225.98053"
+       id="text2677-0"><tspan
+         sodipodi:role="line"
+         id="tspan2675-3"
+         x="198.44353"
+         y="225.98053"
+         style="stroke-width:0.26458332">Stream</tspan></text>
+    <g
+       id="g5418-28-0"
+       transform="translate(20.677579,130.9783)">
+      <circle
+         r="2.2423718"
+         cy="125.68102"
+         cx="25.533562"
+         id="path5412-8-4"
+         style="opacity:1;fill:#000000;fill-opacity:0.86666661;stroke:#000000;stroke-width:0.28029647;stroke-opacity:1" />
+      <circle
+         r="0.54428571"
+         cy="125.68102"
+         cx="25.533562"
+         id="path5414-92-8"
+         style="opacity:1;fill:#ffffff;fill-opacity:0.86666661;stroke:#000000;stroke-width:0.18142857;stroke-opacity:1" />
+    </g>
+    <g
+       id="g5418-28-0-6"
+       transform="translate(101.54357,130.9783)">
+      <circle
+         r="2.2423718"
+         cy="125.68102"
+         cx="25.533562"
+         id="path5412-8-4-1"
+         style="opacity:1;fill:#000000;fill-opacity:0.86666661;stroke:#000000;stroke-width:0.28029647;stroke-opacity:1" />
+      <circle
+         r="0.54428571"
+         cy="125.68102"
+         cx="25.533562"
+         id="path5414-92-8-3"
+         style="opacity:1;fill:#ffffff;fill-opacity:0.86666661;stroke:#000000;stroke-width:0.18142857;stroke-opacity:1" />
+    </g>
+    <g
+       id="g5418-28-0-2"
+       transform="translate(182.40956,130.9783)">
+      <circle
+         r="2.2423718"
+         cy="125.68102"
+         cx="25.533562"
+         id="path5412-8-4-15"
+         style="opacity:1;fill:#000000;fill-opacity:0.86666661;stroke:#000000;stroke-width:0.28029647;stroke-opacity:1" />
+      <circle
+         r="0.54428571"
+         cy="125.68102"
+         cx="25.533562"
+         id="path5414-92-8-9"
+         style="opacity:1;fill:#ffffff;fill-opacity:0.86666661;stroke:#000000;stroke-width:0.18142857;stroke-opacity:1" />
+    </g>
+    <g
+       transform="translate(-66.32922,18.298825)"
+       id="g1483">
+      <g
+         transform="translate(-200.9762,55.347104)"
+         id="g6557-53-2-1-1-1-6-5">
+        <circle
+           style="opacity:1;fill:#000000;fill-opacity:0.99512197;stroke:#000000;stroke-width:0.2435406;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+           id="path6551-38-4-7-7-1-6-2"
+           cx="313.51657"
+           cy="162.77498"
+           r="5.8472295" />
+        <circle
+           style="opacity:1;fill:#fefdff;fill-opacity:0.99512197;stroke:#000000;stroke-width:0.04820995;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+           id="path6553-3-3-4-1-7-2-5"
+           cx="313.51657"
+           cy="162.77498"
+           r="0.61089504" />
+      </g>
+      <circle
+         r="1.1823138"
+         cy="226.95338"
+         cx="112.54037"
+         id="path1458"
+         style="fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.63257247;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
+    </g>
+    <g
+       transform="translate(14.536758,18.298825)"
+       id="g1483-4">
+      <g
+         transform="translate(-200.9762,55.347104)"
+         id="g6557-53-2-1-1-1-6-74">
+        <circle
+           style="opacity:1;fill:#000000;fill-opacity:0.99512197;stroke:#000000;stroke-width:0.2435406;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+           id="path6551-38-4-7-7-1-6-4"
+           cx="313.51657"
+           cy="162.77498"
+           r="5.8472295" />
+        <circle
+           style="opacity:1;fill:#fefdff;fill-opacity:0.99512197;stroke:#000000;stroke-width:0.04820995;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+           id="path6553-3-3-4-1-7-2-3"
+           cx="313.51657"
+           cy="162.77498"
+           r="0.61089504" />
+      </g>
+      <circle
+         r="1.1823138"
+         cy="226.95338"
+         cx="112.54037"
+         id="path1458-0"
+         style="fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.63257247;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
+    </g>
+    <g
+       transform="translate(95.402748,18.298825)"
+       id="g1483-7">
+      <g
+         transform="translate(-200.9762,55.347104)"
+         id="g6557-53-2-1-1-1-6-8">
+        <circle
+           style="opacity:1;fill:#000000;fill-opacity:0.99512197;stroke:#000000;stroke-width:0.2435406;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+           id="path6551-38-4-7-7-1-6-6"
+           cx="313.51657"
+           cy="162.77498"
+           r="5.8472295" />
+        <circle
+           style="opacity:1;fill:#fefdff;fill-opacity:0.99512197;stroke:#000000;stroke-width:0.04820995;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+           id="path6553-3-3-4-1-7-2-8"
+           cx="313.51657"
+           cy="162.77498"
+           r="0.61089504" />
+      </g>
+      <circle
+         r="1.1823138"
+         cy="226.95338"
+         cx="112.54037"
+         id="path1458-8"
+         style="fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.63257247;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
+    </g>
+  </g>
+</svg>

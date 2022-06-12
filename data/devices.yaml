@@ -222,6 +222,11 @@ Multiplexer:
 Slide Pot:
   part-number: SLP-50K
   ordered-from: allelectronics.com
+  length: 3 3/8
+  width: 3/4
+  slide-slot-length: 2 5/8
+  screw-size: 4-40
+  screw-hole-size: 0.116"
   price: 0.50
   knob:
     part-number: KNB-297
@@ -264,6 +269,8 @@ Toggle Switch:
   price: 1.75
   type: SPST
   num-rows: 1
+  hole-size: 0.47"
+  open: toggle on slot side
   pin-connect: p1
   pins:
     - name: p1
@@ -275,6 +282,7 @@ Rotary Encoder:
   ordered-from: allelectronics.com
   price: 1.75
   detents: 20
+  hole-size: 0.27
   fanout-pins: [A, B, Bt]
   num-rows: 1
   pins:
@@ -292,6 +300,7 @@ LED:
   price: 0.10
   color: red
   brightness: brighter
+  hole-size: 3/16
   pin-connect: long
   num-rows: 1
   pins:
@@ -306,6 +315,7 @@ Button:
   ordered-from: mouser.com
   price: 4.51
   normally: open
+  hole-size: 0.47"
   pin-connect: p1
   num-rows: 1
   pins:
@@ -563,6 +573,145 @@ I2C-level-converter:
       connect: [[.1uF, GND]]
     - name: HV2
     - name: HV1
+
+LED-numeric-display:
+  part-number: TDA-26
+  mfc-part-number: LTC-2621G
+  ordered-from: allelectronics.com
+  price: 0.85
+  num-digits: 3
+  color: green
+  length: 0.891"
+  width: 0.394"
+  height: 0.24"
+  pins: 16
+  pitch: 0.1"
+  distance-between-rows: 0.3"
+  voltage: 2.1V
+  current: 20mA
+  pulsed-current: 100mA
+  duty-cycle: 10%
+  max-pulse-width: 0.1mSec
+  common: anode (+)
+  segments: A on top, then clockwise around the edges to F and G in the center
+  pins:
+    - name: D
+    - name: digit-1      # + side of segments A-G and DP
+    - name: DP
+    - name: E
+    - name: digit-2
+    - name: C
+    - name: G
+    - name: digit-3
+
+    - name: N.C.
+    - name: no-pin
+    - name: no-pin
+    - name: B
+    - name: digit-L1-L2-L3 # don't care about these...
+    - name: no-pin
+    - name: A
+    - name: F
+
+LED-alpha-display:
+  part-number: SDA-24
+  mfc-part-number: LA3921-11B
+  ordered-from: allelectronics.com
+  price: 0.50
+  num-segments: 14 + DP
+  color: green
+  length: 0.929" (measured at 15/16-)
+  width: 0.390" (measured at 3/8)
+  height: 0.276"
+  pins: 18
+  pitch: 0.1"
+  distance-between-rows: 0.3"
+  voltage: 2.1V
+  current: 30mA "per chip"
+  pulsed-current: 100mA "per chip"
+  duty-cycle: 10%
+  max-pulse-width: 0.1mSec
+  common: anode (+)
+  segments: A on top, then clockwise around the edges to F and G1, G2 in the center
+            then H thru M starting at upper left for internal "star" segments
+  pins:
+    - name: I
+    - name: H
+    - name: F
+    - name: common cathodes
+    - name: G1
+    - name: E
+    - name: M
+    - name: D
+    - name: L
+
+    - name: K
+    - name: C
+    - name: DP
+    - name: common cathodes
+    - name: G2
+    - name: B
+    - name: J
+    - name: common cathodes
+    - name: A
+
+MOSFET-P-channel:
+  part-number: IRFD9024PBF
+  mouser-number: 844-IRFD9024PBF
+  ordered-from: mouser.com
+  price: 1.85
+  ordered: 10
+  voltage: 60V
+  current: 1.6A
+  on-resistance: 280 mOhms
+  gate-source-voltage:
+    - voltage: -4V
+      drain-current: 0.45A
+    - voltage: -5V
+      drain-current: 2A
+    - voltage: -6V
+      drain-current: 5.5A
+  source: high
+  package: 4 pin DIP
+  pitch: 0.1"
+  row-distance: 0.3"
+  pins:
+    - name: drain
+    - name: drain
+    - name: gate
+    - name: source
+
+Bipolar-NPN:
+  part-number: BC548C B1G
+  mouser-number: 821-BC548CB1G
+  ordered-from: mouser.com
+  price: 0.19
+  ordered: 70
+  voltage: 30V
+  current-continuous: 100mA
+  current-peak: 200mA
+  Vbe:  # Vce 5V
+    - Ic: 0.5mA
+      Vbe: 0.58V
+    - Ic: 100mA
+      Vbe: 0.8V
+  power-dissipation: 500mW
+  hFE: 220-800
+  emitter-follower:
+    - target-current: 100mA
+    - E-resistor: 10ohm  # target 1V
+    - E-voltage: 1V
+    - B-voltage: 1.8V
+    - B-bias-resistors:
+        B-current: 0.5mA
+        Bias-resistor-current: 10mA  # 20x to get ~5% B-current affect
+        Total-bias-resistor: 500ohm
+        B-GND-resistor: 180ohm
+        B-5V-resistor: 320ohm
+  pins:  # flat side up, left to right
+    - name: C
+    - name: B
+    - name: E
 
 Breadboard:
   part-number: SB404
