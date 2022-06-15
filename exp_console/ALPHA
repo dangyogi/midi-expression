@@ -1,0 +1,229 @@
+   ---              A
+  |\|/|          F HIJ B
+   - -             G1 G2
+  |/|\|          E MLK C
+   ---              D
+
+Other possibilies: ` $ % * ( ) + = \ | ' < > / "
+
+
+A  |\        F H G1 E K
+    -
+   | \
+
+B  --        A F J G1 E K D
+  | /
+   -
+  | \
+   --
+
+C  --       A F E D
+  |
+  |
+   --
+
+D           F H E M
+  |\
+  |/
+
+E  --       A F G1 E D
+  |
+   -
+  |
+   --
+
+F  --       A F G1 E
+  |
+   -
+  |
+
+G  --       A F G2 E C D
+  |
+    -
+  |  |
+   --
+
+H |  |      F B G1 G2 E C
+   --
+  |  |
+
+I  ---      A I L D
+    |
+    |
+   ---
+
+J  ---      A B E C D
+     |
+   | |
+   ---
+
+K | /       F J G1 E K
+   -
+  | \
+
+L |         F E D
+  |
+   --
+
+M |\/|     F H J B E C
+  |  |
+
+N |\ |     F H B E K C
+  | \|
+
+O  --      A F B E C D
+  |  |
+  |  |
+   --
+
+P  --      A F B G1 G2 E
+  |  |
+   --
+  |
+
+Q  --      A F B E K C D
+  |  |
+  | \|
+   --
+
+R  --      A F B G1 G2 E K
+  |  |
+   --
+  | \
+
+S  --      --      --    A H G2 C D
+  |        \      |   
+   --       -      - 
+     |       |      \
+   --      --      --    
+
+T  ---     A I L
+    |
+    |
+
+U  |  |    F B E C D
+   |  |
+    --
+
+V  \ |     H B K C
+    \|
+
+W  |  |    F B E M K C
+   |/\|
+
+X  \/      H J M K
+   /\
+
+Y  \ /     H J L
+    |
+
+Z  --      A J M D
+    /
+   /
+   --
+
+0  --      A F J B E M C D
+  | /|
+  |/ |
+   --
+
+1          I L
+     |
+     |
+
+2   ---    A B G2 M D
+      |
+     -
+    /
+    --
+
+3   ---    A B G2 C D
+       |
+      -
+       |
+    ---
+
+4  |  |    F B G1 G2 C
+    --
+      |
+
+5   --     A F G1 G2 C D
+   |
+    --
+      |
+    --
+
+6   --     A F G1 G2 E C D
+   |
+    --
+   |  |
+    --
+
+7  ---    A J M
+     /
+    /
+
+8  --     A F B G1 G2 E C D
+  |  |
+   --
+  |  |
+   --
+
+9  --     A F B G1 G2 C D
+  |  |
+   --
+     |
+   --
+
+-         G1 G2
+
+   --
+
+_         D
+
+
+   --
+
+.  .     DP
+
+
+
+A: F H G1 E K
+B: A F J G1 E K D
+C: A F E D
+D: F H E M
+E: A F G1 E D
+F: A F G1 E
+G: A F G2 E C D
+H: F B G1 G2 E C
+I: A I L D
+J: A B E C D
+K: F J G1 E K
+L: F E D
+M: F H J B E C
+N: F H B E K C
+O: A F B E C D
+P: A F B G1 G2 E
+Q: A F B E K C D
+R: A F B G1 G2 E K
+S: A H G2 C D
+T: A I L
+U: F B E C D
+V: H B K C
+W: F B E M K C
+X: H J M K
+Y: H J L
+Z: A J M D
+0: A F J B E M C D
+1: I L
+2: A B G2 M D
+3: A B G2 C D
+4: F B G1 G2 C
+5: A F G1 G2 C D
+6: A F G1 G2 E C D
+7: A J M
+8: A F B G1 G2 E C D
+9: A F B G1 G2 C D
+-: G1 G2
+_: D
+.: DP

@@ -21,6 +21,9 @@ alsa_midi_dump
 # csv files
 *.csv
 
+# Arduino IDE files
+hs_err_pid*.log
+
 # Distribution / packaging
 .Python
 build/

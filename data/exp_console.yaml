@@ -3,33 +3,58 @@
 ---
 
 controls:
-  top:
-    - [sw-vol-harmonics,       lcd-pot-1,            lcd-pot-2,            lcd-pot-3,            lcd-pot-4,            lcd-pot-5     ]
-    - [sw-even-odd,                                                                                                                  ]
-    - [                  [  pot-1l,  pot-1r ], [  pot-2l,  pot-2r ], [  pot-3l,  pot-3r ], [  pot-4l,  pot-4r ], [  pot-5l,  pot-5r ]]
-    - [sw-send-top                                                                                                                   ]
-    - [bt-send-top                                                                                                                   ]
-    - [sw-calibrate-pots                                                                                                             ]
-    - [bt-save-calibration                                                                                                           ]
-    - [                  [  led-1l,  led-1r ], [  led-2l,  led-2r ], [  led-3l,  led-3r ], [  led-4l,  led-4r ], [  led-5l,  led-5r ]]
-    - [led-new-old,      [bt-no-1l, bt-no-1r], [bt-no-2l, bt-no-2r], [bt-no-3l, bt-no-3r], [bt-no-4l, bt-no-4r], [bt-no-5l, bt-no-5r]]
-    - [led-crs-fine,     [sw-course_fine-1  ], [sw-course_fine-2  ], [sw-course_fine-3  ], [sw-course_fine-4  ], [sw-course_fine-5  ]]
-    - [led-mult-cents,   [sw-mult-cents-1   ], [sw-mult-cents-2   ], [sw-mult-cents-3   ], [sw-mult-cents-4   ], [sw-mult-cents-5   ]]
+  channels:
+    chords:
+      - [[pot-vol-1, pot-on-1, pot-off-1], [pot-vol-2, pot-on-2, pot-off-2], [pot-vol-3, pot-on-3, pot-off-3], [pot-vol-4, pot-on-4, pot-off-4], [pot-vol-5, pot-on-5, pot-off-5]]
+      - [[         sw-send-ch-1         ], [         sw-send-ch-2         ], [         sw-send-ch-3         ], [         sw-send-ch-4         ], [         sw-send-ch-5         ]]
+      - [[         led-send-ch-1        ], [         led-send-ch-2        ], [         led-send-ch-3        ], [         led-send-ch-4        ], [         led-send-ch-5        ]]
+      - [[         bt-send-ch-1         ], [         bt-send-ch-2         ], [         bt-send-ch-3         ], [         bt-send-ch-4         ], [         bt-send-ch-5         ]]
 
-  lower-left:
-    - [rsw-channel,                             lcd-lower-left-1,        lcd-lower-left-2,       lcd-lower-left-3,  ]
-    - [                 sw-inst-synth,  [sw-major-minor,    re-1r  ], [  re-2l,     re-2r  ], [  re-3l,     re-3r  ]]
-    - [rsw-function,    led-inst-synth, [led-major-minor, led-re-1r], [led-re-2l, led-re-2r], [led-re-3l, led-re-3r]] 
-    - [                 bt-send-lower-left                                                                          ]
+    functions:
+      - [             nd-1, nd-2, nd-3, nd-4]
+      - [re-function, re-1, re-2, re-3, re-4]
+      - [led-key,                     led-major                           ]
+      - [led-tune-abs,                led-minor                           ]
+      - [led-match-tuning,            led-1/4-comma                       ]
+      - [led-eq-temp,                 led-1/5-comma                       ]
+      - [led-well-temp,               led-just-1                          ]
+      - [led-meantone,                led-just-2                          ]
+      - [led-just,                    led-just-3                          ]
+      - [led-pyth,                    led-just-4                          ]
+      - [led-harm-basics,             led-just-5                          ]
+      - [led-fe-ramp,                 led-just-6,                   sw-hm ]
+      - [led-fe-sine,                 led-just-7                          ]
+      - [led-attack,                  led-just-8,   led-just-11,    led-hm]
+      - [led-decay,                   led-just-9,   led-just-12           ]
+      - [led-sustain,                 led-just-10,  led-just-13,    bt-hm ]
+      - [led-release,                               led-just-14           ]
+      - [sw-hm-1, sw-hm-2, sw-hm-3, sw-hm-4, sw-hm-5, sw-hm-6, sw-hm-7, sw-hm-8, sw-hm-9, sw-hm-10] 
 
-  lower-right:
-    - [                       pot-lr1,  pot-lr2,  pot-lr3  ]
-    - [sw-send-lower-right                                 ]
-    - [bt-send-lower-right                                 ]
+    channel:
+      - [pot-ch-vol, pot-ch-on, pot-ch-off]
+      - [                         sw-ch   ]
+      - [                         led-ch  ]
+      - [                         bt-ch   ]
+
+    selectors:
+      - [sw-synth, sw-ch-1, sw-ch-2, sw-ch-3, sw-ch-4, sw-ch-5, sw-ch-6, sw-ch-7, sw-ch-8, sw-ch-9, sw-ch-10, sw-ch-11, sw-ch-12, sw-ch-13, sw-ch-14, sw-ch-15]
+
+  error-codes:
+    - [led-mc-err, led-pc-err, led-lc-err]
+
+  programs:
+    - [re-filename, al-1, al-2, al-3, al-4]
+    - [  led-save,  led-load              ]
+    - [  sw-save,   bt-load               ]
+    - [  bt-sync,   bt-abandon            ]
+
+  synth:
+    - [pot-tempo, pot-sy-vol]
 
   notes:
-    - [sw-continuous-pulse, sw-A3, sw-C4, sw-E4, sw-G4, sw-Bb4, sw-C5]
-    - [                     bt-A3, bt-C4, bt-E4, bt-G4, bt-Bb4, bt-C5]
+    - [                      sw-continuous-pulse]
+    - [sw-A3, sw-C4, sw-E4, sw-G4, sw-Bb4, sw-C5]
+    - [bt-A3, bt-C4, bt-E4, bt-G4, bt-Bb4, bt-C5]
 
 prefixes:
   sw: Toggle Switch
@@ -39,198 +64,98 @@ prefixes:
   rsw: Rotary Switch
   re: Rotary Encoder
   pot: Slide Pot
+  al: LED-alpha-display
+  nd: LED-numeric-display
 
 
 devices:
-  I/O-sw-1:
-    type: I/O Expander Input
-    addr: 0x20
-    pins:
-      - name: A2
-        connect: [[GND]]
-      - name: A1
-        connect: [[GND]]
-      - name: A0
-        connect: [[GND]]
-    fans-out-to:                # 16 inputs
-      - [rsw-channel, fanout-pins]
-      - sw-even-odd
-      - sw-vol-harmonics
-      - sw-send-top
-      - bt-send-top
-
-  I/O-sw-2:
-    type: I/O Expander Input
-    addr: 0x21
-    pins:
-      - name: A2
-        connect: [[GND]]
-      - name: A1
-        connect: [[GND]]
-      - name: A0
-        connect: [[Vdd]]
-    fans-out-to:                # 15 inputs
-      - bt-no-1l
-      - bt-no-1r
-      - bt-no-2l
-      - bt-no-2r
-      - bt-no-3l
-      - bt-no-3r
-      - bt-no-4l
-      - bt-no-4r
-      - bt-no-5l
-      - bt-no-5r
-      - sw-course_fine-1
-      - sw-course_fine-2
-      - sw-course_fine-3
-      - sw-course_fine-4
-      - sw-course_fine-5
-
-  I/O-sw-3:
-    type: I/O Expander Input
-    addr: 0x22
-    pins:
-      - name: A2
-        connect: [[GND]]
-      - name: A1
-        connect: [[Vdd]]
-      - name: A0
-        connect: [[GND]]
-    fans-out-to:                # 12 inputs
-      - [rsw-function, fanout-pins]
-
-  I/O-sw-4:
-    type: I/O Expander Input
-    addr: 0x23
-    pins:
-      - name: A2
-        connect: [[GND]]
-      - name: A1
-        connect: [[Vdd]]
-      - name: A0
-        connect: [[Vdd]]
-    fans-out-to:                # 15 inputs
-      - [re-1r, fanout-pins]
-      - [re-2l, fanout-pins]
-      - [re-2r, fanout-pins]
-      - [re-3l, fanout-pins]
-      - [re-3r, fanout-pins]
-
-  I/O-sw-5:
-    type: I/O Expander Input
-    addr: 0x24
-    pins:
-      - name: A2
-        connect: [[Vdd]]
-      - name: A1
-        connect: [[GND]]
-      - name: A0
-        connect: [[GND]]
-    fans-out-to:                # 12 inputs
-      - sw-mult-cents-1
-      - sw-mult-cents-2
-      - sw-mult-cents-3
-      - sw-mult-cents-4
-      - sw-mult-cents-5
-      - bt-send-lower-left
-      - sw-inst-synth
-      - sw-major-minor
-      - sw-send-lower-right
-      - bt-send-lower-right
-      - sw-calibrate-pots
-      - bt-save-calibration
-
-  I/O-led-1:
-    type: I/O Expander Output
-    addr: 0x25
-    pins:
-      - name: A2
-        connect: [[Vdd]]
-      - name: A1
-        connect: [[GND]]
-      - name: A0
-        connect: [[Vdd]]
-    fans-out-to:           # 10 LEDs
-      - led-1l
-      - led-1r
-      - led-2l
-      - led-2r
-      - led-3l
-      - led-3r
-      - led-4l
-      - led-4r
-      - led-5l
-      - led-5r
-
-  I/O-led-2:
-    type: I/O Expander Output
-    addr: 0x26
-    pins:
-      - name: A2
-        connect: [[Vdd]]
-      - name: A1
-        connect: [[Vdd]]
-      - name: A0
-        connect: [[GND]]
-    fans-out-to:           # 10 LEDs
-      - led-new-old
-      - led-crs-fine
-      - led-mult-cents
-      - led-inst-synth
-      - led-major-minor
-      - led-re-1r
-      - led-re-2l
-      - led-re-2r
-      - led-re-3l
-      - led-re-3r
-
-  lcd-muxes-1:
-    type: [batch, Multiplexer]
-    fans-out-to:
-      - lcd-pot-1
-      - lcd-pot-2
-      - lcd-pot-3
-      - lcd-pot-4
-      - lcd-pot-5
-      - lcd-lower-left-1
-      - lcd-lower-left-2
-      - lcd-lower-left-3
-    devices:
-      - name: lcd-mux-1-E
-        links-pin: E
-      - name: lcd-mux-1-DB0
-        links-pin: DB0
-      - name: lcd-mux-1-DB1
-        links-pin: DB1
-      - name: lcd-mux-1-DB2
-        links-pin: DB2
-      - name: lcd-mux-1-DB3
-        links-pin: DB3
-      - name: lcd-mux-1-DB4
-        links-pin: DB4
-      - name: lcd-mux-1-DB5
-        links-pin: DB5
-      - name: lcd-mux-1-DB6
-        links-pin: DB6
-      - name: lcd-mux-1-DB7
-        links-pin: DB7
-    batch-common-pins: [A, B, C]
-    device-link-pin: X
-
   pot-mux-1:
     type: Multiplexer
-    fans-out-to: [pot-1l,  pot-1r, pot-2l,   pot-2r,   pot-3l,  pot-3r,  pot-4l,  pot-4r]
+    fans-out-to: [pot-vol-1, pot-on-1, pot-off-1, pot-vol-2, pot-on-2, pot-off-2, pot-vol-3, pot-on-3]
 
   pot-mux-2:
     type: Multiplexer
-    fans-out-to: [pot-5l,  pot-5r, pot-lr1,  pot-lr2,  pot-lr3]
+    fans-out-to: [pot-off-3, pot-vol-4, pot-on-4, pot-off-4, pot-vol-5, pot-on-5, pot-off-5, pot-ch-vol]
+
+  pot-mux-3:
+    type: Multiplexer
+    fans-out-to: [pot-ch-on, pot-ch-off, pot-tempo, pot-sy-vol]
+
+  master-err-led-npn:
+    type: Bipolar-NPN
+    pins:
+      - name: C
+        connect: [[210ohm, series], [led-mc-err, cathode]]
 
   master-controller:
     type: nano 33 iot
     i2c_addr: None   # Master...
     pins:
+      - name: D13
+        connect: [[2.6Kohm, series], [master-err-led-npn, B]]
       - name: SDA
       - name: SCL
+
+      # Output pins (only one high at a time, re A and B have to be on the same line here)
+      - name: PA16
+        connect: [[re-filename, center], [re-filename, Bt2], [re-function, center], [re-function, Bt2],
+                  [re-1, center], [re-1, Bt2]]
+      - name: PA17
+        connect: [[re-2, center], [re-2, Bt2], [re-3, center], [re-3, Bt2], [re-4, center], [re-4, Bt2]]
+      - name: PA18
+        connect: [[bt-send-ch-1, p2], [bt-send-ch-2, p2], [bt-send-ch-3, p2], [bt-send-ch-4, p2],
+                  [bt-send-ch-5, p2], [bt-hm, p2], [bt-ch, p2], [sw-ch, p2], [sw-save, p2]]
+      - name: PA19
+        connect: [[bt-A3, p2], [bt-C4, p2], [bt-E4, p2], [bt-G4, p2], [bt-Bb4, p2], [bt-C5, p2],
+                  [bt-load, p2], [bt-sync, p2], [bt-abandon, p2]]
+      - name: PA20
+        connect: [[sw-A3, p2], [sw-C4, p2], [sw-E4, p2], [sw-G4, p2], [sw-Bb4, p2], [sw-C5, p2], 
+                  [sw-synth, p2], [sw-ch-1, p2], [sw-ch-2, p2]]
+      - name: PA21
+        connect: [[sw-ch-3, p2], [sw-ch-4, p2], [sw-ch-5, p2], [sw-ch-6, p2], [sw-ch-7, p2],
+                  [sw-ch-8, p2], [sw-ch-9, p2], [sw-ch-10, p2], [sw-ch-11, p2]]
+
+      - name: PB02
+        connect: [[sw-ch-12, p2], [sw-ch-13, p2], [sw-ch-14, p2], [sw-ch-15, p2], [sw-ch, p2],
+                  [sw-hm-1, p2], [sw-hm-2, p2], [sw-hm-3, p2], [sw-hm-4, p2]]
+
+      - name: PB03
+        connect: [[sw-hm-5, p2], [sw-hm-6, p2], [sw-hm-7, p2], [sw-hm-8, p2], [sw-hm-9, p2],
+                  [sw-hm-10, p2], [sw-hm, p2], [sw-send-ch-1, p2], [sw-send-ch-2, p2]]
+
+      - name: PB10
+        connect: [[sw-send-ch-3, p2], [sw-send-ch-4, p2], [sw-send-ch-5, p2],
+                  [sw-continuous-pulse, p2]]
+
+      # Input pins (w/pull-downs)
+      - name: PA02
+        connect: [[re-filename, A], [re-2, A], [bt-send-ch-1, p1], [bt-A3, p1], [sw-A3, p1],
+                  [sw-ch-3, p1], [sw-ch-12, p1], [sw-hm-5, p1], [sw-send-ch-3, p1]]
+      - name: PA03
+        comment: AREF!!! ???
+        connect: [[re-filename, B], [re-2, B], [bt-send-ch-2, p1], [bt-C4, p1], [sw-C4, p1],
+                  [sw-ch-4, p1], [sw-ch-13, p1], [sw-hm-6, p1], [sw-send-ch-4, p1]]
+      - name: PA04
+        connect: [[re-filename, Bt], [re-2, Bt2], [bt-send-ch-3, p1], [bt-E4, p1], [sw-E4, p1],
+                  [sw-ch-5, p1], [sw-ch-14, p1], [sw-hm-7, p1], [sw-send-ch-5, p1]]
+      - name: PA05
+        connect: [[re-function, A], [re-3, A], [bt-send-ch-4, p1], [bt-G4, p1], [sw-G4, p1],
+                  [sw-ch-6, p1], [sw-ch-15, p1], [sw-hm-8, p1], [sw-continuous-pulse, p1]]
+      - name: PA06
+        connect: [[re-function, B], [re-3, B], [bt-send-ch-5, p1], [bt-Bb4, p1], [sw-Bb4, p1],
+                  [sw-ch-7, p1], [sw-ch, p1], [sw-hm-9, p1]]
+      - name: PA07
+        connect: [[re-function, Bt], [re-3, Bt2], [bt-hm, p1], [bt-C5, p1], [sw-C5, p1],
+                  [sw-ch-8, p1], [sw-hm-1, p1],  [sw-hm-10, p1]]
+      - name: PA09
+        connect: [[re-1, A], [re-4, A], [bt-ch, p1], [bt-load, p1], [sw-synth, p1], [sw-ch-9, p1],
+                  [sw-hm-2, p1],  [sw-hm, p1]]
+      - name: PA10
+        connect: [[re-1, B], [re-4, B], [sw-ch, p1], [bt-sync, p1], [sw-ch-1, p1], [sw-ch-10, p1],
+                  [sw-hm-3, p1], [sw-send-ch-1, p1]]
+      - name: PA11
+        connect: [[re-1, Bt], [re-4, Bt2], [sw-save, p1], [bt-abandon, p1], [sw-ch-2, p1],
+                  [sw-ch-11, p1], [sw-hm-4, p1],  [sw-send-ch-2, p1]]
 
   level-converter-pot-powered:
     type: I2C-level-converter
@@ -241,14 +166,18 @@ devices:
         connect: [[master-controller, SDA]]
       - name: LV
         connect: [[master-controller, 3V3]]
+      - name: LV-GND
+        connect: [[master-controller, GND]]
       - name: HV1
-        connect: [[I/O-led-2, SCL], [pot-controller, SCL]]
+        connect: [[pot-controller, SCL]]
       - name: HV2
-        connect: [[I/O-led-2, SDA], [pot-controller, SDA]]
+        connect: [[pot-controller, SDA]]
       - name: HV
         connect: [[pot-controller, 5V]]
+      - name: HV-GND
+        connect: [[pot-controller, GND]]
 
-  level-converter-lcd-powered:
+  level-converter-led-powered:
     type: I2C-level-converter
     pins:
       - name: LV1
@@ -257,99 +186,239 @@ devices:
         connect: [[master-controller, SDA]]
       - name: LV
         connect: [[master-controller, 3V3]]
+      - name: LV-GND
+        connect: [[master-controller, GND]]
       - name: HV1
-        connect: [[I/O-sw-1, SCL], [I/O-sw-2, SCL], [I/O-sw-3, SCL], [I/O-sw-4, SCL],
-                  [I/O-sw-5, SCL], [I/O-led-1, SCL], [lcd-controller, SCL]]
+        connect: [[led-controller, SCL]]
       - name: HV2
-        connect: [[I/O-sw-1, SDA], [I/O-sw-2, SDA], [I/O-sw-3, SDA], [I/O-sw-4, SDA],
-                  [I/O-sw-5, SDA], [I/O-led-1, SDA], [lcd-controller, SDA]]
+        connect: [[led-controller, SDA]]
       - name: HV
-        connect: [[lcd-controller, 5V]]
+        connect: [[led-controller, 5V]]
+      - name: HV-GND
+        connect: [[led-controller, GND]]
 
   pot-controller:  # 5 pins for pots, 2 for I2C
     type: nano every
     i2c_addr: 0x31
     pins:
+      - name: D12
+        comment: err LED2
+        connect: [[290ohm, series], [led-pc-err, anode]]
+
       - name: A0
         connect: [[pot-mux-1, X]]
       - name: A1
         connect: [[pot-mux-2, X]]
       - name: A2
-        connect: []
+        connect: [[pot-mux-3, X]]
       - name: A3
-        connect: []
-      - name: SDA
-      - name: SCL
-      - name: D10
-        connect: [[pot-mux-1, B], [pot-mux-2, B]]
-      - name: D9
-        connect: [[pot-mux-1, A], [pot-mux-2, A]]
-      - name: D5
-        connect: [[pot-mux-1, C], [pot-mux-2, C]]
-      - name: 5V
-        connect: [[pot-mux-1, Vcc], [pot-mux-2, Vcc],
-                  [pot-1l, high-rail], [pot-1r, high-rail], [pot-2l, high-rail],
-                  [pot-2r, high-rail], [pot-3l,  high-rail], [pot-3r, high-rail],
-                  [pot-4l,  high-rail], [pot-4r, high-rail], [pot-5l,  high-rail],
-                  [pot-5r, high-rail], [pot-lr1,  high-rail], [pot-lr2,  high-rail],
-                  [pot-lr3, high-rail], [I/O-led-2, Vdd]]
+        connect: []  # available for a 4th mux for expansion
 
-  lcd-controller:  # 14 for LCDs, 2 for I2C
+      # Mux address lines:
+      - name: D9
+        connect: [[pot-mux-1, A], [pot-mux-2, A], [pot-mux-3, A]]
+      - name: D10
+        connect: [[pot-mux-1, B], [pot-mux-2, B], [pot-mux-3, B]]
+      - name: D5
+        connect: [[pot-mux-1, C], [pot-mux-2, C], [pot-mux-3, C]]
+
+      - name: 5V
+        connect: [[pot-mux-1, Vcc], [pot-mux-2, Vcc], [pot-mux-3, Vcc],
+                  [pot-vol-1, high-rail], [pot-on-1, high-rail], [pot-off-1, high-rail],
+                  [pot-vol-2, high-rail], [pot-on-2, high-rail], [pot-off-2, high-rail],
+                  [pot-vol-3, high-rail], [pot-on-3, high-rail], [pot-off-3, high-rail],
+                  [pot-vol-4, high-rail], [pot-on-4, high-rail], [pot-off-4, high-rail],
+                  [pot-vol-5, high-rail], [pot-on-5, high-rail], [pot-off-5, high-rail],
+                  [pot-ch-vol, high-rail], [pot-ch-on, high-rail], [pot-ch-off, high-rail],
+                  [pot-tempo, high-rail], [pot-sy-vol, high-rail]]
+      - name: GND
+        connect: [[led-pc-err, cathode]]
+
+  leds:
+    # The leds are driven positive by column, then each led in the column lit by row by pulling
+    # those rows negative, so that the LEDs in each column are lit at the same time.
+    # So the col-pins are positive, and the row-pins are negative.
+
+    type: list
+    num-cols: 16
+    num-rows: 16
+
+    # There are 198 LEDs (not counting the nulls).  The 3 error LEDs are wired directly to their
+    # respective Arduino controller and do not participate here.
+    #
+    # The devices are col-wise, meaning the first 16 leds are in the first column and are lit at the
+    # same time.
+    #
+    # The devices are placed in test sequence order here, with 8-bit column alignment for groups of
+    # 8 LEDs or less, and 16-bit alignment for groups of > 8 LEDs.
+    devices: [
+      al-1, null, al-2, null, al-3, null, al-4, null,                                      #     4 rows
+
+      led-save, led-load, null, null, null, null, null, null,                              # 8   1 row
+      led-send-ch-1, led-send-ch-2, led-send-ch-3, led-send-ch-4, led-send-ch-5,           # 5
+      null, null, null,                                                                    # 3
+
+      nd-1, nd-2, nd-3, nd-4,                                                              #     6 rows
+
+      led-key, led-tune-abs, led-match-tuning, led-eq-temp, led-well-temp, led-meantone,   # 6   1 row
+      led-just, led-pyth, led-harm-basics, led-fe-ramp, led-fe-sine, led-attack,           # 6
+      led-decay, led-sustain, led-release, null,                                           # 4
+
+      led-major, led-minor, led-1/4-comma, led-1/5-comma, led-just-1, led-just-2,          # 6   1 row
+      led-just-3, led-just-4, led-just-5, led-just-6, led-just-7, led-just-8,              # 6
+      led-just-9, led-just-10, led-just-11, led-just-12,                                   # 4
+
+      led-just-13, led-just-14, null, null, null, null, null, null,                        # 8
+      led-hm, led-ch,                                                                      # 2   1 row
+    ]
+
+    device-number-attr-name: led-number
+
+    device-map:
+      LED:
+        num-elements: 1
+        col-pins: [anode]
+        row-pins: [cathode]
+      LED-alpha-display:
+        num-elements: 15
+        col-pins: [[common-anodes, 15]]
+        row-pins: [A, B, C, D, E, F, G1, G2, H, I, J, K, L, M, DP]
+      LED-numeric-display:
+        num-elements: 24
+        col-pins: [[digit-1, 8], [digit-2, 8], [digit-3, 8]]
+        row-pins: [A, B, C, D, E, F, G, DP,
+                   A, B, C, D, E, F, G, DP,
+                   A, B, C, D, E, F, G, DP]
+
+  low-npns:
+    type: list
+    num-rows: 16
+    device-name-prefix: low-npn-
+    device-type: Bipolar-NPN
+    device-map:
+      Bipolar-NPN:
+        num-elements: 1
+        pins:
+          - name: C
+            connect: [[34ohm, series]]   # 62mA, == 3.9mA continuous
+          - name: B
+            connect: [[4.3kohm, series]] # 1mA
+          - name: E
+    connect-col-wise: [[C, leds], [B, led-controller]]
+
+  high-mosfets:
+    type: list
+    num-cols: 16
+    device-name-prefix: high-mosfet-
+    device-type: MOSFET-P-channel
+    device-map:
+      MOSFET-P-channel:
+        num-elements: 1
+        col-pins: [gate]
+        pins:
+          - name: source
+            connect: [[.1uF, GND], [led-controller, 5V]]
+          - name: gate
+          - name: drain
+            comment: up to 277mV drop in transistor at 990mA (16 * 62mA)
+    connect-row-wise: [[drain, leds]]
+
+  demuxes:
+    type: list
+    num-cols: 16
+    device-name-prefix: demux-
+    device-type: Demultiplexer
+    device-map:
+      Demultiplexer:
+        num-elements: 8
+        col-pins: [Y0, Y1, Y2, Y3, Y4, Y5, Y6, Y7]
+    demux-1:
+      pins:
+        - name: G1
+          connect: [[Vcc]]
+        - name: G2B
+          connect: [[GND]]
+    demux-2:
+      pins:
+        - name: G2A
+          connect: [[GND]]
+        - name: G2B
+          connect: [[GND]]
+    connect-row-wise: [[col-pins, high-mosfets]]
+
+  col-counter:
+    type: Counter
+    pins:
+      - name: Q3
+        connect: [[demux-1, G2A], [demux-2, G1]]
+      - name: Q2
+        connect: [[demux-1, C], [demux-2, C]]
+      - name: Q1
+        connect: [[demux-1, B], [demux-2, B]]
+      - name: Q0
+        connect: [[demux-1, A], [demux-2, A]]
+
+  led-controller:  # 2 for Counter, 16 for LEDs, 2 for I2C
     type: nano every
     i2c_addr: 0x32
+    row-pins: [PD0, PD1, PD2, PD3, PD4, PD5, PD7, PB0, PB1, PB2, PC4, PC5, PC6, PE1, PE3, PE8]
     pins:
-      - name: A0
-        connect: [[lcd-mux-1-DB3, X]]
-        comment: DB3
-      - name: A1
-        connect: [[lcd-mux-1-DB2, X]]
-        comment: DB2
-      - name: A2
-        connect: [[lcd-mux-1-DB1, X]]
-        comment: DB1
-      - name: A3
-        connect: [[lcd-mux-1-DB0, X]]
-        comment: DB0
-      - name: SDA
-      - name: SCL
-      - name: A6
-        connect: [[lcd-mux-1-DB4, X]]
-        comment: DB4
-      - name: A7
-        connect: [[lcd-mux-1-DB5, X]]
-        comment: DB5
-      - name: D10
-        connect: [[lcd-pot-1, R/W], [lcd-pot-2, R/W], [lcd-pot-3, R/W],
-                  [lcd-pot-4, R/W], [lcd-pot-5, R/W], [lcd-lower-left-1, R/W],
-                  [lcd-lower-left-2, R/W], [lcd-lower-left-3, R/W]]
-        comment: R/W
-      - name: D9
-        connect: [[lcd-mux-1-E, X]]
-        comment: E
+      - name: D13
+        comment: built-in LED
+        aka: PE2
       - name: D7
-        connect: [[lcd-mux-1-DB7, X]]
-        comment: DB7
+        comment: err LED2
+        connect: [[290ohm, series], [led-lc-err, anode]]
+
+      # Col connections counter controls:
+      - name: D6
+        aka: PF4
+        connect: [[col-counter, MR]]   # Master Reset, independent of clock
+      - name: D3
+        aka: PF5
+        connect: [[col-counter, CP]]   # Clock, triggers on neg to pos transition
+
+      # Row connections (16)
+      - name: A3
+        aka: PD0
+      - name: A2
+        aka: PD1
+      - name: A1
+        aka: PD2
+      - name: A0
+        aka: PD3
+      - name: A6
+        aka: PD4
+      - name: A7
+        aka: PD5
+      - name: AREF
+        aka: PD7
+
+      - name: D9
+        aka: PB0
+      - name: D10
+        aka: PB1
       - name: D5
-        connect: [[lcd-pot-1, RS], [lcd-pot-2, RS], [lcd-pot-3, RS],
-                  [lcd-pot-4, RS], [lcd-pot-5, RS], [lcd-lower-left-1, RS],
-                  [lcd-lower-left-2, RS], [lcd-lower-left-3, RS]]
-        comment: RS
-      - name: D4
-        connect: [[lcd-mux-1-E, C]]
-        comment: C
-      - name: D2
-        connect: [[lcd-mux-1-DB6, X]]
-        comment: DB6
-      - name: RX
-        connect: [[lcd-mux-1-E, B]]
-        comment: B
+        aka: PB2
+
       - name: TX
-        connect: [[lcd-mux-1-E, A]]
-        comment: A
+        number: 1
+        aka: PC4
+      - name: RX
+        number: 0
+        aka: PC5
+      - name: D4
+        aka: PC6
+
+      - name: D12
+        aka: PE1
+      - name: D8
+        aka: PE3
+      - name: D11
+        aka: PE8
+
       - name: 5V
-        connect: [[lcd-mux-1-E, Vcc], [lcd-mux-1-DB0, Vcc], [lcd-mux-1-DB1, Vcc],
-                  [lcd-mux-1-DB2, Vcc], [lcd-mux-1-DB3, Vcc], [lcd-mux-1-DB4, Vcc],
-                  [lcd-mux-1-DB5, Vcc], [lcd-mux-1-DB6, Vcc], [lcd-mux-1-DB7, Vcc],
-                  [I/O-sw-1, Vdd], [I/O-sw-2, Vdd], [I/O-sw-3, Vdd], [I/O-sw-4, Vdd],
-                  [I/O-sw-5, Vdd], [I/O-led-1, Vdd]]
+        connect: [[demux-1, Vcc], [demux-2, Vcc], [col-counter, Vcc]]
+      - name: GND
+        connect: [[led-lc-err, cathode]]
 

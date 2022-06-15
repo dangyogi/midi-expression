@@ -26,8 +26,8 @@
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
      inkscape:zoom="1.48"
-     inkscape:cx="259.3548"
-     inkscape:cy="473.16998"
+     inkscape:cx="783.66255"
+     inkscape:cy="608.30512"
      inkscape:document-units="in"
      inkscape:current-layer="layer1"
      showgrid="false"
@@ -35,9 +35,9 @@
      showguides="true"
      inkscape:guide-bbox="true"
      units="in"
-     inkscape:window-width="948"
+     inkscape:window-width="1904"
      inkscape:window-height="1000"
-     inkscape:window-x="2044"
+     inkscape:window-x="1088"
      inkscape:window-y="875"
      inkscape:window-maximized="0" />
   <metadata
@@ -171,14 +171,14 @@
     <text
        xml:space="preserve"
        style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:5.64444447px;line-height:1.25;font-family:'Nimbus Sans';-inkscape-font-specification:'Nimbus Sans, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
-       x="245.59991"
-       y="107.38066"
+       x="249.99693"
+       y="107.99873"
        id="text2673-0"><tspan
          sodipodi:role="line"
          id="tspan2671-9"
-         x="245.59991"
-         y="107.38066"
-         style="stroke-width:0.26458332">Display</tspan></text>
+         x="249.99693"
+         y="107.99873"
+         style="stroke-width:0.26458332">LED</tspan></text>
     <g
        id="g5418-28-0-1"
        transform="translate(230.21788,-5.993028)">

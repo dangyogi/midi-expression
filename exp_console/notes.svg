@@ -25,16 +25,16 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="0.78"
-     inkscape:cx="434.762"
-     inkscape:cy="461.93355"
+     inkscape:zoom="0.9983453"
+     inkscape:cx="427.25867"
+     inkscape:cy="443.36911"
      inkscape:document-units="in"
      inkscape:current-layer="layer1"
      showgrid="false"
-     inkscape:window-width="1064"
-     inkscape:window-height="911"
-     inkscape:window-x="8"
-     inkscape:window-y="964"
+     inkscape:window-width="1904"
+     inkscape:window-height="1000"
+     inkscape:window-x="1088"
+     inkscape:window-y="875"
      inkscape:window-maximized="0"
      units="in"
      showguides="true"
@@ -68,28 +68,6 @@
            x="91.549294"
            y="240.82954" /></flowRegion><flowPara
          id="flowPara3735" /></flowRoot>    <text
-       xml:space="preserve"
-       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:5.64444447px;line-height:1.25;font-family:'Nimbus Sans';-inkscape-font-specification:'Nimbus Sans, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
-       x="178.63785"
-       y="126.63279"
-       id="text7442"><tspan
-         sodipodi:role="line"
-         id="tspan7440"
-         x="178.63785"
-         y="126.63279"
-         style="stroke-width:0.26458332">Continuous</tspan></text>
-    <text
-       xml:space="preserve"
-       style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:5.64444447px;line-height:1.25;font-family:'Nimbus Sans';-inkscape-font-specification:'Nimbus Sans, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
-       x="186.67833"
-       y="154.3246"
-       id="text7446"><tspan
-         sodipodi:role="line"
-         id="tspan7444"
-         x="186.67833"
-         y="154.3246"
-         style="stroke-width:0.26458332">Pulse</tspan></text>
-    <text
        xml:space="preserve"
        style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:5.64444447px;line-height:1.25;font-family:'Nimbus Sans';-inkscape-font-specification:'Nimbus Sans, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
        x="34.668701"
@@ -578,30 +556,56 @@
          style="fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.63257247;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
     </g>
     <g
-       transform="translate(81.79464,-79.652816)"
-       id="g1483-56">
+       id="g195"
+       transform="translate(11.628243,3.6759514)">
+      <text
+         id="text7442"
+         y="126.63279"
+         x="178.63785"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:5.64444447px;line-height:1.25;font-family:'Nimbus Sans';-inkscape-font-specification:'Nimbus Sans, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+         xml:space="preserve"><tspan
+           style="stroke-width:0.26458332"
+           y="126.63279"
+           x="178.63785"
+           id="tspan7440"
+           sodipodi:role="line">Continuous</tspan></text>
+      <text
+         id="text7446"
+         y="154.3246"
+         x="186.67833"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:5.64444447px;line-height:1.25;font-family:'Nimbus Sans';-inkscape-font-specification:'Nimbus Sans, Bold';font-variant-ligatures:normal;font-variant-caps:normal;font-variant-numeric:normal;font-feature-settings:normal;text-align:start;letter-spacing:0px;word-spacing:0px;writing-mode:lr-tb;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.26458332"
+         xml:space="preserve"><tspan
+           style="stroke-width:0.26458332"
+           y="154.3246"
+           x="186.67833"
+           id="tspan7444"
+           sodipodi:role="line">Pulse</tspan></text>
       <g
-         transform="translate(-200.9762,55.347104)"
-         id="g6557-53-2-1-1-1-6-3">
+         id="g1483-56"
+         transform="translate(81.79464,-79.652816)">
+        <g
+           id="g6557-53-2-1-1-1-6-3"
+           transform="translate(-200.9762,55.347104)">
+          <circle
+             r="5.8472295"
+             cy="162.77498"
+             cx="313.51657"
+             id="path6551-38-4-7-7-1-6-94"
+             style="opacity:1;fill:#000000;fill-opacity:0.99512197;stroke:#000000;stroke-width:0.2435406;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
+          <circle
+             r="0.61089504"
+             cy="162.77498"
+             cx="313.51657"
+             id="path6553-3-3-4-1-7-2-8"
+             style="opacity:1;fill:#fefdff;fill-opacity:0.99512197;stroke:#000000;stroke-width:0.04820995;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
+        </g>
         <circle
-           style="opacity:1;fill:#000000;fill-opacity:0.99512197;stroke:#000000;stroke-width:0.2435406;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
-           id="path6551-38-4-7-7-1-6-94"
-           cx="313.51657"
-           cy="162.77498"
-           r="5.8472295" />
-        <circle
-           style="opacity:1;fill:#fefdff;fill-opacity:0.99512197;stroke:#000000;stroke-width:0.04820995;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
-           id="path6553-3-3-4-1-7-2-8"
-           cx="313.51657"
-           cy="162.77498"
-           r="0.61089504" />
+           style="fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.63257247;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1"
+           id="path1458-12"
+           cx="112.54037"
+           cy="226.95338"
+           r="1.1823138" />
       </g>
-      <circle
-         r="1.1823138"
-         cy="226.95338"
-         cx="112.54037"
-         id="path1458-12"
-         style="fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.63257247;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1" />
     </g>
   </g>
 </svg>

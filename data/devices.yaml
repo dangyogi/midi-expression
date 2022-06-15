@@ -9,11 +9,13 @@ I/O Expander:
   current-drive: 25mA
   supply-voltage: [2, 5.5]
   num-rows: 2
+  num-onhand: 10
   socket:
     part-number: 1-2199298-9
     ordered-from: mouser.com
     price: 0.78
-    number-needed: 1
+    num-onhand: 10
+    num-needed: 1
   I2C:
     addr: [0, 1, 0, 0, A2, A1, A0]
     init: []
@@ -185,11 +187,15 @@ Multiplexer:
   part-number: MAX4617CPE+
   ordered-from: mouser.com
   price: 4.48
+  num-onhand: 13
   supply-voltage: [2, 5.5]
   output-pins: [X0, X1, X2, X3, X4, X5, X6, X7]
+  num-pins: 8
   num-rows: 2
   socket:
     part-number: 110-47-316-41-001000
+    num-pins: 16
+    num-onhand: 15
     ordered-from: mouser.com
     price: 1.10
     number-needed: 1
@@ -219,15 +225,106 @@ Multiplexer:
     - name: Vcc
       connect: [[.1uF, GND]]
 
+Counter:
+  part-number: CD74HCT161EE4
+  mouser-number: 595-CD74HCT161EE4
+  ordered-from: mouser.com
+  price: 0.62
+  supply-voltage: [4.5, 5.5]
+  output-pins: [Q0, Q1, Q2, Q3]
+  num-pins: 16
+  num-rows: 2
+  socket:
+    part-number: 110-47-316-41-001000
+    ordered-from: mouser.com
+    price: 1.10
+    num-needed: 1
+  pins:
+    - name: MR
+      inverted: true
+      comment: master reset, independent of clock
+    - name: CP
+      comment: clock, triggers on transition to high
+    - name: P0
+      connect: [[GND]]
+    - name: P1
+      connect: [[GND]]
+    - name: P2
+      connect: [[GND]]
+    - name: P3
+      connect: [[GND]]
+    - name: PE
+      connect: [[Vcc]]
+    - name: GND
+      connect: [[GND]]
+
+    - name: Vcc
+      connect: [[.1uF, GND]]
+    - name: TC
+      comment: no connection
+    - name: Q0
+    - name: Q1
+    - name: Q2
+    - name: Q3
+    - name: TE
+      connect: [[Vcc]]
+    - name: SPE
+      inverted: true
+      connect: [[Vcc]]
+
+Demultiplexer:
+  part-number: SN74HC138N
+  mouser-number: 595-SN74HC138N
+  ordered-from: mouser.com
+  price: 0.60
+  supply-voltage: [2, 6]
+  comment: address selectable low line out of 8 high outputs
+  output-drive: +/- 4mA
+  output-pins: [Y0, Y1, Y2, Y3, Y4, Y5, Y6, Y7]
+  num-pins: 16
+  num-rows: 2
+  fanout-pins: [Y0, Y1, Y2, Y3, Y4, Y5, Y6, Y7]
+  socket:
+    part-number: 110-47-316-41-001000
+    ordered-from: mouser.com
+    price: 1.10
+    number-needed: 1
+  pins:
+    - name: A
+    - name: B
+    - name: C
+    - name: G2A
+      inverted: true
+      comment: must be low, or all outputs are high
+    - name: G2B
+      inverted: true
+      comment: must be low, or all outputs are high
+    - name: G1
+      comment: must be high, or all outputs are high
+    - name: Y7
+    - name: GND
+      connect: [[GND]]
+
+    - name: Y6
+    - name: Y5
+    - name: Y4
+    - name: Y3
+    - name: Y2
+    - name: Y1
+    - name: Y0
+    - name: Vcc
+      connect: [[.1uF, GND]]
+
 Slide Pot:
   part-number: SLP-50K
   ordered-from: allelectronics.com
+  price: 0.50
+  num-onhand: 25
   length: 3 3/8
   width: 3/4
   slide-slot-length: 2 5/8
   screw-size: 4-40
   screw-hole-size: 0.116"
-  price: 0.50
   knob:
     part-number: KNB-297
     ordered-from: allelectronics.com
@@ -244,6 +341,7 @@ Rotary Switch:
   part-number: RSW-112
   ordered-from: allelectronics.com
   price: 2.00
+  num-onhand: 7
   positions: 12
   fanout-pins: [P1, P2, P3, P4, P5, P6, P7, P8, P9, P10, P11, P12]
   num-rows: 1
@@ -267,6 +365,7 @@ Toggle Switch:
   part-number: STS-130
   ordered-from: allelectronics.com
   price: 1.75
+  num-onhand: 35
   type: SPST
   num-rows: 1
   hole-size: 0.47"
@@ -275,12 +374,14 @@ Toggle Switch:
   pins:
     - name: p1
     - name: p2
-      connect: [[GND]]
+      connect: [[+diode, series]]
+      comment: positive side of switch
 
 Rotary Encoder:
   part-number: RE-66
   ordered-from: allelectronics.com
   price: 1.75
+  num-onhand: 15
   detents: 20
   hole-size: 0.27
   fanout-pins: [A, B, Bt]
@@ -288,25 +389,30 @@ Rotary Encoder:
   pins:
     - name: A
     - name: center
-      connect: [[GND]]
+      connect: [[+diode, series]]
+      comment: positive side of switch
     - name: B
     - name: Bt
     - name: Bt2
-      connect: [[GND]]
+      connect: [[+diode, series]]
+      comment: positive side of switch
 
 LED:
   part-number: LED-10R
   ordered-from: allelectronics.com
   price: 0.10
+  num-onhand: 40
   color: red
   brightness: brighter
   hole-size: 3/16
   pin-connect: long
   num-rows: 1
   pins:
-    - name: long
+    - name: anode
+      comment: positive
       connect: []
-    - name: short
+    - name: cathode
+      comment: negative
       connect: [[GND]]
 
 Button:
@@ -314,6 +420,7 @@ Button:
   mouser-number: 633-SB4011NOHC
   ordered-from: mouser.com
   price: 4.51
+  num-onhand: 16
   normally: open
   hole-size: 0.47"
   pin-connect: p1
@@ -321,18 +428,21 @@ Button:
   pins:
     - name: p1
     - name: p2
-      connect: [[GND]]
+      connect: [[+diode, series]]
+      comment: positive side of switch
 
 LCD:
   part-number: HDM16216H-5-S00S
   ordered-from: mouser.com
   price: 10.10
+  num-onhand: 1
   controller: HD44780 or equivalent
   socket:
     part-number: 61301611821
     ordered-from: mouser.com
     price: 0.69
-    number-needed: 1
+    num-onhand: 1
+    num-needed: 1
   num-rows: 1
   pins:
     - name: Vss
@@ -362,6 +472,7 @@ Rotary Pot:
   part-number: P160KNPD-4FC20B10K
   ordered-from: mouser.com
   price: 0.86
+  num-onhand: 1
   ohms: 10k
   taper: linear
   num-rows: 1
@@ -373,6 +484,7 @@ Rotary Pot:
 Nano Every:
   ordered-from: arduino.cc
   price: 27.90 for 3 pack
+  num-onhand: 3
   flash: 48KB
   sram: 6KB
   EEPROM: 256B
@@ -403,23 +515,23 @@ Nano Every:
   pins:
     - name: D13
       comment: built-in LED
-      internal: PE2
+      aka: PE2
     - name: 3V3
       comment: max output 200mA
     - name: AREF
-      internal: PD7
+      aka: PD7
     - name: A0
       number: 14
-      internal: PD3
+      aka: PD3
     - name: A1
       number: 15
-      internal: PD2
+      aka: PD2
     - name: A2
       number: 16
-      internal: PD1
+      aka: PD1
     - name: A3
       number: 17
-      internal: PD0
+      aka: PD0
     - name: A4
       number: 18
       aka: SDA
@@ -428,11 +540,12 @@ Nano Every:
       aka: SCL
     - name: A6
       number: 20
-      internal: PD4
+      aka: PD4
     - name: A7
       number: 21
-      internal: PD5
+      aka: PD5
     - name: 5V
+      connect: [[.1uF, GND]]
       comment: max output 1A
     - name: RESET
       inverted: true
@@ -444,40 +557,101 @@ Nano Every:
 
     - name: TX
       number: 1
-      internal: PC4
+      aka: PC4
     - name: RX
       number: 0
-      internal: PC5
+      aka: PC5
     - name: RESET
       inverted: true
       connect: []
-    - name: GND
+    - name: GND2
     - name: D2
-      internal: PA0
+      aka: PA0
     - name: D3
-      internal: PF5
+      aka: PF5
     - name: D4
-      internal: PC6
+      aka: PC6
     - name: D5
-      internal: PB2
+      aka: PB2
     - name: D6
-      internal: PF4
+      aka: PF4
     - name: D7
-      internal: PA1
+      aka: PA1
     - name: D8
-      internal: PE3
+      aka: PE3
     - name: D9
-      internal: PB0
+      aka: PB0
     - name: D10
-      internal: PB1
+      aka: PB1
     - name: D11
-      internal: PE8
+      aka: PE8
     - name: D12
-      internal: PE1
+      aka: PE1
+
+  aka-registers-by-pin:
+
+    - name: D2
+      aka: PA0
+    - name: D7
+      aka: PA1
+
+    - name: D9
+      aka: PB0
+    - name: D10
+      aka: PB1
+    - name: D5
+      aka: PB2
+
+    - name: TX
+      number: 1
+      aka: PC4
+    - name: RX
+      number: 0
+      aka: PC5
+    - name: D4
+      aka: PC6
+
+    - name: A3
+      number: 17
+      aka: PD0
+    - name: A2
+      number: 16
+      aka: PD1
+    - name: A1
+      number: 15
+      aka: PD2
+    - name: A0
+      number: 14
+      aka: PD3
+    - name: A6
+      number: 20
+      aka: PD4
+    - name: A7
+      number: 21
+      aka: PD5
+    - name: AREF
+      aka: PD7
+
+    - name: D12
+      aka: PE1
+    - name: D13
+      comment: built-in LED
+      aka: PE2
+    - name: D8
+      aka: PE3
+    - name: D11
+      aka: PE8
+
+    - name: D6
+      aka: PF4
+    - name: D3
+      aka: PF5
+
 
 Nano 33 IoT:
   ordered-from: arduino.cc
   price: 19.40
+  num-onhand: 3
   flash: 264KB
   sram: 256KB
   EEPROM: null
@@ -496,16 +670,22 @@ Nano 33 IoT:
     number-needed: 2
   pins:
     - name: D13
+      aka: PA17
       comment: built-in LED
     - name: 3V3
     - name: AREF
+      aka: PA03
     - name: A0
+      aka: PA02
       number: 14
     - name: A1
+      aka: PB02
       number: 15
     - name: A2
+      aka: PA11
       number: 16
     - name: A3
+      aka: PA10
       number: 17
     - name: A4
       number: 18
@@ -514,8 +694,10 @@ Nano 33 IoT:
       number: 19
       aka: SCL
     - name: A6
+      aka: PA09
       number: 20
     - name: A7
+      aka: PB03
       number: 21
     - name: 5V
       comment: ONLY active if both powered by USB and solder bridge is in place
@@ -528,24 +710,93 @@ Nano 33 IoT:
       connect: [[12V], [.1uF, GND]]
 
     - name: TX
+      aka: PB22
       number: 1
     - name: RX
+      aka: PB23
       number: 0
     - name: RESET
       inverted: true
       connect: []
-    - name: GND
+    - name: GND2
     - name: D2
+      aka: PB10
     - name: D3
+      aka: PB11
     - name: D4
+      aka: PA07
     - name: D5
+      aka: PA05
     - name: D6
+      aka: PA04
     - name: D7
+      aka: PA06
     - name: D8
+      aka: PA18
     - name: D9
+      aka: PA20
     - name: D10
+      aka: PA21
     - name: D11
+      aka: PA16
     - name: D12
+      aka: PA19
+
+  internal-registers-by-pin:
+    - name: A0
+      aka: PA02
+    - name: AREF
+      aka: PA03
+    - name: D6
+      aka: PA04
+    - name: D5
+      aka: PA05
+    - name: D7
+      aka: PA06
+    - name: D4
+      aka: PA07
+
+    - name: A6
+      aka: PA09
+    - name: A3
+      aka: PA10
+    - name: A2
+      aka: PA11
+
+    - name: D11
+      aka: PA16
+    - name: D13
+      aka: PA17
+      comment: built-in LED
+    - name: D8
+      aka: PA18
+    - name: D12
+      aka: PA19
+    - name: D9
+      aka: PA20
+    - name: D10
+      aka: PA21
+
+    - name: A1
+      aka: PB02
+    - name: A7
+      aka: PB03
+
+    - name: D2
+      aka: PB10
+    - name: D3
+      aka: PB11
+
+    - name: TX
+      aka: PB22
+    - name: RX
+      aka: PB23
+
+    - name: A4
+      aka: SDA
+    - name: A5
+      aka: SCL
+
 
 I2C-level-converter:
   num-rows: 2
@@ -559,18 +810,16 @@ I2C-level-converter:
     - name: LV1
     - name: LV2
     - name: LV
-      connect: [[.1uF, GND]]
-    - name: GND
-      connect: [[GND]]
+      connect: [[.1uF, LV-GND]]
+    - name: LV-GND
     - name: LV3
     - name: LV4
 
     - name: HV4
     - name: HV3
-    - name: GND
-      connect: [[GND]]
+    - name: HV-GND
     - name: HV
-      connect: [[.1uF, GND]]
+      connect: [[.1uF, HV-GND]]
     - name: HV2
     - name: HV1
 
@@ -579,6 +828,7 @@ LED-numeric-display:
   mfc-part-number: LTC-2621G
   ordered-from: allelectronics.com
   price: 0.85
+  num-onhand: 15
   num-digits: 3
   color: green
   length: 0.891"
@@ -618,6 +868,7 @@ LED-alpha-display:
   mfc-part-number: LA3921-11B
   ordered-from: allelectronics.com
   price: 0.50
+  num-onhand: 20
   num-segments: 14 + DP
   color: green
   length: 0.929" (measured at 15/16-)
@@ -638,7 +889,7 @@ LED-alpha-display:
     - name: I
     - name: H
     - name: F
-    - name: common cathodes
+    - name: common-anodes
     - name: G1
     - name: E
     - name: M
@@ -648,11 +899,13 @@ LED-alpha-display:
     - name: K
     - name: C
     - name: DP
-    - name: common cathodes
+    - name: common-anodes2
+      comment: tied to common-anodes internally
     - name: G2
     - name: B
     - name: J
-    - name: common cathodes
+    - name: common-anodes3
+      comment: tied to common-anodes internally
     - name: A
 
 MOSFET-P-channel:
@@ -660,7 +913,7 @@ MOSFET-P-channel:
   mouser-number: 844-IRFD9024PBF
   ordered-from: mouser.com
   price: 1.85
-  ordered: 10
+  num-onhand: 10
   voltage: 60V
   current: 1.6A
   on-resistance: 280 mOhms
@@ -675,9 +928,9 @@ MOSFET-P-channel:
   package: 4 pin DIP
   pitch: 0.1"
   row-distance: 0.3"
-  pins:
+  pins:   # The two drain pins are tied together outside the package.
     - name: drain
-    - name: drain
+    - name: drain2
     - name: gate
     - name: source
 
@@ -686,7 +939,7 @@ Bipolar-NPN:
   mouser-number: 821-BC548CB1G
   ordered-from: mouser.com
   price: 0.19
-  ordered: 70
+  num-onhand: 70
   voltage: 30V
   current-continuous: 100mA
   current-peak: 200mA
@@ -710,13 +963,59 @@ Bipolar-NPN:
         B-5V-resistor: 320ohm
   pins:  # flat side up, left to right
     - name: C
+      comment: |
+        2.1V across resistor to LED (figuring 5V supply, 2.1V for LED,
+        and 0.8V for transistor) this gives:
+          210ohm for 10mA
+          105ohm for 20mA
+           33.6ohm for 62.5mA
+           34ohm for 61.8mA
+           26ohm for 80mA
+           21ohm for 100mA
     - name: B
+      comment: |
+        4.3Kohm resistor gives 1mA base current at 5V
+        2.6Kohm resistor gives 1mA base current at 3.3V
     - name: E
+      connect: [[GND]]
+
+Diode:
+  part-number: 1N914BTR
+  mouser-number: 512-1N914BTR
+  ordered-from: mouser.com
+  price: 0.10
+  pins:
+    - name: anode
+      comment: positive
+    - name: cathode
+      comment: negative, banded
 
 Breadboard:
   part-number: SB404
   ordered-from: mouser.com
+  num-onhand: 7
   price: 5.00
   length: 3.75 in
   width: 1.85 in
   number-of-rows: 36
+
+Little-stuff:
+  "33pF":
+    num-onhand: 15
+  ".1uF":
+    num-onhand: 20
+  "20K":
+    num-onhand: 120
+  "3.9K":
+    num-onhand: 20
+  "300":
+    num-onhand: 100
+  "150":
+    num-onhand: 100
+  "120":
+    num-onhand: 100
+  "32.4":
+    num-onhand: 10
+  "8.2":
+    num-onhand: 20
+  

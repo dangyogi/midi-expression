@@ -11,12 +11,17 @@ unsigned long Start_time;
 
 byte Last_errno = 0;
 
-byte LED_pin = 13;
+byte LED_pin1 = 13, LED_pin2 = 0xFF;
 
-void err_led(byte led_pin) {
-  pinMode(led_pin, OUTPUT);
-  digitalWrite(led_pin, LOW);
-  LED_pin = led_pin;
+void err_led(byte led_pin1, byte led_pin2=0xFF);
+  pinMode(led_pin1, OUTPUT);
+  digitalWrite(led_pin1, LOW);
+  LED_pin1 = led_pin1;
+  if (led_pin2 != 0xFF) {
+    pinMode(led_pin2, OUTPUT);
+    digitalWrite(led_pin2, LOW);
+    LED_pin2 = led_pin2;
+  }
 }
 
 void push(int delay) {
@@ -30,7 +35,10 @@ void errno(byte current_errno) {
   if (current_errno == 0) {
     Last_errno = 0;
     Num_delays = 0;
-    digitalWrite(LED_pin, LOW);
+    digitalWrite(LED_pin1, LOW);
+    if (LED_pin2 != 0xFF) {
+      digitalWrite(LED_pin2, LOW);
+    }
   } else {
     if (Last_errno == 0) {
       // Display this errno!
@@ -65,14 +73,20 @@ void errno(byte current_errno) {
 
       Start_time = millis();
       Current_delay = 0;
-      digitalWrite(LED_pin, HIGH);
+      digitalWrite(LED_pin1, HIGH);
+      if (LED_pin2 != 0xFF) {
+        digitalWrite(LED_pin2, HIGH);
+      }
       Level = 0;
     } // end if (Last_errno == 0)
   } // end else if (current_errno == 0)
   if (Current_delay < Num_delays) {
     unsigned long current_time = millis();
     if (current_time - Start_time >= Delays[Current_delay]) {
-      digitalWrite(LED_pin, Level);
+      digitalWrite(LED_pin1, Level);
+      if (LED_pin2 != 0xFF) {
+        digitalWrite(LED_pin2, Level);
+      }
       Level = 1 - Level;
       Start_time = current_time;
       if (++Current_delay >= Num_delays) Current_delay = 0;  // wrap around

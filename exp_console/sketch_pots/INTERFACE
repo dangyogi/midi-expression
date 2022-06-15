@@ -1,0 +1,47 @@
+I2C interface:
+  I2C Addr: 0x31
+
+  Requests from on high:
+    0-6: Set Report to send.  5 has a_pin (1 byte), 6 has EEPROM addr (1 byte), the rest have no data.
+    8<a_pin><num_pots>: Set num_pots for a_pin (1 byte each)
+    9<EEPROM_addr><byte>: Store <byte> at <EEPROM_addr>
+    10: Calibate low
+    11: Calibate center
+    12: Calibate high
+    13: Write_calibations
+
+  Reports to on high:
+    0: Errno, Err_data, pot.value (1 byte each) for each pot (2 + num_pots bytes total)
+    1: num_pots, NUM_A_PINS, EEPROM_AVAIL EEPROM_USED (4 bytes total)
+    2: Errno, Err_data (2 bytes total)
+    3: Num_pots for each a_pin (NUM_A_PINS bytes total)
+    4: Cycle_time (uSec, 4 bytes total)
+    5. cal_low, cal_center, cal_high for each pot in a_pin (6 * num_pots for a_pin)
+    6. next stored EEPROM byte (1 byte, EEPROM addr auto increments)
+
+
+Error Codes:
+
+  Errno, Err_data
+
+   1,    request length: invalid request length for command 0-5, expected 1
+   2,    request length: invalid request length for command 5-6, expected 2
+   3,    request a_pin: request a_pin for command 5 out of range
+   4,    request EEPROM_addr: request EEPROM_addr for command 6 out of range
+   8,    request length: invalid request length for command 8, expected 3
+   9,    requested a_pin: requested a_pin for command 8 out of range, must 0-3
+   10,   requested num_pots: requested num_pots for command 8 out of range, must 0-7
+   20,   request length: invalid request length for command 9, expected 3
+   21,   requested EEPROM_addr: requested EEPROM_addr for command 9 out of range
+   30,   request length: invalid request length for command 10, expected 1
+   31,   calibrate_low value: calibrate_low value failed to be < 40
+   40,   request length: invalid request length for command 11, expected 1
+   41,   calibrate_center value: calibrate_center value failed to be within 40 of 511
+   50,   request length: invalid request length for command 12, expected 1
+   51,   calibrate_high value: calibrate_high value failed to be within 40 of 1023
+   60,   request length: invalid request length for command 13, expected 1
+  100,   a_pin: Num_pots read from EEPROM for a_pin > 8
+  101,   10*a_pin + pot_addr: cal_low read from EEPROM for a_pin, pot_addr > 20
+  102,   10*a_pin + pot_addr: cal_center read from EEPROM for a_pin, pot_addr > 50 from 511
+  103,   10*a_pin + pot_addr: cal_high read from EEPROM for a_pin, pot_addr < (1023 - 20)
+  110,   command byte: invalide request command from on high
