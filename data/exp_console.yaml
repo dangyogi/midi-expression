@@ -89,45 +89,45 @@ devices:
 
   master-controller:
     type: nano 33 iot
-    i2c_addr: None   # Master...
+    i2c-addr: None   # Master...
     pins:
       - name: D13
         connect: [[2.6Kohm, series], [master-err-led-npn, B]]
       - name: SDA
       - name: SCL
 
-      # Output pins (only one high at a time, re A and B have to be on the same line here)
+      # Output pins (only one low at a time, re A and B have to be on the same line here)
       - name: PA16
         connect: [[re-filename, center], [re-filename, Bt2], [re-function, center], [re-function, Bt2],
                   [re-1, center], [re-1, Bt2]]
-      - name: PA17
-        connect: [[re-2, center], [re-2, Bt2], [re-3, center], [re-3, Bt2], [re-4, center], [re-4, Bt2]]
       - name: PA18
+        connect: [[re-2, center], [re-2, Bt2], [re-3, center], [re-3, Bt2], [re-4, center], [re-4, Bt2]]
+      - name: PA19
         connect: [[bt-send-ch-1, p2], [bt-send-ch-2, p2], [bt-send-ch-3, p2], [bt-send-ch-4, p2],
                   [bt-send-ch-5, p2], [bt-hm, p2], [bt-ch, p2], [sw-ch, p2], [sw-save, p2]]
-      - name: PA19
+      - name: PA20
         connect: [[bt-A3, p2], [bt-C4, p2], [bt-E4, p2], [bt-G4, p2], [bt-Bb4, p2], [bt-C5, p2],
                   [bt-load, p2], [bt-sync, p2], [bt-abandon, p2]]
-      - name: PA20
+      - name: PA21
         connect: [[sw-A3, p2], [sw-C4, p2], [sw-E4, p2], [sw-G4, p2], [sw-Bb4, p2], [sw-C5, p2], 
                   [sw-synth, p2], [sw-ch-1, p2], [sw-ch-2, p2]]
-      - name: PA21
+      - name: PB02
         connect: [[sw-ch-3, p2], [sw-ch-4, p2], [sw-ch-5, p2], [sw-ch-6, p2], [sw-ch-7, p2],
                   [sw-ch-8, p2], [sw-ch-9, p2], [sw-ch-10, p2], [sw-ch-11, p2]]
 
-      - name: PB02
+      - name: PB03
         connect: [[sw-ch-12, p2], [sw-ch-13, p2], [sw-ch-14, p2], [sw-ch-15, p2], [sw-ch, p2],
                   [sw-hm-1, p2], [sw-hm-2, p2], [sw-hm-3, p2], [sw-hm-4, p2]]
 
-      - name: PB03
+      - name: PB10
         connect: [[sw-hm-5, p2], [sw-hm-6, p2], [sw-hm-7, p2], [sw-hm-8, p2], [sw-hm-9, p2],
                   [sw-hm-10, p2], [sw-hm, p2], [sw-send-ch-1, p2], [sw-send-ch-2, p2]]
 
-      - name: PB10
+      - name: PB11
         connect: [[sw-send-ch-3, p2], [sw-send-ch-4, p2], [sw-send-ch-5, p2],
                   [sw-continuous-pulse, p2]]
 
-      # Input pins (w/pull-downs)
+      # Input pins (w/pull-ups)
       - name: PA02
         connect: [[re-filename, A], [re-2, A], [bt-send-ch-1, p1], [bt-A3, p1], [sw-A3, p1],
                   [sw-ch-3, p1], [sw-ch-12, p1], [sw-hm-5, p1], [sw-send-ch-3, p1]]
@@ -199,11 +199,11 @@ devices:
 
   pot-controller:  # 5 pins for pots, 2 for I2C
     type: nano every
-    i2c_addr: 0x31
+    i2c-addr: 0x31
     pins:
       - name: D12
         comment: err LED2
-        connect: [[290ohm, series], [led-pc-err, anode]]
+        connect: [[300ohm, series], [led-pc-err, anode]]  # 9.7mA
 
       - name: A0
         connect: [[pot-mux-1, X]]
@@ -235,7 +235,7 @@ devices:
         connect: [[led-pc-err, cathode]]
 
   leds:
-    # The leds are driven positive by column, then each led in the column lit by row by pulling
+    # The leds are driven positive by col, then each led in the col lit by row by pulling
     # those rows negative, so that the LEDs in each column are lit at the same time.
     # So the col-pins are positive, and the row-pins are negative.
 
@@ -300,11 +300,12 @@ devices:
         num-elements: 1
         pins:
           - name: C
-            connect: [[34ohm, series]]   # 62mA, == 3.9mA continuous
+            connect: [[32.4ohm, series]] # 34ohm gives 62mA, == 3.9mA continuous, 989mA max/row
+                                         # 32.4ohm gives 64.8mA, == 4.1mA continuous, 1.04A max/row
           - name: B
-            connect: [[4.3kohm, series]] # 1mA
+            connect: [[3.9kohm, series]] # 1mA
           - name: E
-    connect-col-wise: [[C, leds], [B, led-controller]]
+    connect-by-row: [[C, leds], [B, led-controller]]
 
   high-mosfets:
     type: list
@@ -321,7 +322,7 @@ devices:
           - name: gate
           - name: drain
             comment: up to 277mV drop in transistor at 990mA (16 * 62mA)
-    connect-row-wise: [[drain, leds]]
+    connect-by-col: [[drain, leds]]
 
   demuxes:
     type: list
@@ -344,7 +345,7 @@ devices:
           connect: [[GND]]
         - name: G2B
           connect: [[GND]]
-    connect-row-wise: [[col-pins, high-mosfets]]
+    connect-by-col: [high-mosfets]
 
   col-counter:
     type: Counter
@@ -360,7 +361,7 @@ devices:
 
   led-controller:  # 2 for Counter, 16 for LEDs, 2 for I2C
     type: nano every
-    i2c_addr: 0x32
+    i2c-addr: 0x32
     row-pins: [PD0, PD1, PD2, PD3, PD4, PD5, PD7, PB0, PB1, PB2, PC4, PC5, PC6, PE1, PE3, PE8]
     pins:
       - name: D13
@@ -368,7 +369,7 @@ devices:
         aka: PE2
       - name: D7
         comment: err LED2
-        connect: [[290ohm, series], [led-lc-err, anode]]
+        connect: [[300ohm, series], [led-lc-err, anode]]
 
       # Col connections counter controls:
       - name: D6

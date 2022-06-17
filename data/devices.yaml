@@ -800,6 +800,7 @@ Nano 33 IoT:
 
 I2C-level-converter:
   num-rows: 2
+  row-spacing: 0.4"
   socket:
     part-number: 310-87-106-41-001101
     ordered-from: mouser.com
@@ -835,6 +836,7 @@ LED-numeric-display:
   width: 0.394"
   height: 0.24"
   pins: 16
+  num-rows: 2
   pitch: 0.1"
   distance-between-rows: 0.3"
   voltage: 2.1V
@@ -875,6 +877,7 @@ LED-alpha-display:
   width: 0.390" (measured at 3/8)
   height: 0.276"
   pins: 18
+  num-rows: 2
   pitch: 0.1"
   distance-between-rows: 0.3"
   voltage: 2.1V
@@ -909,6 +912,23 @@ LED-alpha-display:
     - name: A
 
 MOSFET-P-channel:
+  part-number: FQP7P06
+  mouser-number: 512-FQP7P06
+  ordered-from: mouser.com
+  price: 1.41
+  num-onhand: 18
+  voltage: 60V
+  current: 7A
+  on-resistance: max 410 mOhms
+  gate-source-voltage: 3.8V for 1A (from graph)
+  source: high
+  pitch: 0.1"
+  pins:   # Tab down, left to right
+    - name: gate
+    - name: drain
+    - name: source
+
+MOSFET-P-channel-obs:
   part-number: IRFD9024PBF
   mouser-number: 844-IRFD9024PBF
   ordered-from: mouser.com
@@ -919,7 +939,7 @@ MOSFET-P-channel:
   on-resistance: 280 mOhms
   gate-source-voltage:
     - voltage: -4V
-      drain-current: 0.45A
+      drain-current: 0.45A   # looks like 10mA on graph... :-(
     - voltage: -5V
       drain-current: 2A
     - voltage: -6V
@@ -928,6 +948,7 @@ MOSFET-P-channel:
   package: 4 pin DIP
   pitch: 0.1"
   row-distance: 0.3"
+  num-rows: 2
   pins:   # The two drain pins are tied together outside the package.
     - name: drain
     - name: drain2
@@ -943,13 +964,14 @@ Bipolar-NPN:
   voltage: 30V
   current-continuous: 100mA
   current-peak: 200mA
+  Vce: 150mV at 100mA Ic
   Vbe:  # Vce 5V
     - Ic: 0.5mA
       Vbe: 0.58V
     - Ic: 100mA
-      Vbe: 0.8V
+      Vbe: 0.8V   # 0.9V at sat
   power-dissipation: 500mW
-  hFE: 220-800
+  hFE: 200  # probably more 400
   emitter-follower:
     - target-current: 100mA
     - E-resistor: 10ohm  # target 1V
@@ -961,21 +983,22 @@ Bipolar-NPN:
         Total-bias-resistor: 500ohm
         B-GND-resistor: 180ohm
         B-5V-resistor: 320ohm
+  num-rows: 1
   pins:  # flat side up, left to right
     - name: C
       comment: |
-        2.1V across resistor to LED (figuring 5V supply, 2.1V for LED,
-        and 0.8V for transistor) this gives:
-          210ohm for 10mA
-          105ohm for 20mA
-           33.6ohm for 62.5mA
-           34ohm for 61.8mA
-           26ohm for 80mA
-           21ohm for 100mA
+        2.55V across resistor to LED (figuring 5V supply, 0.2V for MOSFET,
+        2.1V for LED, and 0.15V for transistor) this gives:
+          255ohm for 10mA
+          128ohm for 20mA
+           41ohm for 62.5mA
+           34ohm for 75mA
+           32.4ohm for 79mA
+           26ohm for 100mA
     - name: B
       comment: |
-        4.3Kohm resistor gives 1mA base current at 5V
-        2.6Kohm resistor gives 1mA base current at 3.3V
+        4.1Kohm resistor gives 1mA base current at 5V
+        2.4Kohm resistor gives 1mA base current at 3.3V
     - name: E
       connect: [[GND]]
 
@@ -1004,18 +1027,18 @@ Little-stuff:
     num-onhand: 15
   ".1uF":
     num-onhand: 20
-  "20K":
+  "20kohm":
     num-onhand: 120
-  "3.9K":
+  "3.9kohm":
     num-onhand: 20
-  "300":
+  "300ohm":
     num-onhand: 100
-  "150":
+  "150ohm":
     num-onhand: 100
-  "120":
+  "120ohm":
     num-onhand: 100
-  "32.4":
+  "32.4ohm":
     num-onhand: 10
-  "8.2":
+  "8.2ohm":
     num-onhand: 20
   

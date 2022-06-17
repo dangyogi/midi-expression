@@ -1,6 +1,7 @@
 # parse_wiring.py
 
-from itertools import zip_longest, chain, repeat
+from itertools import zip_longest, chain, repeat, groupby, cycle
+from operator import itemgetter
 from collections import defaultdict, Counter
 
 from .utils import read_yaml
@@ -52,10 +53,10 @@ class Part(Attrs):
         #                                  uses=self.device.get_unique_pin(name))
         return self.pins_by_name[name]
 
-    def make_connections(self):
+    def make_connections(self, quiet=False):
         for p in self.pins_by_number:
             for clause in p.connect:
-                p.connect_to(clause)
+                p.connect_to(clause, quiet=quiet)
         if self.fans_out_to:
             fanout_pins = [self.pins_by_name[name] for name in self.fanout_pins]
             connects = self.get_fan_out_to_connects()
@@ -63,7 +64,7 @@ class Part(Attrs):
                    f"{self}: too many fans_out_to parts"
             #print(f"{self}.make_connections, fans_out_to {connects}")
             for my_pin, clause in zip(fanout_pins, connects):
-                my_pin.connect_to(clause)
+                my_pin.connect_to(clause, quiet=quiet)
 
     def get_fan_out_to_connects(self):
         r'''Returns [(to_part, to_pin_name)]
@@ -84,37 +85,98 @@ class Part(Attrs):
         return ans
 
     def dump(self):
-        print(f"{self.name}: {self.device.name}")
-        print()
-        if self.device.num_rows == 1:
-            for pin in self.pins_by_number:
-                print(pin.desc(reverse=True))
+        for line in self.gen_dump_lines():
+            print(line)
+
+    def gen_dump_lines(self):
+        r'''Returns a list of lines for dump.
+
+        These do NOT have newlines at the end...
+        '''
+        lines = []
+        max_line_len = 134
+        title = f"{self.name}: {self.device.name}"
+        if not hasattr(self.device, 'num_rows') or self.device.num_rows == 1:
+            lines.append(title)
+            lines.append('')
+            pin_descs = equalize((pin.desc() for pin in self.pins_by_number), max_line_len)
+            for pin_number, pin_name, groups in pin_descs:
+                if not groups:
+                    lines.append(f"{pin_number} {pin_name}")
+                else:
+                    lines.append(f"{pin_number} {pin_name} -> {', '.join(groups[0])}")
+                    for group in groups[1:]:
+                        lines.append(' ' * (len(pin_number) + len(pin_name) + 5) + ', '.join(group))
         else:
-            left_side = equalize((pin.desc()
+            lines.append(' ' * ((max_line_len - len(title) + 1)//2 + 1) + title)
+            lines.append('')
+            max_line_len_per_side = (max_line_len - 8) // 2
+            left_side = equalize((pin.desc(reverse=True)
                                   for pin in self.pins_by_number[:self.num_pins//2]),
+                                 max_line_len_per_side,
                                  '>')
-            right_side = equalize((pin.desc(reverse=True)
+            right_side = equalize((pin.desc()
                                    for pin
                                     in reversed(self.pins_by_number[self.num_pins//2:])),
-                                 '<')
-            print(' ' * len(left_side[0]), '+----+')
+                                  max_line_len_per_side)
+            #print(''.join(f"{i:10}" for i in range(1, 10)))
+            #print("1234567890" * 10, max_line_len_per_side)
+            lines.append(f"{'+----+':>{max_line_len_per_side+7}}")
             for left, right in zip(left_side, right_side):
-                print(left, '-|    |-', right.rstrip(), sep='')
-            print(' ' * len(left_side[0]), '+----+')
+                left_pin_number, left_pin_name, left_connections = left
+                right_pin_number, right_pin_name, right_connections = right
+                if left_connections:
+                    left_line = ' '.join((', '.join(left_connections[0]), '<-',
+                                                    left_pin_name, left_pin_number))
+                else:
+                    left_line = ' '.join((left_pin_name, left_pin_number))
+                if right_connections:
+                    right_line = ' '.join((right_pin_number, right_pin_name, '->',
+                                          ', '.join(right_connections[0])))
+                else:
+                    right_line = ' '.join((right_pin_number, right_pin_name))
+                lines.append(f"{left_line:>{max_line_len_per_side}}-|    |-{right_line}")
+                left_fudge = ' ' * (len(left_pin_number) + len(left_pin_name) + 5)
+                left_width = max_line_len_per_side - len(left_fudge)
+                right_fudge = ' ' * (len(right_pin_number) + len(right_pin_name) + 5)
+                for left_group, right_group \
+                 in zip_longest(left_connections[1:], right_connections[1:]):
+                    line = []
+                    if left_group is None:
+                        line.append(' ' * max_line_len_per_side + " |    | ")
+                    else:
+                        line.append(
+                          f"{', '.join(left_group):>{left_width}}{left_fudge} |    | ")
+                    if right_group is not None:
+                        line.append(right_fudge + ', '.join(right_group))
+                    lines.append(''.join(line))
+            lines.append(f"{'+----+':>{max_line_len_per_side+7}}")
+        return lines
 
-def box(height, width=6):
-    yield '+' + '-' * (width - 2) + '+'
-    for i in range(height - 2):
-        yield '|' + ' ' * (width - 2) + '|'
-    yield '+' + '-' * (width - 2) + '+'
+def equalize(list_of_chunks, max_connections_len, align='<'):
+    r'''Returns [(adj_pin_number, adj_pin_name, groups)]
 
-def equalize(list_of_chunks, align):
+    Equalizes the widths of pin_number and pin_name and groups connections.
+    '''
     list_of_chunks = tuple(list_of_chunks)
-    widths = [max(len(x[i]) for x in list_of_chunks)
-              for i in range(len(list_of_chunks[0]))]
-    return [' '.join(f"{chunk:{align}{width}}"
-                     for chunk, width in zip(chunks, widths))
-            for chunks in list_of_chunks]
+    num_width, name_width = [max(len(x[i]) for x in list_of_chunks) for i in range(2)]
+    max_connections_len -= num_width + name_width + 2 + 4  # final 4 for "->" arrow
+    return [(f"{num:>{num_width}}", f"{name:{align}{name_width}}",
+             tuple(group(connections, max_connections_len)))
+            for num, name, connections in list_of_chunks]
+
+def group(connections, max_connections_len):
+    group = []
+    line_left = max_connections_len
+    for conn in connections:
+        if len(conn) + 2 > line_left:
+            yield group
+            group = []
+            line_left = max_connections_len
+        group.append(conn)
+        line_left -= len(conn) + 2   # leave room for ', '
+    if group:
+        yield group
 
 class Pin(Attrs):
     dont_inherit = Attrs.dont_inherit.union(('connections',))
@@ -123,7 +185,7 @@ class Pin(Attrs):
         Attrs.__init__(self, name, attrs, parent, uses)
         self.connections = []
 
-    def connect_to(self, clause, one_way=False):
+    def connect_to(self, clause, one_way=False, quiet=False):
         if isinstance(clause, str):
             clause = (clause,)
         assert len(clause) <= 2
@@ -136,31 +198,33 @@ class Pin(Attrs):
                 try:
                     part = Parts[part]
                 except KeyError:
-                    print(f"{self.parent}.{self.name}: connect_to got invalid {part=}")
+                    if not quiet:
+                        print(f"{self.parent}.{self.name}: connect_to got invalid {part=}")
 
         if isinstance(part, str):
-            Little_stuff[part] += 1
             if pin is None:
-                self.connections.append((part,))
+                connect = (part,)
             else:
-                self.connections.append((part, pin))
+                connect = (part, pin)
+            if connect not in self.connections:
+                self.connections.append(connect)
+                Little_stuff[part] += 1
         else:
             assert pin is not None, \
                    f"{self.parent}.{self.name}: connect_to part, {part.name}, must have pin"
-            self.connections.append((part, pin))
-            self.parent.connected = True
-            part.connected = True
+            if (part, pin) not in self.connections:
+                self.connections.append((part, pin))
+                self.parent.connected = True
+                part.connected = True
 
             #if not one_way:
-            #    part.get_unique_pin(pin).connect_to((self.parent, self.name), True)
+            #    part.get_unique_pin(pin).connect_to((self.parent, self.name), True, quiet=quiet)
 
     def desc(self, reverse=False):
-        if reverse:
-            align = "<"
-            arrow = "->"
-        else:
-            align = ">"
-            arrow = "<-"
+        r'''Returns pin_number, pin_name, [connection]
+
+        Reverse reverses the order of the connections.
+        '''
         conn_fragments = []
         for conn in self.connections:
             if isinstance(conn, str):
@@ -169,14 +233,9 @@ class Pin(Attrs):
                 conn_fragments.append(' '.join(conn))
             else:
                 conn_fragments.append(f"{conn[0].name}.{conn[1]}")
-        chunks = [', '.join(conn_fragments),
-                  (arrow if conn_fragments else '  '),
-                  self.name,
-                  f"{self.pin_number}"
-                 ]
         if reverse:
-            chunks.reverse()
-        return chunks
+            conn_fragments.reverse()
+        return f"{self.pin_number}", self.name, conn_fragments
 
 class Batch(Part):
     connected = False
@@ -185,12 +244,13 @@ class Batch(Part):
     def init2(self):
         self.devices = tuple(Part(v['name'], self.device, v) for v in self.devices)
 
-    def make_connections(self):
+    def make_connections(self, quiet=False):
         if hasattr(self, 'batch_common_pins'):
             first_part = self.devices[0]
             for dest_part in self.devices[1:]:
                 for pin_name in self.batch_common_pins:
-                    first_part.get_unique_pin(pin_name).connect_to((dest_part, pin_name))
+                    first_part.get_unique_pin(pin_name).connect_to((dest_part, pin_name),
+                                                                   quiet=quiet)
         to_parts = tuple(Parts[name] for name in self.fans_out_to)
         for my_part in self.devices:
             fanout_pins = my_part.device.fanout_pins
@@ -199,7 +259,8 @@ class Batch(Part):
                    f"{my_part.name} fanout-pins"
             to_pin_name = my_part.links_pin
             for to_part, fanout_pin in zip(to_parts, fanout_pins):
-                my_part.get_unique_pin(fanout_pin).connect_to((to_part, to_pin_name))
+                my_part.get_unique_pin(fanout_pin).connect_to((to_part, to_pin_name),
+                                                              quiet=quiet)
 
 class List:
     r'''One or two dimensional lists of devices.
@@ -230,12 +291,13 @@ class List:
 
     def __init__(self, name, device_map, num_rows=1, num_cols=1, devices=None,
                  device_name_prefix=None, device_type=None, device_number_attr_name=None,
-                 connect=(), **dev_inits):
+                 connect_by_col=(), connect_by_row=(), **dev_inits):
         self.name = name
         self.device_map = device_map
         self.num_rows = num_rows
         self.num_cols = num_cols
-        self.connect = connect
+        self.connect_by_col = connect_by_col
+        self.connect_by_row = connect_by_row
         self.dev_inits = dev_inits
 
         assert self.num_rows > 1 or self.num_cols > 1, \
@@ -289,75 +351,147 @@ class List:
                         setattr(dev.get_unique_pin(pin_name), device_number_attr_name, device_number)
                         device_number += 1
 
-    def get_connect_by_row(self, pin_names_name='row-pins'):
-        r'''Yields a tuple of (dev, pin), or (None, None) for each row.
+    def get_rows_by_col(self, pin_names_name='col-pins', pin_name=None):
+        r'''Yields a row tuple of (dev, pin), or (None, None) for each column.
 
-        Indexed by [row][col]
-        '''
-        return grouper(self.get_all_connects(pin_names_name), self.num_rows, fillvalue=(None, None))
-
-    def get_connect_by_col(self):
-        r'''Yields a tuple of (dev, pin), or (None, None) for each column.
+        Each row is a tuple of (dev, pin), or (None, None).
 
         Indexed by [col][row]
+
+        Maps against col-pins.
+
+        If pin_name is passed, it is used directly, rather than looking up pins by pin_names_name.
         '''
-        return zip_longest(*tuple(self.get_connect_by_row('col-pins')),
+        return grouper(self.get_all_connects(pin_names_name, pin_name), self.num_rows, fillvalue=(None, None))
+
+    def get_cols_by_row(self, pin_name=None):
+        r'''Yields a tuple of columns for each row.
+
+        Each column is a tuple of (dev, pin), or (None, None).
+
+        Indexed by [row][col]
+
+        Maps against row-pins.
+
+        If pin_name is passed, it is used directly, rather than looking up pins by pin_names_name.
+        '''
+        return zip_longest(*tuple(self.get_rows_by_col('row-pins', pin_name)),
                            fillvalue=(None, None))
 
-    def get_all_connects(self, pin_names_name):
+    def get_all_connects(self, pin_names_name, pin_name=None):
         for dev_name in self.devices:
             if dev_name is None:
                 yield None, None
             else:
                 dev = Parts[dev_name]
-                for pin_name in self.device_map[dev.device.name][pin_names_name]:
-                    if isinstance(pin_name, (tuple, list)):
-                        name, num = pin_name
-                        for i in range(num):
-                            yield dev, name
-                    else:
-                        yield dev, pin_name
+                if pin_name is not None:
+                    yield dev, pin_name
+                else:
+                    for p_name in self.device_map[dev.device.name][pin_names_name]:
+                        if isinstance(p_name, (tuple, list)):
+                            name, num = p_name
+                            for i in range(num):
+                                yield dev, name
+                        else:
+                            yield dev, p_name
 
-    def make_connections(self):
+    def make_connections(self, quiet=False):
         # connect each device to dev_inits.pins.connect and device_map.pins.connect
         for device_name in self.devices:
             if device_name is not None:
                 device = Parts[device_name]
                 if device_name in self.dev_inits:
-                    self.connect_device(device, self.dev_inits[device_name]['pins'])
+                    self.connect_device(device, self.dev_inits[device_name]['pins'], quiet)
                 dm = self.device_map[device.device.name]
                 if 'pins' in dm:
-                    self.connect_device(device, dm['pins'])
-        # connect each device to dev_inits.pins.connect and device_map.pins.connect
-        if all('row-pins' in value for value in self.device_map.values()):
+                    self.connect_device(device, dm['pins'], quiet)
+
+        if False:
+            if all('row-pins' in value for value in self.device_map.values()):
+                pin_name = None
+            else:
+                pin_name = 'dummy'
             print()
-            print(f"{self.name}.make_connections: get_connect_by_row:")
-            for row in self.get_connect_by_row():
+            print(f"{self.name}.make_connections: get_cols_by_row:")
+            for row in self.get_cols_by_row(pin_name=pin_name):
                 for (part, pin) in row:
                     if part is None:
                         print(f"{part}.{pin}", end=' ')
                     else:
                         print(f"{part.name}.{pin}", end=' ')
                 print()
-        if all('col-pins' in value for value in self.device_map.values()):
+            if all('col-pins' in value for value in self.device_map.values()):
+                pin_name = None
+            else:
+                pin_name = 'dummy'
             print()
-            print(f"{self.name}.make_connections: get_connect_by_col:")
-            for col in self.get_connect_by_col():
+            print(f"{self.name}.make_connections: get_rows_by_col:")
+            for col in self.get_rows_by_col(pin_name=pin_name):
                 for (part, pin) in col:
                     if part is None:
                         print(f"{part}.{pin}", end=' ')
                     else:
                         print(f"{part.name}.{pin}", end=' ')
                 print()
-        print()
+            print()
 
-    def connect_device(self, device, pins):
+        # cross-connect devices row-wise:
+        def get_dest_connections(dest_device, pin_names_name):
+            dev = Parts[dest_device]
+            if isinstance(dev, List):
+                if pin_names_name == 'row-pins':
+                    #print(f"get_dest_connections: {dest_device=}, {pin_names_name=} doing by_row")
+                    return dev.get_cols_by_row()
+                #print(f"get_dest_connections: {dest_device=}, {pin_names_name=} doing by_col")
+                return dev.get_rows_by_col()
+            #print(f"get_dest_connections: {dest_device=}, {pin_names_name=} getting pins from device")
+            ans = []
+            for pin in getattr(dev, convert_name(pin_names_name)):
+                #print(f"get_dest_connections: {dest_device=}, {pin_names_name=} yielding {dev=}, {pin=}")
+                ans.append(((dev, pin),))
+            return ans
+
+        def process_connections(connections_attr):
+            for dest_connect in getattr(self, connections_attr):
+                if isinstance(dest_connect, (tuple, list)):
+                    my_pin, dest_device = dest_connect
+                else:
+                    my_pin, dest_device = None, dest_connect
+                if connections_attr == 'connect_by_row':
+                    my_connects = tuple(self.get_cols_by_row(pin_name=my_pin))
+                    dest_connects = tuple(get_dest_connections(dest_device, 'row-pins'))
+                else:
+                    my_connects = tuple(self.get_rows_by_col(pin_name=my_pin))
+                    dest_connects = tuple(get_dest_connections(dest_device, 'col-pins'))
+                #print(f"{len(my_connects)=}, {len(dest_connects)=}")
+                #print("my_connects", my_connects)
+                #print("dest_connects", dest_connects)
+                for my_cols, dest_cols in zip(my_connects, dest_connects):
+                    my_cols = tuple(my_cols)
+                    dest_cols = tuple(dest_cols)
+                    #print(f"{len(my_cols)=}, {len(dest_cols)=}")
+                    #print("my_cols", my_cols)
+                    #print("dest_cols", dest_cols)
+                    if len(my_cols) == 1 and len(dest_cols) > 1:
+                        my_cols = cycle(my_cols)
+                    if len(dest_cols) == 1 and len(my_cols) > 1:
+                        dest_cols = cycle(dest_cols)
+                    for my_connect, dest_connect in zip(my_cols, dest_cols):
+                        if my_connect[0] is not None and dest_connect[0] is not None:
+                            #print(f"{self.name}: {my_connect=}, {dest_connect=}")
+                            my_dev, my_pin = my_connect
+                            my_dev.get_unique_pin(my_pin).connect_to(dest_connect, quiet=quiet)
+
+        process_connections('connect_by_row')
+        process_connections('connect_by_col')
+
+    def connect_device(self, device, pins, quiet):
         for info in pins:  # info should have 'name' and, maybe, 'connect'
             pin_name = info['name']
             if 'connect' in info:
                 for connect_clause in info['connect']:
                     #print(f"{self.name}.connect_device {device=}, {pin_name=}, {connect_clause=}")
-                    device.get_unique_pin(pin_name).connect_to(connect_clause)
+                    device.get_unique_pin(pin_name).connect_to(connect_clause, quiet=quiet)
 
 def count_pins(pins):
     ans = 0
@@ -367,6 +501,12 @@ def count_pins(pins):
         else:
             ans += 1
     return ans
+
+def unique_justseen(iterable, key=None):
+    "List unique elements, preserving order. Remember only the element just seen."
+    # unique_justseen('AAAABBBCCDAABBB') --> A B C D A B
+    # unique_justseen('ABBCcAD', str.lower) --> A B C A D
+    return map(next, map(itemgetter(1), groupby(iterable, key)))
 
 def ncycles(iterable, n):
     r'''Return the sequence elements n times.
@@ -381,18 +521,18 @@ def grouper(iterable, n, fillvalue=None):
     args = [iter(iterable)] * n
     return zip_longest(*args, fillvalue=fillvalue)
 
-def get_wiring(filename):
+def get_wiring(filename, quiet=False):
     load_devices()
     yaml = read_yaml(filename)
-    return parse_wiring(yaml)
+    return parse_wiring(yaml, quiet)
 
-def parse_wiring(yaml):
+def parse_wiring(yaml, quiet):
     prefixes = parse_prefixes(yaml['prefixes'])
     ans = {}
     ans['controls'] = parse_controls(prefixes, yaml['controls'])
     ans['devices'] = parse_devices(yaml['devices'])
     for p in Parts.values():
-        p.make_connections()
+        p.make_connections(quiet)
     return ans
 
 def parse_prefixes(prefixes):
@@ -467,24 +607,63 @@ if __name__ == "__main__":
     argparser.add_argument('-l', "--little", action='store_true')
     argparser.add_argument('-d', "--devices", action='store_true')
     argparser.add_argument('-i', "--isolated", action='store_true')
+    argparser.add_argument('-s', "--summary", action='store_true')
+    argparser.add_argument('-q', "--quiet", action='store_true')
 
     args = argparser.parse_args()
 
-    wiring = get_wiring("exp_console.yaml")
-    print(len(Parts), "parts")
-    print(len(wiring['controls']), "controls")
-    print(len(wiring['devices']), "devices")
-    print()
+    wiring = get_wiring("exp_console.yaml", args.quiet)
 
-    if args.devices:
+    if args.summary:
+        print(len(Parts), "parts")
+        print(len(wiring['controls']), "controls")
+        print(len(wiring['devices']), "devices")
+    elif args.devices:
         for name, device in all_devices():
-            print(f"{name:20} {len(device.instances):3}")
+            if hasattr(device, 'num_onhand'):
+                if device.num_onhand < len(device.instances):
+                    print(f"{name + ':':21}need {len(device.instances):3}, {device.num_onhand:3} onhand, "
+                          f"ORDER {len(device.instances) - device.num_onhand:3}")
+                else:
+                    print(f"{name + ':':21}need {len(device.instances):3}, {device.num_onhand:3} onhand")
+            else:
+                print(f"{name + ':':21}need {len(device.instances):3}, unknown onhand")
     elif args.little:
+        little_stuff_onhand = get_device('Little-stuff')
         for name, count in sorted(Little_stuff.items()):
-            print(f"{name}: {count}")
+            if hasattr(little_stuff_onhand, convert_name(name)):
+                num_onhand = getattr(little_stuff_onhand, convert_name(name)).num_onhand
+                if num_onhand < count:
+                    print(f"{name+':':20} need {count:3}, {num_onhand:3} onhand, ORDER {count - num_onhand:3}")
+                else:
+                    print(f"{name+':':20} need {count:3}, {num_onhand:3} onhand")
+            else:
+                print(f"{name+':':20} need {count:3}, unknown onhand")
     elif args.isolated:
         for name, part in Parts.items():
-            if not part.connected:
+            if not part.connected and not isinstance(part, List):
                 print(f"part {name} not connected")
+    elif args.part:
+        if args.part != 'all':
+            Parts[args.part].dump()
+        else:
+            lines_per_page = 44
+            lines_left = lines_per_page
+            need_blank_line = False
+            for name, part in sorted(Parts.items()):
+                if not isinstance(part, List):
+                    lines = part.gen_dump_lines()
+                    if len(lines) + need_blank_line > lines_left:
+                        for i in range(lines_left):
+                            print()
+                        lines_left = lines_per_page
+                        need_blank_line = False
+                    if need_blank_line:
+                        print()
+                        lines_left -= 1
+                    for line in lines:
+                        print(line)
+                    lines_left -= len(lines)
+                    need_blank_line = True
     else:
-        Parts[args.part].dump()
+        argparser.print_help()
