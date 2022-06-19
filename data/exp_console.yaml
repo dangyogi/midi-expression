@@ -362,7 +362,9 @@ devices:
   led-controller:  # 2 for Counter, 16 for LEDs, 2 for I2C
     type: nano every
     i2c-addr: 0x32
-    row-pins: [PD0, PD1, PD2, PD3, PD4, PD5, PD7, PB0, PB1, PB2, PC4, PC5, PC6, PE1, PE3, PE8]
+    #row-pins: [PD0, PD1, PD2, PD3, PD4, PD5, PD7, PB0, PB1, PB2, PC4, PC5, PC6, PE0, PE1, PE3]
+    row-pins: [PE1, PC6, PC5, PC4, PE3, PB2, PB1, PB0,
+               PD7, PE0, PD5, PD4, PD3, PD2, PD1, PD0]
     pins:
       - name: D13
         comment: built-in LED
@@ -411,12 +413,12 @@ devices:
       - name: D4
         aka: PC6
 
+      - name: D11
+        aka: PE0
       - name: D12
         aka: PE1
       - name: D8
         aka: PE3
-      - name: D11
-        aka: PE8
 
       - name: 5V
         connect: [[demux-1, Vcc], [demux-2, Vcc], [col-counter, Vcc]]

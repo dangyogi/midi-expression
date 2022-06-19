@@ -4,7 +4,7 @@
 #include <Wire.h>
 #include "flash_errno.h"
 
-extern byte scale_slide_pot(int reading, int calibrated_threshold, int calibrated_center);
+extern byte scale_slide_pot(int reading, int calibrated_row, int calibrated_center, int calibrated_high);
 
 #define MUX_A      9
 #define MUX_B     10
@@ -55,11 +55,14 @@ byte Err_data = 0;
 
 void setup() {
   // put your setup code here, to run once:
+  err_led(ERR_LED, ERR_LED2);
+
+  digitalWrite(ERR_LED, HIGH);
+  digitalWrite(ERR_LED2, HIGH);
+  
   pinMode(MUX_A, OUTPUT);
   pinMode(MUX_B, OUTPUT);
   pinMode(MUX_C, OUTPUT);
-
-  err_led(ERR_LED, ERR_LED2);
 
   Wire.begin(0x31);
   Wire.setClock(400000);
@@ -162,6 +165,9 @@ void setup() {
   
   Serial.print("sizeof(struct pot_info_s) is ");
   Serial.println(sizeof(struct pot_info_s));
+  
+  digitalWrite(ERR_LED, LOW);
+  digitalWrite(ERR_LED2, LOW);
 } // end setup()
 
 // 0 = errno, err_data, all pot values
@@ -287,7 +293,7 @@ void calibrate_high(void) {  // errnos 51-59
     for (pot_addr = 0; pot_addr < Num_pots[a_pin]; pot_addr++) {
       if (values[a_pin][pot_addr] > (1023 - 40)) {
         Pot_info[a_pin][pot_addr].cal_high = values[a_pin][pot_addr];
-        Pot_info[a_pin][pot_addr].calibrated |= CALBRATED_HIGH;
+        Pot_info[a_pin][pot_addr].calibrated |= CALIBRATED_HIGH;
       } else {
         Errno = 51;
         Err_data = values[a_pin][pot_addr];
@@ -301,13 +307,13 @@ void write_calibrations(void) {  // errnos 61-69
   for (a_pin = 0; a_pin < NUM_A_PINS; a_pin++) {
     for (pot_addr = 0; pot_addr < Num_pots[a_pin]; pot_addr++) {
       struct pot_info_s *pi = &Pot_info[a_pin][pot_addr];
-      if (pi->calibrated & CALBRATED_LOW) {
+      if (pi->calibrated & CALIBRATED_LOW) {
         EEPROM.put(EEPROM_cal_low(a_pin, pot_addr), pi->cal_low);
       }
-      if (pi->calibrated & CALBRATED_CENTER) {
+      if (pi->calibrated & CALIBRATED_CENTER) {
         EEPROM.put(EEPROM_cal_center(a_pin, pot_addr), pi->cal_center);
       }
-      if (pi->calibrated & CALBRATED_HIGH) {
+      if (pi->calibrated & CALIBRATED_HIGH) {
         EEPROM.put(EEPROM_cal_high(a_pin, pot_addr), pi->cal_high);
       }
       pi->calibrated = 0;
@@ -451,9 +457,9 @@ void sendReport(void) {
 unsigned int Num_reads = 0;
 unsigned int Read_threshold = 10;
 
-byte Trace_a_pin = 0xFF, Trace_pot_addr = 0xFF;
+byte Trace_on = 0;
 
-void read(byte a_pin, byte pot_addr) {
+void read(byte a_pin, byte pot_addr, byte pot_num) {
   int a = analogRead(A_pins[a_pin]);
 
   struct pot_info_s *pi = &Pot_info[a_pin][pot_addr];
@@ -470,8 +476,10 @@ void read(byte a_pin, byte pot_addr) {
         byte scaled_value = scale_slide_pot(new_value, pi->cal_low, pi->cal_center, pi->cal_high);
         if (pi->value != scaled_value) {
           pi->value = scaled_value;
-          if (a_pin == Trace_a_pin && pot_addr == Trace_pot_addr) {
-            Serial.print("Trace ");
+          if (Trace_on) {
+            Serial.print("Trace: pot_num ");
+            Serial.print(pot_num);
+            Serial.print(" -> ");
             Serial.println(scaled_value);
           }
         } // end if (scaled_value changed)
@@ -495,7 +503,7 @@ void help(void) {
   Serial.println("H - calibrate_high");
   Serial.println("V - view_calibrations");
   Serial.println("W - write_calibrations");
-  Serial.println("Na_pin,pot_addr - trace oN");
+  Serial.println("N - trace oN");
   Serial.println("F - trace ofF");
   Serial.println();
 }
@@ -539,17 +547,18 @@ void loop() {
   // put your main code here, to run repeatedly:
 
   unsigned long start_time = micros();
-  byte a_pin, pot_addr;
+  byte a_pin, pot_addr, pot_num;
   
   Num_reads += 1;
 
   // cycle time is 1.8 mSec
+  pot_num = 0;
   for (a_pin = 0; a_pin < NUM_A_PINS; a_pin++) {
     for (pot_addr = 0; pot_addr < Num_pots[a_pin]; pot_addr++) {
       digitalWrite(MUX_A, pot_addr & 0x1);
       digitalWrite(MUX_B, pot_addr & 0x2);
       digitalWrite(MUX_C, pot_addr & 0x4);
-      read(a_pin, pot_addr);
+      read(a_pin, pot_addr, ++pot_num);
     } // end for (pot_addr)
   } // end for (a_pin)
   
@@ -644,34 +653,13 @@ void loop() {
       Serial.println("write_calibrations done");
       break;
     case 'N':
-      a_pin = Serial.parseInt(SKIP_WHITESPACE);
-      if (a_pin >= NUM_A_PINS) {
-        Serial.print("Invalid a_pin ");  
-        Serial.print(a_pin);
-        Serial.print(" must be < ");
-        Serial.println(NUM_A_PINS);    
-      } else if (Serial.read() != ',') {
-        Serial.println("Missing ',' in 'N' command -- aborted");
-      } else {
-        pot_addr = Serial.parseInt(SKIP_WHITESPACE);
-        if (pot_addr < 8) {
-          Trace_a_pin = a_pin;
-          Trace_pot_addr = pot_addr;
-          Serial.print("Trace oN for a_pin ");
-          Serial.print(a_pin);
-          Serial.print(", pot_addr ");
-          Serial.println(pot_addr);
-        } else {
-          Serial.print("Invalid num_pots ");  
-          Serial.print(pot_addr);
-          Serial.println(" must be < 8");
-        }
-      }
+      Trace_on = 1;
+      Serial.println("Trace oN");
       break;
     case 'F':
-      Trace_a_pin = 0xFF;
-      Trace_pot_addr = 0xFF;
+      Trace_on = 0;
       Serial.println("Trace ofF");
+      break;
     case ' ': case '\t': case '\n': case '\r': break;
     default: help(); break;
     } // end switch (c)

@@ -1,0 +1,83 @@
+The led-controller allows access over I2C to turn on/off up to 256 LEDS.  This includes
+each segment (and DP) in each digit of the numeric displays, counting each as a seperate
+LED, as well as each segment (and DP) of the 14-segment alpha displays.  At the time of 
+this writing, this added up to 198 LEDs, including 96 within four 3-digit numeric displays
+and 60 within four alpha displays.  This leaves 42 that are actual individual LEDs.
+
+Due to the numeric and alpha displays, the controller offers three levels of access to
+the LEDS:
+
+  1. Access to each individual LED.  At this level all of the LEDs (including segments)
+     are simply layed out in one long bitmap.  A 1 bit lights the LED, a 0 bit turns it off.
+     This bitmap may be set:
+
+     - one bit at a time for any bit
+     - 8 bits (one byte) at a time on any byte boundary
+     - 16 bits (two bytes) at a time on any 2-byte boundary
+
+     This bitmap is used to cycle through the LED columns in the innermost loop.  This loop
+     has no concept of numeric or alpha displays.
+
+  2. Access to numeric displays.
+
+     This access is designed to allow the setting of all three digits of 1 numeric display
+     in a single I2C command.  The command has the display#, digit1, digit2, digit3, and
+     a 3-bit DP-bitmap.  The led controller does the 7 segment decoding.
+
+  3. Access to alpha displays.
+
+     It is assumed that the alpha displays are being used to display more characters than
+     there are display units.  So the full text (up to 30 chars) is sent in one command.
+     The led controller takes care of both the scrolling and the 14 segment decoding.  It
+     only displays uppercase letters, so it converts lowercase letters to uppercase for
+     display.  It will collapse a '.' between the two letters on either side of it, setting
+     the DP on the letter to it's left.  If there the '.' is the first char in the string,
+     a space is added to the front of the string.
+
+     Thus, individual alpha displays are grouped into units, where each unit may display
+     a different string.
+
+     The command has the unit#, string.
+
+
+The innermost loop is coded as a step() function.  This function takes a "who donnit" code,
+which will be placed into Err_data if the function didn't get called quickly enough.  It
+does the following each time it's called:
+
+  - Wait for the conclusion of the 100uSec interval with the LEDs on for the last column
+    set up.  If the interval has already expired, set the Errno and Err_data, set a global
+    disable flag, and turn off all LED rows.
+
+  - Turn off all LED rows.
+
+  - If this is the 15th column, do a reset on the counter (pulse MR).  Otherwise, increment
+    the counter (pulse CP line).
+
+  - While the LEDs are still off, call timeout().
+
+    - timeout() is where long-duration code is given a chance to run.  It doesn't have to 
+      worry about calling step() quickly enough because it is called when all of the LEDs
+      are off.  The Wire callbacks simply set a "todo" flag to trigger the code to run later
+      when convenient.  They should set a flag to catch the situation where a subsequent
+      request comes in before the current request has finished being processed.
+
+      If the timeout() function were called only once at the end of displaying all of the
+      columns, it would be called roughly every 1.6 mSec.  At 400kHz, this enough time for
+      the master-controller to transmit ~80 bytes!  (The Wire buffer is only 32 bytes)...
+
+      So, instead, the timeout() function is called at the end of each column.  This should
+      end up getting called roughly once every 100 uSec, which is only enough time for
+      Wire to transmit ~5 bytes.
+
+  - Turn on the LEDs for the current column and get the time (in micros()) to start the
+    next 100 uSec period.
+
+
+PORT manipulation:
+    PORTB.OUT = <8-bits>
+    PORTB.OUTSET   eliminates port read, 1 bit sets that pin, 0 bit unchanged
+    PORTB.OUTCLR   eliminates port read, 1 bit clears that pin, 0 bit unchanged
+    PORTB.OUTTGL
+    PORTB.DIR      1 bit for output, 0 for input
+    PORTB.DIRSET   1 bit for output, 0 for no change
+    PORTB.DIRCLR   1 bit for input, 0 for no change

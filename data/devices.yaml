@@ -242,9 +242,9 @@ Counter:
   pins:
     - name: MR
       inverted: true
-      comment: master reset, independent of clock
+      comment: master reset, independent of clock, 30nSec pulse width
     - name: CP
-      comment: clock, triggers on transition to high
+      comment: clock, triggers on transition to high, 25nSec pulse width
     - name: P0
       connect: [[GND]]
     - name: P1
@@ -485,6 +485,7 @@ Nano Every:
   ordered-from: arduino.cc
   price: 27.90 for 3 pack
   num-onhand: 3
+  microcontroller: ATMega4809
   flash: 48KB
   sram: 6KB
   EEPROM: 256B
@@ -510,7 +511,7 @@ Nano Every:
     PB: [D9, D10, D5]
     PC: [TX, RX, D4]
     PD: [A3, A2, A1, A0, A6, A7, AREF]
-    PE: [D12, D13, D8, D11]
+    PE: [D11, D12, D13, D8]
     PF: [D6, D3]
   pins:
     - name: D13
@@ -584,7 +585,7 @@ Nano Every:
     - name: D10
       aka: PB1
     - name: D11
-      aka: PE8
+      aka: PE0
     - name: D12
       aka: PE1
 
@@ -632,6 +633,8 @@ Nano Every:
     - name: AREF
       aka: PD7
 
+    - name: D11
+      aka: PE0
     - name: D12
       aka: PE1
     - name: D13
@@ -639,8 +642,6 @@ Nano Every:
       aka: PE2
     - name: D8
       aka: PE3
-    - name: D11
-      aka: PE8
 
     - name: D6
       aka: PF4
@@ -652,6 +653,7 @@ Nano 33 IoT:
   ordered-from: arduino.cc
   price: 19.40
   num-onhand: 3
+  microcontroller: SAMD21
   flash: 264KB
   sram: 256KB
   EEPROM: null
