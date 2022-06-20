@@ -1,7 +1,5 @@
 // step.ino
 
-//#include "step.h"
-
 #define COUNTER_MR_NOT  6     /* PF4 */
 #define COUNTER_CP      3     /* PF5 */
 
@@ -25,6 +23,15 @@
 //#define COL_15          A3    /* PD0 */
 
 byte Num_rows;
+
+/***
+typedef struct {   // size 4 bytes, representing 16 bits (cols)
+  byte port_d;  // 7, 5-0 -> COL_8, COL_10 to COL_15
+  byte port_b;  // 2-0    -> COL_5 to COL_7
+  byte port_c;  // 6-4    -> COL_1 to COL_3
+  byte port_e;  // 3,1,0  -> COL_4, COL_0, COL_9
+} col_ports_t;
+***/
 
 col_ports_t Col_ports[NUM_ROWS];   // 64 bytes
 
@@ -128,7 +135,7 @@ unsigned short On_start, On_end;
 
 byte Current_row = NUM_ROWS - 1;
 
-extern void timeout(void);      // defined elsewhere...
+//extern void timeout(void);      // defined elsewhere...
 
 void step(byte who_dunnit_errno) {
   // caller has 100 uSec (1600 processor clock cycles) to call this after prior call.

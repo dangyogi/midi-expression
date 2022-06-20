@@ -1,10 +1,6 @@
 // sketch_numeric_displays.ino
 
-#include "flash_errno.h"
-//#include "step.h"
-#include "sketch_numeric_displays.h"
-
-static byte EEPROM_numeric_offset;
+byte EEPROM_numeric_offset;
 
 byte EEPROM_Num_numeric_displays(void) {
   return EEPROM_numeric_offset;

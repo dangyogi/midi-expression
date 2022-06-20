@@ -1,14 +1,11 @@
 // sketch_alpha_displays.ino
 
-#include "flash_errno.h"
-
-//#include "step.h"
-//#include "sketch_alpha_displays.h"
+// includes from sketch_led.ino show up here with Arduino IDE!
 
 // Defines "const col_ports_t Alpha_decoder[]" indexed by char (< 128)
 #include "Alpha_decoder.h"
 
-static byte EEPROM_alpha_offset;
+byte EEPROM_alpha_offset;
 
 byte EEPROM_Num_alpha_strings(void) {
   return EEPROM_alpha_offset;
