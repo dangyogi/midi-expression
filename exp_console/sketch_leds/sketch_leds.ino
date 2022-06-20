@@ -5,8 +5,8 @@
 #include "flash_errno.h"
 
 #include "step.h"
-#include "sketch_numeric_displays.h"
-#include "sketch_alpha_displays.h"
+#include "numeric_displays.h"
+#include "alpha_displays.h"
 
 #define NUM_EEPROM_USED     EEPROM_needed
 #define EEPROM_SIZE         (EEPROM.length())
