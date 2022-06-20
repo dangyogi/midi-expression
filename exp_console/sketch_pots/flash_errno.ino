@@ -9,6 +9,9 @@ byte Current_delay = 0;
 byte Level;
 unsigned long Start_time;
 
+byte Errno;
+byte Err_data;
+
 byte Last_errno = 0;
 
 byte LED_pin1 = 13, LED_pin2 = 0xFF;
@@ -31,8 +34,8 @@ void push(int delay) {
   }
 }
 
-void errno(byte current_errno) {
-  if (current_errno == 0) {
+void errno(void) {
+  if (Errno == 0) {
     Last_errno = 0;
     Num_delays = 0;
     digitalWrite(LED_pin1, LOW);
@@ -42,7 +45,8 @@ void errno(byte current_errno) {
   } else {
     if (Last_errno == 0) {
       // Display this errno!
-      Last_errno = current_errno;
+      byte current_errno = Errno;
+      Last_errno = Errno;
       byte i;
       byte divisor = 100;
       byte seen_first = 0;

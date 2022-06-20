@@ -47,18 +47,12 @@ struct pot_info_s {   // size 14 bytes
 // indexed by [A_pin#][pot#]
 struct pot_info_s Pot_info[NUM_A_PINS][8];   
 
-byte Errno = 0;
-byte Err_data = 0;
-
 #define ERR_LED    13   // built-in LED
 #define ERR_LED2   12   // LED on panel
 
 void setup() {
   // put your setup code here, to run once:
   err_led(ERR_LED, ERR_LED2);
-
-  digitalWrite(ERR_LED, HIGH);
-  digitalWrite(ERR_LED2, HIGH);
   
   pinMode(MUX_A, OUTPUT);
   pinMode(MUX_B, OUTPUT);
@@ -67,6 +61,13 @@ void setup() {
   Wire.begin(0x31);
   Wire.setClock(400000);
   Serial.begin(9600);
+
+  while (!Serial) {
+      digitalWrite(ERR_LED, HIGH);
+      digitalWrite(ERR_LED2, HIGH);
+  }
+  digitalWrite(ERR_LED, LOW);
+  digitalWrite(ERR_LED2, LOW);
   
   byte a_pin, pot_addr;
   byte num_pots_msg_seen = 0;
@@ -165,9 +166,6 @@ void setup() {
   
   Serial.print("sizeof(struct pot_info_s) is ");
   Serial.println(sizeof(struct pot_info_s));
-  
-  digitalWrite(ERR_LED, LOW);
-  digitalWrite(ERR_LED2, LOW);
 } // end setup()
 
 // 0 = errno, err_data, all pot values
@@ -561,6 +559,38 @@ void loop() {
       read(a_pin, pot_addr, ++pot_num);
     } // end for (pot_addr)
   } // end for (a_pin)
+
+  if (!Serial) {
+      digitalWrite(ERR_LED, HIGH);
+      digitalWrite(ERR_LED2, HIGH);
+  } else {
+      digitalWrite(ERR_LED, LOW);
+      digitalWrite(ERR_LED2, LOW);
+  }
+  
+  byte a_pin, pot_addr;
+  byte num_pots_msg_seen = 0;
+  byte cal_msg_seen = 0;
+  for (a_pin = 0; a_pin < NUM_A_PINS; a_pin++) {
+    byte num_pots = EEPROM[EEPROM_num_pots_addr(a_pin)];
+    if (num_pots == 0xFF) {
+      Num_pots[a_pin] = 1;
+      if (!num_pots_msg_seen) {
+        Serial.print("Num_pots for ");
+        Serial.print(a_pin);
+        Serial.println(" not set in EEPROM");
+        num_pots_msg_seen = 1;
+      }
+    } else if (num_pots > 8) {
+      Num_pots[a_pin] = 8;
+      Errno = 100;
+      Err_data = a_pin;
+    } else Num_pots[a_pin] = num_pots;
+    for (pot_addr = 0; pot_addr < 8; pot_addr++) {
+      // Go ahead and initialize all 8, in case the number of pots changes...
+      Pot_info[a_pin][pot_addr].a_low = 100000;
+      Pot_info[a_pin][pot_addr].a_high = -100000;
+      Pot_info[a_pin][pot_addr].last_reported = -1;
   
   if (Num_reads >= Read_threshold) Num_reads = 1;
 
@@ -665,7 +695,7 @@ void loop() {
     } // end switch (c)
   } // end if (Serial.available())
   
-  errno(Errno);   // Flash pin 13
+  errno();   // Flash pin D13 and D12
   
   Cycle_time = micros() - start_time;
 }

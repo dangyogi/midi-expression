@@ -3,7 +3,15 @@
 from collections import defaultdict
 
 
-Segments = frozenset("A B C D E F G1 G2 J I H K L M DP".split())
+Segments = frozenset("A B C D E F G1 G2 H I J K L M DP".split())
+
+#        A       -----
+#      FHIJB     |\|/|
+#      G1 G2     -- --
+#      EMLKC     |/|\|
+#        D  DP   ----- .
+
+Unknown_letter = frozenset("A B C D E F H J M K".split())
 
 Segment_map = {
     'A': frozenset("F H G1 E K".split()),
@@ -45,32 +53,106 @@ Segment_map = {
     '-': frozenset("G1 G2".split()),
     '_': frozenset("D".split()),
     '.': frozenset("DP".split()),
+    ' ': frozenset("".split()),
+    '/': frozenset("M J".split()),
+    '\\': frozenset("H K".split()),
+    '|': frozenset("I L".split()),
+    '$': frozenset("A F G1 G2 C D I L".split()),
+    '&': frozenset("C K H A J M D".split()),
+    '*': frozenset("H I J M L K G1 G2".split()),
+    '+': frozenset("I L G1 G2".split()),
+    '=': frozenset("G1 G2 D".split()),
+    '<': frozenset("J K".split()),
+    '>': frozenset("H M".split()),
+    '"': frozenset("H J".split()),
+    "'": frozenset("J".split()),
+    "`": frozenset("H".split()),
 }
 
-Sets_by_segment = defaultdict(list)
+Segment_to_bit_number = {letter: i
+                         for i, letter in enumerate(sorted(Segments.difference(["DP"])))}
+Segment_to_bit_number["DP"] = 14
+#print(f"{Segment_to_bit_number=}")
 
-for segments in Segment_map.values():
-    for segment in segments:
-        Sets_by_segment[segment].append(segments)
+Col_ports = [
+    ("e", 1),  # 0
+    ("c", 6),  # 1
+    ("c", 5),  # 2
+    ("c", 4),  # 3
+    ("e", 3),  # 4
+    ("b", 2),  # 5
+    ("b", 1),  # 6
+    ("b", 0),  # 7
+    ("d", 7),  # 8
+    ("e", 0),  # 9
+    ("d", 5),  # 10
+    ("d", 4),  # 11
+    ("d", 3),  # 12
+    ("d", 2),  # 13
+    ("d", 1),  # 14
+    ("d", 0),  # 15
+]
 
-print("Inclusive segments:")
-for key, sequences in Sets_by_segment.items():
-    segments = Segments.intersection(*sequences)
-    assert len(segments) > 0, f"{key=}, {sequences=}"
-    if len(segments) > 1:
-        print(key, '->', sorted(segments - {key,}))
+Port_order = "decb"
 
-print()
-print("Exclusive segments:")
-for key, sequences in Sets_by_segment.items():
-    segments = Segments.difference(*sequences)
-    assert len(segments) > 0, f"{key=}, {sequences=}"
-    if len(segments) > 1:
-        print(key, '->', sorted(segments))
+#print(f"{sorted(Col_ports)=}")
+
+if False:
+    Sets_by_segment = defaultdict(list)
+
+    for segments in Segment_map.values():
+        for segment in segments:
+            Sets_by_segment[segment].append(segments)
+
+    print("Inclusive segments:")
+    for key, sequences in Sets_by_segment.items():
+        segments = Segments.intersection(*sequences)
+        assert len(segments) > 0, f"{key=}, {sequences=}"
+        if len(segments) > 1:
+            print(key, '->', sorted(segments - {key,}))
+
+    print()
+    print("Exclusive segments:")
+    for key, sequences in Sets_by_segment.items():
+        segments = Segments.difference(*sequences)
+        assert len(segments) > 0, f"{key=}, {sequences=}"
+        if len(segments) > 1:
+            print(key, '->', sorted(segments))
 
 
 
 if __name__ == "__main__":
-    print(len(Segments))
-    print(len(Segment_map))
-    print(len(Sets_by_segment))
+    from itertools import groupby
+    from operator import itemgetter
+
+    if False:
+        print(len(Segments))
+        print(len(Segment_map))
+        print(len(Sets_by_segment))
+
+    print("// Alpha_decoder.h")
+    print()
+    print("const struct col_ports_s Alpha_decoder[] = {")
+    for i in range(128):
+        c = chr(i).upper()
+        #if c not in Segment_map:
+        #    print("  {0b11111111, 0b11111111, 0b11111111, 0b11111111", end='')
+        #else:
+        ports = {port: 0 for port in Col_ports}
+        for segment in Segment_map.get(c, Unknown_letter):
+            ports[Col_ports[Segment_to_bit_number[segment]]] = 1 
+        port_nums = {}
+        for port, bits in groupby(sorted(ports.keys()), itemgetter(0)):
+            n = 0
+            for bit in bits:
+                n |= ports[port, bit[1]] << bit[1]
+            port_nums[port] = f"0b{n:08b}"
+        print("  {", end='')
+        print(', '.join((port_nums[port] if port in port_nums else "0b0")
+                        for port in Port_order), end='')
+        if i < 127:
+            print("},")
+        else:
+            print("}")
+    print("};")
+
