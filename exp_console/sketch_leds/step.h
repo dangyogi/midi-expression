@@ -1,4 +1,4 @@
-// sketch_step.h
+// step.h
 
 #define NUM_COLS            16
 #define NUM_ROWS            16

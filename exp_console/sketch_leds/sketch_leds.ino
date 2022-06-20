@@ -96,36 +96,27 @@ void receiveRequest(int how_many) {
 
 void step_receiveRequest(void) {
   // request from on high
-  byte b0, b1, b2;
+  byte b0, b1, b2, b3;
   b0 = Wire.read();
-  if (b0 < 5) {
+  if (b0 < 6) {
     if (!check_eq(How_many, 1, 1)) Report = b0;
   } else if (b0 < 7) {
+    // b0 == 6
     if (!check_eq(How_many, 2, 2)) {
       b1 = Wire.read();
-      if (b0 == 5) {
-        if (!check_ls(b1, NUM_A_PINS, 3)) {
-          Report = b0;
-          Report_addr = b1;
-        }
-      } else {
-        // b0 == 6
-        if (!check_ls(b1, EEPROM[NUM_EEPROM_USED], 4)) {
-          Report = b0;
-          Report_addr = b1;
-        }
+      if (!check_ls(b1, EEPROM[NUM_EEPROM_USED], 4)) {
+        Report = b0;
+        Report_addr = b1;
       }
     }
   } else {
     switch (b0) {
-    case 8:  // set num pots, a_pin, number
-      if (check_eq(How_many, 3, 8)) break;
+    case 8:  // set num rows
+      if (check_eq(How_many, 2, 8)) break;
       b1 = Wire.read();
-      if (check_ls(b1, NUM_A_PINS, 9)) break;
-      b2 = Wire.read();
-      if (check_ls(b2, 8, 10)) break;
-      Num_pots[b1] = b2;
-      EEPROM[EEPROM_num_pots_addr(b1)] = b2;
+      if (check_ls(b1, NUM_ROWS, 9)) break;
+      Num_rows = b1;
+      EEPROM[EEPROM_Num_rows] = b1;
       break;
     case 9:  // store EEPROM addr, value
       if (check_eq(How_many, 3, 20)) break;
@@ -134,6 +125,46 @@ void step_receiveRequest(void) {
       b2 = Wire.read();
       if (b1 > EEPROM[NUM_EEPROM_USED]) EEPROM[NUM_EEPROM_USED] = b1;
       EEPROM[EEPROM_storage_addr(b1)] = b2;
+      break;
+    case 10:  // set Num_numeric_displays
+      if (check_eq(How_many, 2, 8)) break;
+      b1 = Wire.read();
+      if (check_ls(b1, MAX_NUMERIC_DISPLAYS, 9)) break;
+      Num_numeric_displays = b1;
+      EEPROM[EEPROM_Num_numeric_displays()] = b1;
+      break;
+    case 11:  // set <numeric_display>, size, offset
+      if (check_eq(How_many, 4, 8)) break;
+      b1 = Wire.read();
+      if (check_ls(b1, Num_numeric_displays, 9)) break;
+      b2 = Wire.read();
+      if (check_ls(b2, MAX_NUMERIC_DISPLAY_SIZE, 9)) break;
+      b3 = Wire.read();
+      if (check_ls(b3, Num_rows * NUM_COLS / 8, 9)) break;
+      Numeric_display_size[b1] = b2;
+      EEPROM[EEPROM_Numeric_display_size(b1)] = b2;
+      Numeric_display_offset[b1] = b3;
+      EEPROM[EEPROM_Numeric_display_offset(b1)] = b3;
+      break;
+    case 12:  // set Num_alpha_strings
+      if (check_eq(How_many, 2, 8)) break;
+      b1 = Wire.read();
+      if (check_ls(b1, MAX_NUM_STRINGS, 9)) break;
+      Num_alpha_strings = b1;
+      EEPROM[EEPROM_Num_alpha_strings()] = b1;
+      break;
+    case 13:  // set <string_num>, num_chars, index
+      if (check_eq(How_many, 4, 8)) break;
+      b1 = Wire.read();
+      if (check_ls(b1, Num_alpha_strings, 9)) break;
+      b2 = Wire.read();
+      if (check_ls(b2, MAX_STRING_LEN, 9)) break;
+      b3 = Wire.read();
+      if (check_ls(b3, Num_rows * NUM_COLS / 16, 9)) break;
+      Alpha_num_chars[b1] = b2;
+      EEPROM[EEPROM_Alpha_num_chars(b1)] = b2;
+      Alpha_index[b1] = b3;
+      EEPROM[EEPROM_Alpha_index(b1)] = b3;
       break;
     default:
       Errno = 110;
@@ -157,7 +188,7 @@ void sendReport(void) {
 }
 
 void step_sendReport(void) {
-  byte a_pin, pot_addr;
+  byte i;
   switch (Report) {
   case 0:  // Errno, Err_data
     Wire.write(Errno);
@@ -166,17 +197,32 @@ void step_sendReport(void) {
     Err_data = 0;
     break;
   case 1:  // Num_rows, NUM_COLS, Num_numeric_displays, Num_alpha_displays, EEPROM_AVAIL,
-           // EEPROM USED (4 bytes total)
+           // EEPROM USED (6 bytes total)
     Wire.write(Num_rows);
     Wire.write(byte(NUM_COLS));
-
+    Wire.write(Num_numeric_displays);
+    Wire.write(Num_alpha_strings);
     Wire.write(byte(EEPROM_AVAIL));
     Wire.write(EEPROM[NUM_EEPROM_USED]);
     break;
-  case 2:  // num_digits (Num_numeric_displays bytes)
-  case 3:  // alpha_displays FIX
+  case 2:  // numeric_display_size (Num_numeric_displays bytes)
+    for (i = 0; i < Num_numeric_displays; i++) {
+      Wire.write(Numeric_display_size[i]);
+    }
+    break;
+  case 3:  // numeric_display_offset (Num_numeric_displays bytes)
+    for (i = 0; i < Num_numeric_displays; i++) {
+      Wire.write(Numeric_display_offset[i]);
+    }
+    break;
   case 4:  // Cycle_time (uSec, 4 bytes total)
     Wire.write(Cycle_time);
+    break;
+  case 5:  // alpha_num_chars, alpha_index (2*Num_alpha_strings bytes)
+    for (i = 0; i < Num_alpha_strings; i++) {
+      Wire.write(Alpha_num_chars[i]);
+      Wire.write(Alpha_index[i]);
+    }
     break;
   case 6:  // next stored EEPROM byte (1 byte, EEPROM_addr auto-incremented)
     if (Report_addr < EEPROM[NUM_EEPROM_USED]) {
@@ -194,7 +240,13 @@ void help(void) {
   Serial.println();
   Serial.println("? - help");
   Serial.println("P - show Num_rows");
-  Serial.println("Sn - set Num_rows to n");
+  Serial.println("Rn - set Num_rows to n");
+  Serial.println("A - show Alpha_string settings");
+  Serial.println("Sn - set Num_alpha_strings to n");
+  Serial.println("C<str>,chars,index - set Alpha_num_chars, Alpha_index for <str>");
+  Serial.println("D - show Num_numeric_displays");
+  Serial.println("Nn - set Num_numeric_displays to n");
+  Serial.println("U<disp>,size,offset - set Numeric_display_size, Numeric_display_offset for <disp>");
   Serial.println("T - show Cycle_time");
   Serial.println("X<errno> - set Errno");
   Serial.println("E - show Errno, Err_data");
@@ -222,38 +274,124 @@ void timeout(void) {
 
   if (Serial.available()) {
     char c = toupper(Serial.read());
-    byte n;
+    byte b0, b1, b2;
     switch (c) {
     case '?': help(); break;
     case 'P':
-      for (a_pin = 0; a_pin < NUM_A_PINS - 1; a_pin++) {
-        Serial.print(Num_pots[a_pin]);
-        Serial.print(", ");
+      Serial.print("Num_rows: ");
+      Serial.println(Num_rows);
+      break;
+    case 'R':
+      b0 = Serial.parseInt(SKIP_WHITESPACE);
+      if (b0 >= NUM_ROWS) {
+        Serial.print("Invalid num_rows ");  
+        Serial.print(b0);
+        Serial.print(" must be < ");
+        Serial.println(NUM_ROWS);    
+      } else {
+        Num_rows = b0;
+        EEPROM[EEPROM_Num_rows] = b0;
       }
-      Serial.println(Num_pots[NUM_A_PINS - 1]);
+      break;
+
+    case 'A':
+      Serial.print("Num_alpha_strings: ");
+      Serial.println(Num_alpha_strings);
       break;
     case 'S':
-      a_pin = Serial.parseInt(SKIP_WHITESPACE);
-      if (a_pin >= NUM_A_PINS) {
-        Serial.print("Invalid a_pin ");  
-        Serial.print(a_pin);
+      b0 = Serial.parseInt(SKIP_WHITESPACE);
+      if (b0 >= MAX_NUM_STRINGS) {
+        Serial.print("Invalid Num_alpha_strings ");  
+        Serial.print(b0);
         Serial.print(" must be < ");
-        Serial.println(NUM_A_PINS);    
-      } else if (Serial.read() != ',') {
-        Serial.println("Missing ',' in 'S' command -- aborted");
+        Serial.println(MAX_NUM_STRINGS);    
       } else {
-        n = Serial.parseInt(SKIP_WHITESPACE);
-        if (n < 8) {
-          Num_pots[a_pin] = n;
-          EEPROM[EEPROM_num_pots_addr(a_pin)] = n;
-          Serial.print("Num_pots for a_pin ");
-          Serial.print(a_pin);
-          Serial.print(" set to ");
-          Serial.println(n);
+        Num_alpha_strings = b0;
+        EEPROM[EEPROM_Num_alpha_strings()] = b0;
+      }
+      break;
+    case 'C':
+      b0 = Serial.parseInt(SKIP_WHITESPACE);
+      if (b0 >= NUM_ROWS) {
+        Serial.print("Invalid num_rows ");  
+        Serial.print(b0);
+        Serial.print(" must be < ");
+        Serial.println(NUM_ROWS);    
+      } else if (Serial.read() != ',') {
+        Serial.println("Missing ',' in 'C' command -- aborted");
+      } else {
+        b1 = Serial.parseInt(SKIP_WHITESPACE);
+        if (b1 >= MAX_STRING_LEN) {
+          Serial.print("Invalid Alpha_num_chars ");  
+          Serial.print(b1);
+          Serial.print(" must be < ");
+          Serial.println(MAX_STRING_LEN);    
+        } else if (Serial.read() != ',') {
+          Serial.println("Missing ',' in 'C' command -- aborted");
         } else {
-          Serial.print("Invalid num_pots ");  
-          Serial.print(n);
-          Serial.println(" must be < 8");
+          b2 = Serial.parseInt(SKIP_WHITESPACE);
+          if (b2 >= Num_rows * NUM_COLS / 16) {
+            Serial.print("Invalid Alpha_index ");  
+            Serial.print(b2);
+            Serial.print(" must be < ");
+            Serial.println(Num_rows * NUM_COLS / 16);    
+          } else {
+            Alpha_num_chars[b0] = b1;
+            EEPROM[EEPROM_Alpha_num_chars(b0)] = b1;
+            Alpha_index[b0] = b2;
+            EEPROM[EEPROM_Alpha_index(b0)] = b2;
+          }
+        }
+      }
+      break;
+
+    case 'D':
+      Serial.print("Num_numeric_displays: ");
+      Serial.println(Num_numeric_displays);
+      break;
+    case 'N':
+      b0 = Serial.parseInt(SKIP_WHITESPACE);
+      if (b0 >= MAX_NUMERIC_DISPLAYS) {
+        Serial.print("Invalid Num_numeric_displays ");  
+        Serial.print(b0);
+        Serial.print(" must be < ");
+        Serial.println(MAX_NUMERIC_DISPLAYS);    
+      } else {
+        Num_numeric_displays = b0;
+        EEPROM[EEPROM_Num_numeric_displays()] = b0;
+      }
+      break;
+    case 'U':
+      b0 = Serial.parseInt(SKIP_WHITESPACE);
+      if (b0 >= Num_numeric_displays) {
+        Serial.print("Invalid numeric_display ");  
+        Serial.print(b0);
+        Serial.print(" must be < ");
+        Serial.println(Num_numeric_displays);    
+      } else if (Serial.read() != ',') {
+        Serial.println("Missing ',' in 'U' command -- aborted");
+      } else {
+        b1 = Serial.parseInt(SKIP_WHITESPACE);
+        if (b1 >= MAX_NUMERIC_DISPLAY_SIZE) {
+          Serial.print("Invalid Numeric_display_size ");  
+          Serial.print(b1);
+          Serial.print(" must be < ");
+          Serial.println(MAX_NUMERIC_DISPLAY_SIZE);    
+        } else if (Serial.read() != ',') {
+          Serial.println("Missing ',' in 'U' command -- aborted");
+        } else {
+          b2 = Serial.parseInt(SKIP_WHITESPACE);
+          if (b2 >= Num_rows * NUM_COLS / 8) {
+            Serial.print("Invalid Numeric_display_offset ");  
+            Serial.print(b2);
+            Serial.print(" must be < ");
+            Serial.println(Num_rows * NUM_COLS / 8);
+          } else {
+            Numeric_display_size[b0] = b1;
+            EEPROM[EEPROM_Numeric_display_size(b0)] = b1;
+            Numeric_display_offset[b0] = b2;
+            EEPROM[EEPROM_Numeric_display_offset(b0)] = b2;
+          }
         }
       }
       break;

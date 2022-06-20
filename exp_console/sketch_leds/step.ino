@@ -1,6 +1,6 @@
 // step.ino
 
-#include "step.h"
+//#include "step.h"
 
 #define COUNTER_MR_NOT  6     /* PF4 */
 #define COUNTER_CP      3     /* PF5 */

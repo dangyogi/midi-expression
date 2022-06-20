@@ -2,24 +2,24 @@
 
 #include "flash_errno.h"
 
-#include "step.h"
-#include "sketch_alpha_displays.h"
+//#include "step.h"
+//#include "sketch_alpha_displays.h"
 
 // Defines "const col_ports_t Alpha_decoder[]" indexed by char (< 128)
 #include "Alpha_decoder.h"
 
-static byte EEPROM_offset;
+static byte EEPROM_alpha_offset;
 
 byte EEPROM_Num_alpha_strings(void) {
-  return EEPROM_offset;
+  return EEPROM_alpha_offset;
 }
 
 byte EEPROM_Alpha_num_chars(byte string_num) {
-  return 1 + string_num;
+  return 1 + string_num + EEPROM_alpha_offset;
 }
 
 byte EEPROM_Alpha_index(byte string_num) {
-  return 1 + MAX_NUM_STRINGS + string_num;
+  return 1 + MAX_NUM_STRINGS + string_num + EEPROM_alpha_offset;
 }
 
 byte Num_alpha_strings;
@@ -28,7 +28,7 @@ byte Alpha_index[MAX_NUM_STRINGS];     // word index for left-most char display
 
 byte setup_alpha_displays(byte my_EEPROM_offset) {
   // put your setup code here, to run once:
-  EEPROM_offset = my_EEPROM_offset;
+  EEPROM_alpha_offset = my_EEPROM_offset;
 
   byte b = EEPROM[EEPROM_Num_alpha_strings()];
   if (b == 0xFF) {

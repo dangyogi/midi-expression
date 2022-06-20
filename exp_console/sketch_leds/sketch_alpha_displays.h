@@ -9,6 +9,10 @@ extern byte EEPROM_Num_alpha_strings(void);
 extern byte EEPROM_Alpha_num_chars(byte string_num);
 extern byte EEPROM_Alpha_index(byte string_num);
 
+extern byte Num_alpha_strings;
+extern byte Alpha_num_chars[MAX_NUM_STRINGS];
+extern byte Alpha_index[MAX_NUM_STRINGS];
+
 extern byte setup_alpha_displays(byte my_EEPROM_offset);
 
 extern void load_string(byte string_num, char *s);

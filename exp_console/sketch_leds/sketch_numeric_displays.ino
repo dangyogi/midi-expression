@@ -1,21 +1,21 @@
 // sketch_numeric_displays.ino
 
 #include "flash_errno.h"
-#include "step.h"
+//#include "step.h"
 #include "sketch_numeric_displays.h"
 
-static byte EEPROM_offset;
+static byte EEPROM_numeric_offset;
 
 byte EEPROM_Num_numeric_displays(void) {
-  return EEPROM_offset;
+  return EEPROM_numeric_offset;
 }
 
 byte EEPROM_Numeric_display_size(byte numeric_display) {
-  return 1 + numeric_display;
+  return 1 + numeric_display + EEPROM_numeric_offset;
 }
 
 byte EEPROM_Numeric_display_offset(byte numeric_display) {
-  return 1 + MAX_NUMERIC_DISPLAYS + numeric_display;
+  return 1 + MAX_NUMERIC_DISPLAYS + numeric_display + EEPROM_numeric_offset;
 }
 
 byte Num_numeric_displays;
@@ -23,7 +23,7 @@ byte Numeric_display_size[MAX_NUMERIC_DISPLAYS];    // number of digits
 byte Numeric_display_offset[MAX_NUMERIC_DISPLAYS];  // byte_num of right-most digit
 
 byte setup_numeric_displays(byte my_EEPROM_offset) {
-  EEPROM_offset = my_EEPROM_offset;
+  EEPROM_numeric_offset = my_EEPROM_offset;
   byte b = EEPROM[EEPROM_Num_numeric_displays()];
   if (b == 0xFF) {
     Serial.println("Num_numeric_displays not set in EEPROM");
