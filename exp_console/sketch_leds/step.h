@@ -19,5 +19,8 @@ extern byte Num_rows;
 extern byte setup_step(void);   // return EEPROM needed
 extern void step(byte who_dunnit_errno);
 
+extern void led_on(byte bit_num);
+extern void led_off(byte bit_num);
+
 extern byte load_8(byte bits, byte byte_num);
 extern byte load_16(unsigned short bits, byte word_num);

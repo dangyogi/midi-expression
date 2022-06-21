@@ -72,10 +72,86 @@ byte setup_step(void) {
   return 1;
 } // end setup_step()
 
+void led_on(byte bit_num) {
+  if (bit_num >= Num_rows * NUM_COLS) {
+    Errno = 50;
+    Err_data = bit_num;
+    return;
+  }
+  byte row = bit_num >> 4;
+  byte col = bit_num & 0x0F;
+  switch (col) {                  // 76543210
+  case 0:  Col_port[row].port_e |= 0b00000010; break;
+  case 1:  Col_port[row].port_c |= 0b01000000; break;
+  case 2:  Col_port[row].port_c |= 0b00100000; break;
+  case 3:  Col_port[row].port_c |= 0b00010000; break;
+  case 4:  Col_port[row].port_e |= 0b00001000; break;
+  case 5:  Col_port[row].port_b |= 0b00000100; break;
+  case 6:  Col_port[row].port_b |= 0b00000010; break;
+  case 7:  Col_port[row].port_b |= 0b00000001; break;
+  case 8:  Col_port[row].port_d |= 0b10000000; break;
+  case 9:  Col_port[row].port_e |= 0b00000001; break;
+  case 10: Col_port[row].port_d |= 0b00100000; break;
+  case 11: Col_port[row].port_d |= 0b00010000; break;
+  case 12: Col_port[row].port_d |= 0b00001000; break;
+  case 13: Col_port[row].port_d |= 0b00000100; break;
+  case 14: Col_port[row].port_d |= 0b00000010; break;
+  case 15: Col_port[row].port_d |= 0b00000001; break;
+  } // end switch (col)
+}
+
+void led_off(byte bit_num) {
+  if (bit_num >= Num_rows * NUM_COLS) {
+    Errno = 60;
+    Err_data = bit_num;
+    return;
+  }
+  byte row = bit_num >> 4;
+  byte col = bit_num & 0x0F;
+  switch (col) {                   // 76543210
+  case 0:  Col_port[row].port_e &= ~0b00000010; break;
+  case 1:  Col_port[row].port_c &= ~0b01000000; break;
+  case 2:  Col_port[row].port_c &= ~0b00100000; break;
+  case 3:  Col_port[row].port_c &= ~0b00010000; break;
+  case 4:  Col_port[row].port_e &= ~0b00001000; break;
+  case 5:  Col_port[row].port_b &= ~0b00000100; break;
+  case 6:  Col_port[row].port_b &= ~0b00000010; break;
+  case 7:  Col_port[row].port_b &= ~0b00000001; break;
+  case 8:  Col_port[row].port_d &= ~0b10000000; break;
+  case 9:  Col_port[row].port_e &= ~0b00000001; break;
+  case 10: Col_port[row].port_d &= ~0b00100000; break;
+  case 11: Col_port[row].port_d &= ~0b00010000; break;
+  case 12: Col_port[row].port_d &= ~0b00001000; break;
+  case 13: Col_port[row].port_d &= ~0b00000100; break;
+  case 14: Col_port[row].port_d &= ~0b00000010; break;
+  case 15: Col_port[row].port_d &= ~0b00000001; break;
+  } // end switch (col)
+}
+
+#define LED_ORDER_SCROLL_RATE     250   /* mSec */
+
+byte Current_led;
+byte Leds_lit;
+
+// Just set Timeout_fun_runtime[TEST_LED_ORDER] = 1 to start test.
+unsigned short test_led_order(void) {
+  if (Leds_lit) {
+    led_off(Current_led++);
+  }
+  if (Leds_lit >= Num_rows * NUM_COLS) {
+    Current_led = 0;    // get ready for next time!
+    Leds_lit = 0;
+    return 0;           // Done!
+  }
+  led_on(Current_led);
+  Leds_lit++;
+  return LED_ORDER_SCROLL_RATE;
+}
+
 byte load_8(byte bits, byte byte_num) {
   // The MSB of bits goes into the first column, and the LSB into the last column.
   // Returns 1 if successful, 0 on invalid byte_num.
-  if (byte_num >= 2*Num_rows) return 0;
+  if (byte_num >= Num_rows * NUM_COLS / 8) return 0;
   if (byte_num & 1) {
     // high byte, COL_8 to COL_15
     byte_num >> 1;   // translate to Row number
@@ -128,14 +204,12 @@ byte load_16(unsigned short bits, byte word_num) {
   // Returns 1 if successful, 0 on invalid word_num.
   word_num <<= 1;   // translate to byte_num
 
-  return load_8(byte(bits >> 8), word_num) && load_8(byte(bits), word_num + 1);
+  return load_8(byte(bits), word_num) && load_8(byte(bits >> 8), word_num + 1);
 }
 
 unsigned short On_start, On_end;
 
 byte Current_row = NUM_ROWS - 1;
-
-//extern void timeout(void);      // defined elsewhere...
 
 void step(byte who_dunnit_errno) {
   // caller has 100 uSec (1600 processor clock cycles) to call this after prior call.
@@ -186,8 +260,10 @@ void step(byte who_dunnit_errno) {
   }
 
   // Does anything that can't be broken into steps < 100 uSec while the LEDs are off.
-  // This should get called about every 1.6 mSec.
-  timeout();
+  // This will get called about every 1.6 mSec.
+  if (Current_row == 0) {
+    timeout();
+  }
 
   // Turn on LED Columns for this Row:
   On_start = (unsigned short)micros();

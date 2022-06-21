@@ -17,4 +17,5 @@ extern byte setup_alpha_displays(byte my_EEPROM_offset);
 
 extern void load_string(byte string_num, char *s);
 
-extern byte advance_strings(void);  // Returns 1 if scrolling done, else 0.
+// Timeout function: Returns how long to wait until next call (mSec).
+extern unsigned short advance_strings(void);

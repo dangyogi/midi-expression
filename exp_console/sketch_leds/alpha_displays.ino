@@ -62,30 +62,23 @@ byte setup_alpha_displays(byte my_EEPROM_offset) {
 col_ports_t Alpha_string[MAX_STRING_LEN + END_GAP][MAX_NUM_STRINGS];
 byte String_len[MAX_NUM_STRINGS];
 byte Scrolling_index[MAX_NUM_STRINGS];   // current starting scrolling index
-unsigned long Time_to_advance_strings;   // millis()
 
-byte advance_strings(void) {
+unsigned short advance_strings(void) {
   // Called by timeout().
-  // Returns 1 if scrolling done, else 0.
-  unsigned long now = millis();
-  if (now >= Time_to_advance_strings) {
-    byte i;
-    for (i = 0; i < MAX_NUM_STRINGS; i++) {
-      if (String_len[i] > Alpha_num_chars[i]) {
-        // We're scrolling this string!  Time to advance 1 char...
-        Scrolling_index[i] += 1;
-        Scrolling_index[i] %= String_len[i];
-        byte j;
-        for (j = 0; j < Alpha_num_chars[i]; j++) {
-          Col_ports[Alpha_index[i] + j] =
-            Alpha_string[(Scrolling_index[i] + j) % String_len[i]][i];
-        } // end for (j)
-      } // end if (scrolling this string?)
-    } // end for (i)
-    Time_to_advance_strings = now + SCROLL_DELAY;
-    return 1;
-  } // end if (time to advance strings)
-  return 0;
+  byte i;
+  for (i = 0; i < MAX_NUM_STRINGS; i++) {
+    if (String_len[i] > Alpha_num_chars[i]) {
+      // We're scrolling this string!  Time to advance 1 char...
+      Scrolling_index[i] += 1;
+      Scrolling_index[i] %= String_len[i];
+      byte j;
+      for (j = 0; j < Alpha_num_chars[i]; j++) {
+        Col_ports[Alpha_index[i] + j] =
+          Alpha_string[(Scrolling_index[i] + j) % String_len[i]][i];
+      } // end for (j)
+    } // end if (scrolling this string?)
+  } // end for (i)
+  return SCROLL_DELAY;
 }
 
 void load_string(byte string_num, char *s) {

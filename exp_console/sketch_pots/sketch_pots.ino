@@ -4,13 +4,16 @@
 #include <Wire.h>
 #include "flash_errno.h"
 
-extern byte scale_slide_pot(int reading, int calibrated_row, int calibrated_center, int calibrated_high);
-
 #define MUX_A      9
 #define MUX_B     10
 #define MUX_C      5
 
-// MUX X pins are connected to A0 - A4; X0 - X7 are connected to pots.
+#define SET_MUX_ADDR(n)   \
+        digitalWrite(MUX_A, !!((n) & 1));  \
+        digitalWrite(MUX_B, !!((n) & 2));  \
+        digitalWrite(MUX_C, !!((n) & 4))
+
+// MUX X pins are connected to A0 - A3; X0 - X7 are connected to pots.
 
 #define NUM_A_PINS          4
 #define EEPROM_NEEDED       (NUM_A_PINS * (1 + 8*3*sizeof(int)))
@@ -32,6 +35,9 @@ byte Num_pots[NUM_A_PINS];    // number of pots on each A_pin
 #define CALIBRATED_LOW          0x1
 #define CALIBRATED_CENTER       0x2
 #define CALIBRATED_HIGH         0x4
+
+#define MAX_CALIBRATION_ERROR_CENTER   60
+#define MAX_CALIBRATION_ERROR_ENDS     30
 
 struct pot_info_s {   // size 14 bytes
   int a_low;
@@ -60,11 +66,11 @@ void setup() {
 
   Wire.begin(0x31);
   Wire.setClock(400000);
-  Serial.begin(9600);
+  Serial.begin(230400);
 
   while (!Serial) {
-      digitalWrite(ERR_LED, HIGH);
-      digitalWrite(ERR_LED2, HIGH);
+    digitalWrite(ERR_LED, HIGH);
+    digitalWrite(ERR_LED2, HIGH);
   }
   digitalWrite(ERR_LED, LOW);
   digitalWrite(ERR_LED2, LOW);
@@ -108,7 +114,7 @@ void setup() {
           cal_msg_seen = 1;
         }
         b = 0;
-      } else if (b > 20) {
+      } else if (b > MAX_CALIBRATION_ERROR_ENDS) {
         Errno = 101;
         Err_data = 10 * a_pin + pot_addr;
         b = 0;
@@ -126,7 +132,7 @@ void setup() {
           cal_msg_seen = 1;
         }
         b = 511;
-      } else if (abs(b - 511) > 50) {
+      } else if (abs(b - 511) > MAX_CALIBRATION_ERROR_CENTER) {
         Errno = 102;
         Err_data = 10 * a_pin + pot_addr;
         b = 511;
@@ -145,11 +151,11 @@ void setup() {
           Serial.println(" not set in EEPROM");
           cal_msg_seen = 1;
         }
-        b = 0;
-      } else if (b < (1023 - 20)) {
+        b = 1023;
+      } else if (b < (1023 - MAX_CALIBRATION_ERROR_ENDS)) {
         Errno = 103;
         Err_data = 10 * a_pin + pot_addr;
-        b = 0;
+        b = 1023;
       }
       Pot_info[a_pin][pot_addr].cal_high = b;
       Pot_info[a_pin][pot_addr].calibrated = 0;
@@ -201,32 +207,30 @@ byte check_ls(byte b, byte limit, byte errno) {
 byte Cal_iterations = 100;
 
 void calibrate_low(void) {  // errnos 31-39
-  int values[NUM_A_PINS][8];
+  int max_values[NUM_A_PINS][8];
   byte i, a_pin, pot_addr;
   for (a_pin = 0; a_pin < NUM_A_PINS; a_pin++) {
     for (pot_addr = 0; pot_addr < Num_pots[a_pin]; pot_addr++) {
-      values[a_pin][pot_addr] = 0;
+      max_values[a_pin][pot_addr] = 0;
     }
   }
   for (i = 0; i < Cal_iterations; i++) {
     for (a_pin = 0; a_pin < NUM_A_PINS; a_pin++) {
       for (pot_addr = 0; pot_addr < Num_pots[a_pin]; pot_addr++) {
-        digitalWrite(MUX_A, pot_addr & 1);
-        digitalWrite(MUX_B, pot_addr & 2);
-        digitalWrite(MUX_C, pot_addr & 4);
+        SET_MUX_ADDR(pot_addr);
         int a = analogRead(A_pins[a_pin]);
-        if (a > values[a_pin][pot_addr]) values[a_pin][pot_addr] = a;
+        if (a > max_values[a_pin][pot_addr]) max_values[a_pin][pot_addr] = a;
       }
     }
   } // end for (i)
   for (a_pin = 0; a_pin < NUM_A_PINS; a_pin++) {
     for (pot_addr = 0; pot_addr < Num_pots[a_pin]; pot_addr++) {
-      if (values[a_pin][pot_addr] < 40) {
-        Pot_info[a_pin][pot_addr].cal_low = values[a_pin][pot_addr];
+      if (max_values[a_pin][pot_addr] < MAX_CALIBRATION_ERROR_ENDS) {
+        Pot_info[a_pin][pot_addr].cal_low = max_values[a_pin][pot_addr];
         Pot_info[a_pin][pot_addr].calibrated |= CALIBRATED_LOW;
       } else {
         Errno = 31;
-        Err_data = values[a_pin][pot_addr];
+        Err_data = max_values[a_pin][pot_addr];
       }
     }
   } // end for (a_pin)
@@ -245,9 +249,7 @@ void calibrate_center(void) {  // errnos 41-49
   for (i = 0; i < Cal_iterations; i++) {
     for (a_pin = 0; a_pin < NUM_A_PINS; a_pin++) {
       for (pot_addr = 0; pot_addr < Num_pots[a_pin]; pot_addr++) {
-        digitalWrite(MUX_A, pot_addr & 1);
-        digitalWrite(MUX_B, pot_addr & 2);
-        digitalWrite(MUX_C, pot_addr & 4);
+        SET_MUX_ADDR(pot_addr);
         int a = analogRead(A_pins[a_pin]);
         if (a < min_values[a_pin][pot_addr]) min_values[a_pin][pot_addr] = a;
         if (a > max_values[a_pin][pot_addr]) max_values[a_pin][pot_addr] = a;
@@ -257,44 +259,42 @@ void calibrate_center(void) {  // errnos 41-49
   for (a_pin = 0; a_pin < NUM_A_PINS; a_pin++) {
     for (pot_addr = 0; pot_addr < Num_pots[a_pin]; pot_addr++) {
       int median = (min_values[a_pin][pot_addr] + max_values[a_pin][pot_addr]) / 2;
-      if (abs(median - 511) < 40) {
+      if (abs(median - 511) < MAX_CALIBRATION_ERROR_CENTER) {
         Pot_info[a_pin][pot_addr].cal_center = median;
         Pot_info[a_pin][pot_addr].calibrated |= CALIBRATED_CENTER;
       } else {
         Errno = 41;
-        Err_data = median;
+        Err_data = abs(median - 511);
       }
     }
   } // end for (a_pin)
 }
 
 void calibrate_high(void) {  // errnos 51-59
-  int values[NUM_A_PINS][8];
+  int min_values[NUM_A_PINS][8];
   byte i, a_pin, pot_addr;
   for (a_pin = 0; a_pin < NUM_A_PINS; a_pin++) {
     for (pot_addr = 0; pot_addr < Num_pots[a_pin]; pot_addr++) {
-      values[a_pin][pot_addr] = 10000;
+      min_values[a_pin][pot_addr] = 10000;
     }
   }
   for (i = 0; i < Cal_iterations; i++) {
     for (a_pin = 0; a_pin < NUM_A_PINS; a_pin++) {
       for (pot_addr = 0; pot_addr < Num_pots[a_pin]; pot_addr++) {
-        digitalWrite(MUX_A, pot_addr & 1);
-        digitalWrite(MUX_B, pot_addr & 2);
-        digitalWrite(MUX_C, pot_addr & 4);
+        SET_MUX_ADDR(pot_addr);
         int a = analogRead(A_pins[a_pin]);
-        if (a < values[a_pin][pot_addr]) values[a_pin][pot_addr] = a;
+        if (a < min_values[a_pin][pot_addr]) min_values[a_pin][pot_addr] = a;
       }
     }
   } // end for (i)
   for (a_pin = 0; a_pin < NUM_A_PINS; a_pin++) {
     for (pot_addr = 0; pot_addr < Num_pots[a_pin]; pot_addr++) {
-      if (values[a_pin][pot_addr] > (1023 - 40)) {
-        Pot_info[a_pin][pot_addr].cal_high = values[a_pin][pot_addr];
+      if (min_values[a_pin][pot_addr] > (1023 - MAX_CALIBRATION_ERROR_ENDS)) {
+        Pot_info[a_pin][pot_addr].cal_high = min_values[a_pin][pot_addr];
         Pot_info[a_pin][pot_addr].calibrated |= CALIBRATED_HIGH;
       } else {
         Errno = 51;
-        Err_data = values[a_pin][pot_addr];
+        Err_data = 1023 - min_values[a_pin][pot_addr];
       }
     }
   } // end for (a_pin)
@@ -356,7 +356,7 @@ void receiveRequest(int how_many) {
     b1 = Wire.read();
     if (check_ls(b1, NUM_A_PINS, 9)) break;
     b2 = Wire.read();
-    if (check_ls(b2, 8, 10)) break;
+    if (check_ls(b2, 9, 10)) break;
     Num_pots[b1] = b2;
     EEPROM[EEPROM_num_pots_addr(b1)] = b2;
     break;
@@ -473,13 +473,23 @@ void read(byte a_pin, byte pot_addr, byte pot_num) {
         pi->last_reported = new_value;
         byte scaled_value = scale_slide_pot(new_value, pi->cal_low, pi->cal_center, pi->cal_high);
         if (pi->value != scaled_value) {
-          pi->value = scaled_value;
           if (Trace_on) {
             Serial.print("Trace: pot_num ");
             Serial.print(pot_num);
-            Serial.print(" -> ");
+            Serial.print(", new_value ");
+            Serial.print(new_value);
+            Serial.print(", cal_low ");
+            Serial.print(pi->cal_low);
+            Serial.print(", cal_center ");
+            Serial.print(pi->cal_center);
+            Serial.print(", cal_high ");
+            Serial.print(pi->cal_high);
+            Serial.print(" -> from ");
+            Serial.print(pi->value);
+            Serial.print(" to ");
             Serial.println(scaled_value);
-          }
+          } // end if (Trace_on)
+          pi->value = scaled_value;
         } // end if (scaled_value changed)
       } // end if (new_value changed)
     } // end if (a_low/a_high changed)
@@ -503,6 +513,7 @@ void help(void) {
   Serial.println("W - write_calibrations");
   Serial.println("N - trace oN");
   Serial.println("F - trace ofF");
+  Serial.println("An - set MUX addr to n, and disable activity, trace ofF re-enables");
   Serial.println();
 }
 
@@ -534,66 +545,46 @@ void view_calibrations(void) {
       } else {
         Serial.print(", cal_high: F, high: ");
       }
-      Serial.print(pi->cal_high);
+      Serial.println(pi->cal_high);
 
       pot_num++;
     } // end for (pot_addr)
   } // end for (a_pin)
 }
 
+byte Disable = 0;
+
 void loop() {
   // put your main code here, to run repeatedly:
 
+  // Cycle_time for 20 pins is reported as 2.8 mSec
+
   unsigned long start_time = micros();
   byte a_pin, pot_addr, pot_num;
-  
-  Num_reads += 1;
 
-  // cycle time is 1.8 mSec
-  pot_num = 0;
-  for (a_pin = 0; a_pin < NUM_A_PINS; a_pin++) {
-    for (pot_addr = 0; pot_addr < Num_pots[a_pin]; pot_addr++) {
-      digitalWrite(MUX_A, pot_addr & 0x1);
-      digitalWrite(MUX_B, pot_addr & 0x2);
-      digitalWrite(MUX_C, pot_addr & 0x4);
-      read(a_pin, pot_addr, ++pot_num);
-    } // end for (pot_addr)
-  } // end for (a_pin)
-
-  if (!Serial) {
-      digitalWrite(ERR_LED, HIGH);
-      digitalWrite(ERR_LED2, HIGH);
-  } else {
-      digitalWrite(ERR_LED, LOW);
-      digitalWrite(ERR_LED2, LOW);
-  }
+  if (!Disable) {
+    Num_reads += 1;
   
-  byte a_pin, pot_addr;
-  byte num_pots_msg_seen = 0;
-  byte cal_msg_seen = 0;
-  for (a_pin = 0; a_pin < NUM_A_PINS; a_pin++) {
-    byte num_pots = EEPROM[EEPROM_num_pots_addr(a_pin)];
-    if (num_pots == 0xFF) {
-      Num_pots[a_pin] = 1;
-      if (!num_pots_msg_seen) {
-        Serial.print("Num_pots for ");
-        Serial.print(a_pin);
-        Serial.println(" not set in EEPROM");
-        num_pots_msg_seen = 1;
-      }
-    } else if (num_pots > 8) {
-      Num_pots[a_pin] = 8;
-      Errno = 100;
-      Err_data = a_pin;
-    } else Num_pots[a_pin] = num_pots;
-    for (pot_addr = 0; pot_addr < 8; pot_addr++) {
-      // Go ahead and initialize all 8, in case the number of pots changes...
-      Pot_info[a_pin][pot_addr].a_low = 100000;
-      Pot_info[a_pin][pot_addr].a_high = -100000;
-      Pot_info[a_pin][pot_addr].last_reported = -1;
+    // cycle time is 1.8 mSec
+    pot_num = 0;
+    for (a_pin = 0; a_pin < NUM_A_PINS; a_pin++) {
+      for (pot_addr = 0; pot_addr < Num_pots[a_pin]; pot_addr++) {
+        SET_MUX_ADDR(pot_addr);
+        read(a_pin, pot_addr, ++pot_num);
+      } // end for (pot_addr)
+    } // end for (a_pin)
   
-  if (Num_reads >= Read_threshold) Num_reads = 1;
-
+    if (!Serial) {
+        digitalWrite(ERR_LED, HIGH);
+        digitalWrite(ERR_LED2, HIGH);
+    } else {
+        digitalWrite(ERR_LED, LOW);
+        digitalWrite(ERR_LED2, LOW);
+    }
+  
+    if (Num_reads >= Read_threshold) Num_reads = 0;
+  } // end if (!Disable)
+  
   if (Serial.available()) {
     char c = toupper(Serial.read());
     byte n;
@@ -617,7 +608,7 @@ void loop() {
         Serial.println("Missing ',' in 'S' command -- aborted");
       } else {
         n = Serial.parseInt(SKIP_WHITESPACE);
-        if (n < 8) {
+        if (n < 9) {
           Num_pots[a_pin] = n;
           EEPROM[EEPROM_num_pots_addr(a_pin)] = n;
           Serial.print("Num_pots for a_pin ");
@@ -627,7 +618,7 @@ void loop() {
         } else {
           Serial.print("Invalid num_pots ");  
           Serial.print(n);
-          Serial.println(" must be < 8");
+          Serial.println(" must be < 9");
         }
       }
       break;
@@ -688,7 +679,21 @@ void loop() {
       break;
     case 'F':
       Trace_on = 0;
+      Disable = 0;
       Serial.println("Trace ofF");
+      break;
+    case 'A':
+      n = Serial.parseInt(SKIP_WHITESPACE);
+      if (n >= 8) {
+        Serial.print("Invalid MUX addr ");  
+        Serial.print(n);
+        Serial.println(" must be < 8");
+      } else {
+        SET_MUX_ADDR(n);
+        Disable = 1;
+        Serial.print("Set MUX addr to ");
+        Serial.println(n);
+      }
       break;
     case ' ': case '\t': case '\n': case '\r': break;
     default: help(); break;

@@ -1,7 +1,7 @@
 
 // Indexed by low reading from analogRead() (0 - 511).
 // Gives linear position of slider (0 - 127)
-const byte PROGMEM Slide_pot_translation[] = {
+const byte Slide_pot_translation[] = {
     0,   1,   2,   3,   4,   5,   6,   6,   7,   8,     //   0 -   9
     8,   9,  10,  10,  11,  12,  12,  13,  13,  14,     //  10 -  19
    14,  15,  15,  16,  16,  17,  17,  17,  18,  18,     //  20 -  29
@@ -57,11 +57,13 @@ const byte PROGMEM Slide_pot_translation[] = {
 };
 
 
-byte scale_slide_pot(int reading, int calibrated_low, int calibrated_center, int calibrated_high) {
+byte scale_slide_pot(int reading, int calibrated_low, int calibrated_center,
+                     int calibrated_high
+) {
   // `reading` is the direct output of analogRead on the slide pot (0 - 1023).
-  // `calibrated_low` and `calibrated_high` are the distances from each endpoint of the slide pot to
-  // consider the same as the endpoint.  E.g., calibrated_low of 3 would treat 3 as 0, and
-  // calibrated_high of 1020 would threat 1020 as 1023.
+  // `calibrated_low` and `calibrated_high` are the distances from each endpoint of the
+  // slide pot to consider the same as the endpoint.  E.g., calibrated_low of 3 would
+  // treat 3 as 0, and calibrated_high of 1020 would threat 1020 as 1023.
   // `calibrated_center` is the reading at the detented center point on the slide pot.
   //
   // Returns the scaled (linearized) value between 0 and 127.

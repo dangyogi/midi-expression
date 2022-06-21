@@ -207,7 +207,7 @@ Multiplexer:
     - name: X7
     - name: X5
     - name: ENABLE
-      connect: [[Vcc]]
+      connect: [[GND]]
     - name: N.C.
       connect: []
     - name: GND

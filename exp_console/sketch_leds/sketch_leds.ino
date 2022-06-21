@@ -26,8 +26,8 @@ void setup() {
   digitalWrite(ERR_LED, HIGH);
   digitalWrite(ERR_LED2, HIGH);
 
-  Serial.begin(9600);
-  
+  Serial.begin(230400);
+
   EEPROM_needed = setup_step();
   EEPROM_needed += setup_numeric_displays(EEPROM_needed);
   EEPROM_needed += setup_alpha_displays(EEPROM_needed);
@@ -138,9 +138,9 @@ void step_receiveRequest(void) {
       b1 = Wire.read();
       if (check_ls(b1, Num_numeric_displays, 9)) break;
       b2 = Wire.read();
-      if (check_ls(b2, MAX_NUMERIC_DISPLAY_SIZE, 9)) break;
+      if (check_ls(b2, MAX_NUMERIC_DISPLAY_SIZE + 1, 9)) break;
       b3 = Wire.read();
-      if (check_ls(b3, Num_rows * NUM_COLS / 8, 9)) break;
+      if (check_ls(b3, Num_rows * NUM_COLS / 8 - 2*b2, 9)) break;
       Numeric_display_size[b1] = b2;
       EEPROM[EEPROM_Numeric_display_size(b1)] = b2;
       Numeric_display_offset[b1] = b3;
@@ -251,26 +251,45 @@ void help(void) {
   Serial.println("X<errno> - set Errno");
   Serial.println("E - show Errno, Err_data");
   Serial.println();
+  Serial.print("sizeof(unsigned long): ");
+  Serial.println(sizeof(unsigned long));
+  Serial.print("-1ul: ");
+  Serial.println(-1ul, HEX);
 }
 
-#define NUM_TIMEOUT_FUNS        0
+#define NUM_TIMEOUT_FUNS        3
+#define ADVANCE_STRINGS         0
+#define TEST_LED_ORDER          1
+#define TEST_NUMERIC_DECODER    2
 
-byte Timeout_fun_scheduled[NUM_TIMEOUT_FUNS];
+// 0 means "off"
+unsigned long Timeout_fun_runtime[NUM_TIMEOUT_FUNS];
 
 void timeout(void) {
   // This is the slow loop.  It is run roughly every 1.6 mSec.
 
+  // Timeout funs are unsigned short foo(void), returning how many mSec to wait from the
+  // start of this call, until the next call.  Returning 0xFFFF will disable the fun
+  // (until somebody else sets its Timeout_fun_runtime).
+
+  unsigned long now = millis();
+
   byte i;
   for (i = 0; i < NUM_TIMEOUT_FUNS; i++) {
-    if (Timeout_fun_scheduled[i]) {
+    if (millis >= Timeout_fun_runtime[i] && Timeout_fun_runtime[i]) {
+      unsigned short delay;  // mSec to next call, 0 means no next call (as of now)
       switch (i) {
-      case 0: break;  // FIX
+      case ADVANCE_STRINGS: delay = advance_strings(); break;
+      case TEST_LED_ORDER: delay = test_led_order(); break;
       } // end switch (i)
+      if (delay == 0) {
+        Timeout_fun_runtime[i] = 0;
+      } else {
+        Timeout_fun_runtime[i] = now + delay;
+      }
       return;
     } // end if (Timeout_fun_scheduled[i])
   } // end for (i)
-
-  if (advance_strings()) return;
 
   if (Serial.available()) {
     char c = toupper(Serial.read());
@@ -372,20 +391,20 @@ void timeout(void) {
         Serial.println("Missing ',' in 'U' command -- aborted");
       } else {
         b1 = Serial.parseInt(SKIP_WHITESPACE);
-        if (b1 >= MAX_NUMERIC_DISPLAY_SIZE) {
+        if (b1 > MAX_NUMERIC_DISPLAY_SIZE) {
           Serial.print("Invalid Numeric_display_size ");  
           Serial.print(b1);
-          Serial.print(" must be < ");
+          Serial.print(" must be <= ");
           Serial.println(MAX_NUMERIC_DISPLAY_SIZE);    
         } else if (Serial.read() != ',') {
           Serial.println("Missing ',' in 'U' command -- aborted");
         } else {
           b2 = Serial.parseInt(SKIP_WHITESPACE);
-          if (b2 >= Num_rows * NUM_COLS / 8) {
+          if (b2 >= Num_rows * NUM_COLS / 8 - 2*b1) {
             Serial.print("Invalid Numeric_display_offset ");  
             Serial.print(b2);
             Serial.print(" must be < ");
-            Serial.println(Num_rows * NUM_COLS / 8);
+            Serial.println(Num_rows * NUM_COLS / 8 - 2*b1);
           } else {
             Numeric_display_size[b0] = b1;
             EEPROM[EEPROM_Numeric_display_size(b0)] = b1;
@@ -395,6 +414,7 @@ void timeout(void) {
         }
       }
       break;
+
     case 'T':
       Serial.print("Cycle_time is ");
       Serial.print(Cycle_time);
@@ -418,7 +438,7 @@ void timeout(void) {
     default: help(); break;
     } // end switch (c)
   } // end if (Serial.available())
-  
+
   errno();
 }
 
@@ -457,7 +477,7 @@ void loop() {
       } // end for (i)
       step(50);
     } // end if (Next_step_fun > next_step_fun)
-  } else {
+  } else {  // Nothing else to run...
     step(51);
   } // end if (Next_step_fun != 0xFF)
 }

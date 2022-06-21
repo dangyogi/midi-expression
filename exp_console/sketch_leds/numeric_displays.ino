@@ -16,7 +16,7 @@ byte EEPROM_Numeric_display_offset(byte numeric_display) {
 
 byte Num_numeric_displays;
 byte Numeric_display_size[MAX_NUMERIC_DISPLAYS];    // number of digits
-byte Numeric_display_offset[MAX_NUMERIC_DISPLAYS];  // byte_num of right-most digit
+byte Numeric_display_offset[MAX_NUMERIC_DISPLAYS];  // byte_num of left-most digit
 
 byte setup_numeric_displays(byte my_EEPROM_offset) {
   EEPROM_numeric_offset = my_EEPROM_offset;
@@ -66,7 +66,42 @@ const byte Numeric_7_segment_decode[] = {
   0b11100000,    // 7
   0b11111110,    // 8
   0b11110110,    // 9
+  0b00000010,    // 10 (minus '-')
+  0b00000000,    // 11 (all segments off)
 };
+
+void load_digit(byte display_num, byte digit_num, byte value, byte dp) {
+  // value of 10 produces a '-', 11 turns all segments off
+  if (display_num >= Num_numeric_displays) {
+    Errno = 40;
+    Err_data = display_num;
+  } elif (digit_num >= Numeric_display_size[display_num]) {
+    Errno = 41;
+    Err_data = digit_num;
+  } elif (value > 11) {
+    Errno = 42;
+    Err_data = value;
+  } else {
+    byte bits = Numeric_7_segment_decode[value];
+    if (dp) bits |= 1;
+    load_8(bits, Numeric_display_offset[display_num] + 2*digit_num);
+  }
+}
+
+#define TEST_NUMERIC_DECODER_SCROLL_DELAY       250 /* mSec */
+
+byte Display_num;
+byte Digit_num;
+byte Value_test;    // next value to display
+byte DP_test;
+
+unsigned short test_numeric_decoder(void) {
+  if (Value_test == 10) {
+    // FIX
+  }
+  load_digit(Display_num, Digit_num, 11, 0);
+  return TEST_NUMERIC_DECODER_SCROLL_DELAY;
+}
 
 void load_numeric(byte display_num, short value, byte decimal_place) {
   // display_num indexes Numeric_display_size and Numeric_display_offset.
@@ -86,7 +121,7 @@ void load_numeric(byte display_num, short value, byte decimal_place) {
     byte i;
     // Turn off all segments on all digits
     for (i = 0; i < Numeric_display_size[display_num]; i++) {
-      load_8(0, Numeric_display_offset[display_num] - i);
+      load_8(0, Numeric_display_offset[display_num] + 2*i);
     }
     byte negative = value < 0;
     value = abs(value);
@@ -96,16 +131,16 @@ void load_numeric(byte display_num, short value, byte decimal_place) {
     while (i == 0 || value) {
       bits = Numeric_7_segment_decode[value % 10];
       if (decimal_place == i + 1) bits |= 1;
-      load_8(bits, addr - i);
+      load_8(bits, addr + 2*i);
       value /= 10;
       i++;
     } // end while
     if (negative) {
       bits = 0b10;
       if (decimal_place == i + 1) bits |= 1;
-      load_8(bits, addr - i);
+      load_8(bits, addr + 2*i);
     } else if (decimal_place == i + 1) {
-      load_8(0b1, addr - i);
+      load_8(0b1, addr + 2*i);
     }
   } // end ifs
 }

@@ -24,6 +24,12 @@ alsa_midi_dump
 # Arduino IDE files
 hs_err_pid*.log
 
+# Dup files (sym linked)
+exp_console/sketch_leds/flash_errno.h
+exp_console/sketch_leds/flash_errno.ino
+exp_console/sketch_master/flash_errno.h
+exp_console/sketch_master/flash_errno.ino
+
 # Distribution / packaging
 .Python
 build/

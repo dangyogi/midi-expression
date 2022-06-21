@@ -36,12 +36,14 @@ void push(int delay) {
 
 void errno(void) {
   if (Errno == 0) {
-    Last_errno = 0;
-    Num_delays = 0;
-    digitalWrite(LED_pin1, LOW);
-    if (LED_pin2 != 0xFF) {
-      digitalWrite(LED_pin2, LOW);
-    }
+    if (Last_errno) {
+      Last_errno = 0;
+      Num_delays = 0;
+      digitalWrite(LED_pin1, LOW);
+      if (LED_pin2 != 0xFF) {
+        digitalWrite(LED_pin2, LOW);
+      }
+    } // end if (Last_errno)
   } else {
     if (Last_errno == 0) {
       // Display this errno!
