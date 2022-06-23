@@ -19,3 +19,5 @@ extern void load_string(byte string_num, char *s);
 
 // Timeout function: Returns how long to wait until next call (mSec).
 extern unsigned short advance_strings(void);
+
+// vim: sw=2

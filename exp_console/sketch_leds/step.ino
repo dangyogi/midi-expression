@@ -274,3 +274,4 @@ void step(byte who_dunnit_errno) {
   On_end = On_start + 100;
 }
 
+// vim: sw=2

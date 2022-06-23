@@ -481,3 +481,5 @@ void loop() {
     step(51);
   } // end if (Next_step_fun != 0xFF)
 }
+
+// vim: sw=2

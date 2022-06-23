@@ -16,7 +16,8 @@ byte Last_errno = 0;
 
 byte LED_pin1 = 13, LED_pin2 = 0xFF;
 
-void err_led(byte led_pin1, byte led_pin2=0xFF) {
+void err_led(byte led_pin1, byte led_pin2) {
+//void err_led(byte led_pin1, byte led_pin2=0xFF) {
   pinMode(led_pin1, OUTPUT);
   digitalWrite(led_pin1, LOW);
   LED_pin1 = led_pin1;
@@ -99,3 +100,5 @@ void errno(void) {
     }
   } // end if (Current_delay < Num_delays)
 }
+
+// vim: sw=2

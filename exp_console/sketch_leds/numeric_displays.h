@@ -20,3 +20,4 @@ extern void load_digit(byte display_num, byte digit_num, byte value, byte dp);
 // decimal_place of 0 means no decimal.  Otherwise it is the digit number for the DP.
 extern void load_numeric(byte display_num, short value, byte decimal_place);
 
+// vim: sw=2

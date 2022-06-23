@@ -144,3 +144,5 @@ void load_numeric(byte display_num, short value, byte decimal_place) {
     }
   } // end ifs
 }
+
+// vim: sw=2

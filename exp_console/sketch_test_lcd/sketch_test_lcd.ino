@@ -526,3 +526,5 @@ void loop() {
     } // end switch
   } // end if
 }
+
+// vim: sw=2

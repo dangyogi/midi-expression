@@ -97,3 +97,5 @@ void loop() {
     } // end switch
   } // end if (Serial.available())
 }
+
+// vim: sw=2

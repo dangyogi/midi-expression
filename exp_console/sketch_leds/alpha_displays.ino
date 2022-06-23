@@ -115,3 +115,5 @@ void load_string(byte string_num, char *s) {
     Scrolling_index[string_num] = 0;
   }
 }
+
+// vim: sw=2
