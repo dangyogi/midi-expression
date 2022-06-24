@@ -97,6 +97,9 @@ void receiveRequest(int how_many) {
 void step_receiveRequest(void) {
   // request from on high
   byte b0, b1, b2, b3;
+  unsigned short us0;
+  short ss0;
+  char s[MAX_STRING_LEN + 1];
   b0 = Wire.read();
   if (b0 < 6) {
     if (!check_eq(How_many, 1, 1)) Report = b0;
@@ -165,6 +168,63 @@ void step_receiveRequest(void) {
       EEPROM[EEPROM_Alpha_num_chars(b1)] = b2;
       Alpha_index[b1] = b3;
       EEPROM[EEPROM_Alpha_index(b1)] = b3;
+      break;
+    case 14:  // turn on led
+      if (check_eq(How_many, 2, 9)) break;
+      led_on(Wire.read());
+      break;
+    case 15:  // turn off led
+      if (check_eq(How_many, 2, 10)) break;
+      led_off(Wire.read());
+      break;
+    case 16:  // set 8 bits
+      if (check_eq(How_many, 3, 11)) break;
+      b1 = Wire.read();
+      load_8(Wire.read(), b1);
+      break;
+    case 17:  // set 16 bits
+      if (check_eq(How_many, 4, 12)) break;
+      b1 = Wire.read();
+      us0 = Wire.read();  // MSB first
+      us0 = (us0 << 8) | Wire.read();
+      load_16(us0, b1);
+      break;
+    case 18:  // load digit
+      if (check_eq(How_many, 5, 13)) break;
+      b1 = Wire.read();
+      b2 = Wire.read();
+      b3 = Wire.read();
+      load_digit(b1, b2, b3, Wire.read());
+      break;
+    case 19:  // load numeric
+      if (check_eq(How_many, 5, 14)) break;
+      b1 = Wire.read();
+      ss0 = Wire.read();
+      ss0 = (ss0 << 8) | Wire.read();
+      load_numeric(b1, ss0, Wire.read());
+      break;
+    case 20:  // load note
+      if (check_eq(How_many, 4, 15)) break;
+      b1 = Wire.read();
+      b2 = Wire.read();
+      load_note(b1, b2, Wire.read());
+      break;
+    case 21:  // load sharp_flat
+      if (check_eq(How_many, 3, 16)) break;
+      b1 = Wire.read();
+      load_sharp_flat(b1, Wire.read());
+      break;
+    case 22:  // load string
+      if (How_many < 2) {
+        Errno = 17;
+        Err_data = How_many;
+        break;
+      }
+      if (check_ls(How_many, MAX_STRING_LEN + 3, 18)) break;
+      b1 = Wire.read();
+      for (b2 = 0; b2 < How_many - 2; b2++) s[b2] = Wire.read();
+      s[b2] = 0;
+      load_string(b1, s);
       break;
     default:
       Errno = 110;
@@ -246,15 +306,20 @@ void help(void) {
   Serial.println("C<str>,chars,index - set Alpha_num_chars, Alpha_index for <str>");
   Serial.println("D - show Num_numeric_displays");
   Serial.println("Nn - set Num_numeric_displays to n");
-  Serial.println("U<disp>,size,offset - set Numeric_display_size, Numeric_display_offset for <disp>");
+  Serial.println(
+    "U<disp>,size,offset - set Numeric_display_size, Numeric_display_offset for <disp>");
   Serial.println("T - show Cycle_time");
   Serial.println("X<errno> - set Errno");
   Serial.println("E - show Errno, Err_data");
-  Serial.println();
-  Serial.print("sizeof(unsigned long): ");
-  Serial.println(sizeof(unsigned long));
-  Serial.print("-1ul: ");
-  Serial.println(-1ul, HEX);
+  Serial.println("L<bit> - led oN");
+  Serial.println("F<bit> - led ofF");
+  Serial.println("B<byte_addr>,<2hex> - set 8 bits");
+  Serial.println("W<word_addr>,<4hex> - set 16 bits");
+  Serial.println("G<disp_addr>,<digit>,<value>,<dp> - load digit");
+  Serial.println("M<disp_addr>,<value>,<decimal_place> - load numeric");
+  Serial.println("O<disp_addr>,<note>,<sharp_flat> - load note, sharp_flat 1=sharp, 2=flat");
+  Serial.println("H<disp_addr>,<sharp_flat> - load shart_flat, 1=sharp, 2=flat");
+  Serial.println("I<str#>,<string> - load string");
 }
 
 #define NUM_TIMEOUT_FUNS        3
@@ -264,6 +329,13 @@ void help(void) {
 
 // 0 means "off"
 unsigned long Timeout_fun_runtime[NUM_TIMEOUT_FUNS];
+
+byte from_hex(byte ch) {
+  if (ch >= '0' && ch <= '9') return ch - '0';
+  ch = toupper(ch);
+  if (ch >= 'A' && ch <= 'F') return ch - 'A' + 10;
+  return 0xFF;  // invalid hex digit
+}
 
 void timeout(void) {
   // This is the slow loop.  It is run roughly every 1.6 mSec.
@@ -293,7 +365,10 @@ void timeout(void) {
 
   if (Serial.available()) {
     char c = toupper(Serial.read());
-    byte b0, b1, b2;
+    byte b0, b1, b2, b3;
+    unsigned short us0;
+    signed short ss0;
+    char s[MAX_STRING_LEN + 1];
     switch (c) {
     case '?': help(); break;
     case 'P':
@@ -433,6 +508,227 @@ void timeout(void) {
       Serial.println(Err_data);
       Errno = 0;
       Err_data = 0;
+      break;
+    case 'L': // led on
+      b0 = Serial.parseInt(SKIP_WHITESPACE);
+      if (b0 >= Num_rows * NUM_COLS) {
+        Serial.print("Invalid led number ");  
+        Serial.print(b0);
+        Serial.print(" must be < ");
+        Serial.println(Num_rows * NUM_COLS);    
+      } else {
+        led_on(b0);
+      }
+      break;
+    case 'F': // led off
+      b0 = Serial.parseInt(SKIP_WHITESPACE);
+      if (b0 >= Num_rows * NUM_COLS) {
+        Serial.print("Invalid led number ");  
+        Serial.print(b0);
+        Serial.print(" must be < ");
+        Serial.println(Num_rows * NUM_COLS);    
+      } else {
+        led_off(b0);
+      }
+    case 'B':  // set 8 bits
+      b0 = Serial.parseInt(SKIP_WHITESPACE);
+      if (b0 >= Num_rows * NUM_COLS / 8) {
+        Serial.print("Invalid led byte number ");
+        Serial.print(b0);
+        Serial.print(" must be < ");
+        Serial.println(Num_rows * NUM_COLS / 8);    
+      } else if (Serial.read() != ',') {
+        Serial.println("Missing ',' in 'B' command -- aborted");
+      } else {
+        b1 = from_hex(Serial.read());
+        if (b1 == 0xFF) {
+          Serial.print("Invalid hex digit ");  
+          Serial.println(b1);
+        } else {
+          b2 = from_hex(Serial.read());
+          if (b2 == 0xFF) {
+            Serial.print("Invalid hex digit ");  
+            Serial.println(b2);
+          } else {
+            b1 = (b1 << 4) | b2;
+            load_8(b1, b0);
+          }
+        }
+      }
+      break;
+    case 'W':
+      b0 = Serial.parseInt(SKIP_WHITESPACE);
+      if (b0 >= Num_rows * NUM_COLS / 16) {
+        Serial.print("Invalid led byte number ");
+        Serial.print(b0);
+        Serial.print(" must be < ");
+        Serial.println(Num_rows * NUM_COLS / 16);    
+      } else if (Serial.read() != ',') {
+        Serial.println("Missing ',' in 'W' command -- aborted");
+      } else {
+        b1 = from_hex(Serial.read());
+        if (b1 == 0xFF) {
+          Serial.print("Invalid hex digit ");  
+          Serial.println(b1);
+        } else {
+          b2 = from_hex(Serial.read());
+          if (b2 == 0xFF) {
+            Serial.print("Invalid hex digit ");  
+            Serial.println(b2);
+          } else {
+            b2 = from_hex(Serial.read());
+            if (b2 == 0xFF) {
+              Serial.print("Invalid hex digit ");  
+              Serial.println(b2);
+            } else {
+              us0 = (us0 << 4) | b2;
+              b2 = from_hex(Serial.read());
+              if (b2 == 0xFF) {
+                Serial.print("Invalid hex digit ");  
+                Serial.println(b2);
+              } else {
+                us0 = (us0 << 4) | b2;
+                load_16(us0, b0);
+              }
+            }
+          }
+        }
+      }
+      break;
+    case 'G':
+      b0 = Serial.parseInt(SKIP_WHITESPACE);
+      if (b0 >= Num_numeric_displays) {
+        Serial.print("Invalid numeric display number ");  
+        Serial.print(b0);
+        Serial.print(" must be < ");
+        Serial.println(Num_numeric_displays);    
+      } else if (Serial.read() != ',') {
+        Serial.println("Missing ',' in 'G' command -- aborted");
+      } else {
+        b1 = Serial.parseInt(SKIP_WHITESPACE);
+        if (b1 >= Numeric_display_size[b0]) {
+          Serial.print("Invalid digit ");  
+          Serial.print(b1);
+          Serial.print(" must be < ");
+          Serial.println(Numeric_display_size[b0]);    
+        } else if (Serial.read() != ',') {
+          Serial.println("Missing ',' in 'G' command -- aborted");
+        } else {
+          b2 = Serial.parseInt(SKIP_WHITESPACE);
+          if (b2 >= 12) {
+            Serial.print("Invalid value ");  
+            Serial.print(b2);
+            Serial.print(" must be < ");
+            Serial.println(12);    
+          } else if (Serial.read() != ',') {
+            Serial.println("Missing ',' in 'G' command -- aborted");
+          } else {
+            b3 = Serial.parseInt(SKIP_WHITESPACE);
+            if (b3 >= 2) {
+              Serial.print("Invalid dp ");  
+              Serial.print(b3);
+              Serial.print(" must be < ");
+              Serial.println(2);    
+            } else {
+              load_digit(b0, b1, b2, b3);
+            }
+          }
+        }
+      }
+      break;
+    case 'M':
+      b0 = Serial.parseInt(SKIP_WHITESPACE);
+      if (b0 >= Num_numeric_displays) {
+        Serial.print("Invalid numeric display number ");  
+        Serial.print(b0);
+        Serial.print(" must be < ");
+        Serial.println(Num_numeric_displays);    
+      } else if (Serial.read() != ',') {
+        Serial.println("Missing ',' in 'M' command -- aborted");
+      } else {
+        ss0 = Serial.parseInt(SKIP_WHITESPACE);
+        if (Serial.read() != ',') {
+          Serial.println("Missing ',' in 'M' command -- aborted");
+        } else {
+          b1 = Serial.parseInt(SKIP_WHITESPACE);
+          if (b1 >= Numeric_display_size[b0]) {
+            Serial.print("Invalid digit ");  
+            Serial.print(b1);
+            Serial.print(" must be < ");
+            Serial.println(Numeric_display_size[b0]);    
+          } else {
+            load_numeric(b0, ss0, b1);
+          }
+        }
+      }
+      break;
+
+    case 'O':
+      b0 = Serial.parseInt(SKIP_WHITESPACE);
+      if (b0 >= Num_numeric_displays) {
+        Serial.print("Invalid numeric display number ");  
+        Serial.print(b0);
+        Serial.print(" must be < ");
+        Serial.println(Num_numeric_displays);    
+      } else if (Serial.read() != ',') {
+        Serial.println("Missing ',' in 'O' command -- aborted");
+      } else {
+        b1 = Serial.parseInt(SKIP_WHITESPACE);
+        if (b1 >= 7) {
+          Serial.print("Invalid note ");  
+          Serial.print(b1);
+          Serial.print(" must be < ");
+          Serial.println(7);    
+        } else if (Serial.read() != ',') {
+          Serial.println("Missing ',' in 'O' command -- aborted");
+        } else {
+          b2 = Serial.parseInt(SKIP_WHITESPACE);
+          if (b2 >= 3) {
+            Serial.print("Invalid sharp_flat ");  
+            Serial.print(b2);
+            Serial.print(" must be < ");
+            Serial.println(3);    
+          } else {
+            load_note(b0, b1, b2);
+          }
+        }
+      }
+      break;
+    case 'H':
+      b0 = Serial.parseInt(SKIP_WHITESPACE);
+      if (b0 >= Num_numeric_displays) {
+        Serial.print("Invalid numeric display number ");  
+        Serial.print(b0);
+        Serial.print(" must be < ");
+        Serial.println(Num_numeric_displays);    
+      } else if (Serial.read() != ',') {
+        Serial.println("Missing ',' in 'H' command -- aborted");
+      } else {
+        b1 = Serial.parseInt(SKIP_WHITESPACE);
+        if (b1 >= 3) {
+          Serial.print("Invalid sharp_flat ");  
+          Serial.print(b1);
+          Serial.print(" must be < ");
+          Serial.println(3);    
+        } else {
+          load_sharp_flat(b0, b1);
+        }
+      }
+      break;
+    case 'I':
+      b0 = Serial.parseInt(SKIP_WHITESPACE);
+      if (b0 >= Num_alpha_strings) {
+        Serial.print("Invalid alpha string number ");  
+        Serial.print(b0);
+        Serial.print(" must be < ");
+        Serial.println(Num_alpha_strings);    
+      } else if (Serial.read() != ',') {
+        Serial.println("Missing ',' in 'I' command -- aborted");
+      } else {
+        b1 = Serial.readBytesUntil('\n', s, MAX_STRING_LEN);
+        s[b1] = 0;
+        load_string(b0, s);
+      }
       break;
     case ' ': case '\t': case '\n': case '\r': break;
     default: help(); break;

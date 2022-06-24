@@ -1,0 +1,37 @@
+I2C interface:
+  I2C Addr: 0x32
+
+  Requests from on high:
+    0-6: Set Report to send.  6 has EEPROM addr (1 byte), the rest have no data.
+    8<#rows>: Set num_rows
+    9<EEPROM_addr><byte>: Store <byte> at <EEPROM_addr>
+    10<ndisp>: Set num_numeric_displays
+    11<ndisp><size><offset>: Set size, offset for ndisp
+    12<nalpha>: Set num_alpha_strings
+    13<str#><#displays><index>: Set #displays, index for str#
+    14<led>: turn on led
+    15<led>: turn off led
+    16<byte><8bits>: set 8 bits at byte addr
+    17<word><16bits>: set 16 bits at byte addr, 16 bits sent MSB first (big_endian)
+    18<disp><digit#><value><dp>: load digit
+    19<disp><value_s16><dec_place>: load numeric
+    20<disp><note><sharp_flat>: load note
+    21<disp><sharp_flat>: load sharp_flat
+    22<str><string>: load string
+
+  Reports to on high:
+    0: Errno, Err_data (2 bytes total)
+    1: num_rows, NUM_COLS, Num_numeric_displays, Num_alpha_displays, EEPROM_AVAIL,
+       EEPROM_USED (6 bytes total)
+    2: numeric_display_size for each numeric_display (Num_numeric_displays bytes total)
+    3: numeric_display_offset for each numeric_display (Num_numeric_displays bytes total)
+    4: Cycle_time (uSec, 4 bytes total)
+    5. alpha_num_chars, alpha_index for each string (2 * Num_alpha_strings bytes total)
+    6. next stored EEPROM byte (1 byte, EEPROM addr auto increments)
+
+
+Error Codes:
+
+  Errno, Err_data
+
+

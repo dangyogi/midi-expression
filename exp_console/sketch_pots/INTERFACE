@@ -2,7 +2,8 @@ I2C interface:
   I2C Addr: 0x31
 
   Requests from on high:
-    0-6: Set Report to send.  5 has a_pin (1 byte), 6 has EEPROM addr (1 byte), the rest have no data.
+    0-6: Set Report to send.  5 has a_pin (1 byte), 6 has EEPROM addr (1 byte),
+         the rest have no data.
     8<a_pin><num_pots>: Set num_pots for a_pin (1 byte each)
     9<EEPROM_addr><byte>: Store <byte> at <EEPROM_addr>
     10: Calibate low

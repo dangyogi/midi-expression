@@ -124,6 +124,14 @@ void loop() {
             Close_counts[i] = 0;
           } // end if (Close_counts)
         } // end for (i)
+        for (i = 0; i < NUM_ENCODERS; i++) {
+          if (Encoders[i].var != NULL && Encoders[i].var->changed) {
+            Serial.print("Encoder ");
+            Serial.print(i);
+            Serial.print(" now ");
+            Serial.println(Encoders[i].var->value);
+          } // end if (encoder changed)
+        } // end for (i)
         break;
       case ONE_TIME_REPORT:
         help();

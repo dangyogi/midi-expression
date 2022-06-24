@@ -1,4 +1,4 @@
-// sketch_numeric_displays.h
+// numeric_displays.h
 
 #define MAX_NUMERIC_DISPLAYS            32
 #define MAX_NUMERIC_DISPLAY_SIZE        4
@@ -19,6 +19,9 @@ extern void load_digit(byte display_num, byte digit_num, byte value, byte dp);
 // value may be < 0, but then is limited to one less digit.
 // decimal_place of 0 means no decimal.  Otherwise it is the digit number for the DP.
 extern void load_numeric(byte display_num, short value, byte decimal_place);
+
+// sharp_flat of 0 means natural, 1 means sharp, 2 means flat.
+extern void load_sharp_flat(byte display_num, byte sharp_flat);
 
 // note must be 0-6 (for A-G).
 // sharp_flat of 0 means natural, 1 means sharp, 2 means flat.

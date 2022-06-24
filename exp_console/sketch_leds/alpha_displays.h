@@ -1,4 +1,4 @@
-// sketch_alpha_displays.h
+// alpha_displays.h
 
 #define MAX_NUM_STRINGS     4
 #define MAX_STRING_LEN      30

@@ -1,4 +1,4 @@
-// sketch_alpha_displays.ino
+// alpha_displays.ino
 
 // includes from sketch_led.ino show up here with Arduino IDE!
 

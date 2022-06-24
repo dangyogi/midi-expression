@@ -21,8 +21,8 @@ the LEDS:
   2. Access to numeric displays.
 
      This access is designed to allow the setting of all three digits of 1 numeric display
-     in a single I2C command.  The command has the display#, digit1, digit2, digit3, and
-     a 3-bit DP-bitmap.  The led controller does the 7 segment decoding.
+     in a single I2C command.  The command has the display#, value, and decimal_point.
+     The led controller converts the value to digits and does the 7 segment decoding.
 
   3. Access to alpha displays.
 
@@ -31,8 +31,8 @@ the LEDS:
      The led controller takes care of both the scrolling and the 14 segment decoding.  It
      only displays uppercase letters, so it converts lowercase letters to uppercase for
      display.  It will collapse a '.' between the two letters on either side of it, setting
-     the DP on the letter to it's left.  If there the '.' is the first char in the string,
-     a space is added to the front of the string.
+     the DP on the letter to it's left.  If a '.' is the first char in the string, a space
+     is added to the front of the string to receive the DP.
 
      Thus, individual alpha displays are grouped into units, where each unit may display
      a different string.

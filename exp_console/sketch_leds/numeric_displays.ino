@@ -1,4 +1,4 @@
-// sketch_numeric_displays.ino
+// numeric_displays.ino
 
 byte EEPROM_numeric_offset;
 
@@ -85,10 +85,10 @@ void load_digit(byte display_num, byte digit_num, byte value, byte dp) {
   if (display_num >= Num_numeric_displays) {
     Errno = 40;
     Err_data = display_num;
-  } elif (digit_num >= Numeric_display_size[display_num]) {
+  } else if (digit_num >= Numeric_display_size[display_num]) {
     Errno = 41;
     Err_data = digit_num;
-  } elif (value > 11) {
+  } else if (value > 11) {
     Errno = 42;
     Err_data = value;
   } else {
@@ -155,6 +155,31 @@ void load_numeric(byte display_num, short value, byte decimal_place) {
   } // end ifs
 }
 
+void load_sharp_flat(byte display_num, byte sharp_flat) {
+  if (display_num >= Num_numeric_displays) {
+    Errno = 30;
+    Err_data = display_num;
+  } else if (sharp_flat > 2) {
+    Errno = 32;
+    Err_data = sharp_flat;
+  } else {
+    switch (sharp_flat) {
+    case 0: // natural
+      load_8(0b0, display_num + 2*1);
+      load_8(0b0, display_num + 2*2);
+      break;
+    case 1: // sharp
+      load_8(Numeric_7_segment_decode[19], display_num + 2*1);
+      load_8(Numeric_7_segment_decode[20], display_num + 2*2);
+      break;
+    case 2: // flat
+      load_8(Numeric_7_segment_decode[17], display_num + 2*1);
+      load_8(Numeric_7_segment_decode[21], display_num + 2*2);
+      break;
+    } // end switch
+  } // end ifs
+}
+
 void load_note(byte display_num, byte note, byte sharp_flat) {
   // display_num indexes Numeric_display_size and Numeric_display_offset.
   // note must be 0-6 for A-G
@@ -170,24 +195,10 @@ void load_note(byte display_num, byte note, byte sharp_flat) {
     Err_data = sharp_flat;
   } else {
     byte addr = Numeric_display_offset[display_num];
-    byte i;
-    // Turn off all segments on all digits
-    for (i = 0; i < Numeric_display_size[display_num]; i++) {
-      load_8(0, addr + 2*i);
-    }
     byte bits = Numeric_7_segment_decode[note + 12];
     if (sharp_flat) bits |= 0b1;  // turn on DP
     load_8(bits, addr);
-    switch (sharp_flat) {
-    case 1: // sharp
-      load_8(Numeric_7_segment_decode[19], addr + 2*1);
-      load_8(Numeric_7_segment_decode[20], addr + 2*2);
-      break;
-    case 2: // flat
-      load_8(Numeric_7_segment_decode[17], addr + 2*1);
-      load_8(Numeric_7_segment_decode[21], addr + 2*2);
-      break;
-    }
+    load_sharp_flat(display_num, sharp_flat);
   } // end ifs
 }
 

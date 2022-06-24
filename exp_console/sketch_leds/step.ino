@@ -81,22 +81,22 @@ void led_on(byte bit_num) {
   byte row = bit_num >> 4;
   byte col = bit_num & 0x0F;
   switch (col) {                  // 76543210
-  case 0:  Col_port[row].port_e |= 0b00000010; break;
-  case 1:  Col_port[row].port_c |= 0b01000000; break;
-  case 2:  Col_port[row].port_c |= 0b00100000; break;
-  case 3:  Col_port[row].port_c |= 0b00010000; break;
-  case 4:  Col_port[row].port_e |= 0b00001000; break;
-  case 5:  Col_port[row].port_b |= 0b00000100; break;
-  case 6:  Col_port[row].port_b |= 0b00000010; break;
-  case 7:  Col_port[row].port_b |= 0b00000001; break;
-  case 8:  Col_port[row].port_d |= 0b10000000; break;
-  case 9:  Col_port[row].port_e |= 0b00000001; break;
-  case 10: Col_port[row].port_d |= 0b00100000; break;
-  case 11: Col_port[row].port_d |= 0b00010000; break;
-  case 12: Col_port[row].port_d |= 0b00001000; break;
-  case 13: Col_port[row].port_d |= 0b00000100; break;
-  case 14: Col_port[row].port_d |= 0b00000010; break;
-  case 15: Col_port[row].port_d |= 0b00000001; break;
+  case 0:  Col_ports[row].port_e |= 0b00000010; break;
+  case 1:  Col_ports[row].port_c |= 0b01000000; break;
+  case 2:  Col_ports[row].port_c |= 0b00100000; break;
+  case 3:  Col_ports[row].port_c |= 0b00010000; break;
+  case 4:  Col_ports[row].port_e |= 0b00001000; break;
+  case 5:  Col_ports[row].port_b |= 0b00000100; break;
+  case 6:  Col_ports[row].port_b |= 0b00000010; break;
+  case 7:  Col_ports[row].port_b |= 0b00000001; break;
+  case 8:  Col_ports[row].port_d |= 0b10000000; break;
+  case 9:  Col_ports[row].port_e |= 0b00000001; break;
+  case 10: Col_ports[row].port_d |= 0b00100000; break;
+  case 11: Col_ports[row].port_d |= 0b00010000; break;
+  case 12: Col_ports[row].port_d |= 0b00001000; break;
+  case 13: Col_ports[row].port_d |= 0b00000100; break;
+  case 14: Col_ports[row].port_d |= 0b00000010; break;
+  case 15: Col_ports[row].port_d |= 0b00000001; break;
   } // end switch (col)
 }
 
@@ -109,22 +109,22 @@ void led_off(byte bit_num) {
   byte row = bit_num >> 4;
   byte col = bit_num & 0x0F;
   switch (col) {                   // 76543210
-  case 0:  Col_port[row].port_e &= ~0b00000010; break;
-  case 1:  Col_port[row].port_c &= ~0b01000000; break;
-  case 2:  Col_port[row].port_c &= ~0b00100000; break;
-  case 3:  Col_port[row].port_c &= ~0b00010000; break;
-  case 4:  Col_port[row].port_e &= ~0b00001000; break;
-  case 5:  Col_port[row].port_b &= ~0b00000100; break;
-  case 6:  Col_port[row].port_b &= ~0b00000010; break;
-  case 7:  Col_port[row].port_b &= ~0b00000001; break;
-  case 8:  Col_port[row].port_d &= ~0b10000000; break;
-  case 9:  Col_port[row].port_e &= ~0b00000001; break;
-  case 10: Col_port[row].port_d &= ~0b00100000; break;
-  case 11: Col_port[row].port_d &= ~0b00010000; break;
-  case 12: Col_port[row].port_d &= ~0b00001000; break;
-  case 13: Col_port[row].port_d &= ~0b00000100; break;
-  case 14: Col_port[row].port_d &= ~0b00000010; break;
-  case 15: Col_port[row].port_d &= ~0b00000001; break;
+  case 0:  Col_ports[row].port_e &= ~0b00000010; break;
+  case 1:  Col_ports[row].port_c &= ~0b01000000; break;
+  case 2:  Col_ports[row].port_c &= ~0b00100000; break;
+  case 3:  Col_ports[row].port_c &= ~0b00010000; break;
+  case 4:  Col_ports[row].port_e &= ~0b00001000; break;
+  case 5:  Col_ports[row].port_b &= ~0b00000100; break;
+  case 6:  Col_ports[row].port_b &= ~0b00000010; break;
+  case 7:  Col_ports[row].port_b &= ~0b00000001; break;
+  case 8:  Col_ports[row].port_d &= ~0b10000000; break;
+  case 9:  Col_ports[row].port_e &= ~0b00000001; break;
+  case 10: Col_ports[row].port_d &= ~0b00100000; break;
+  case 11: Col_ports[row].port_d &= ~0b00010000; break;
+  case 12: Col_ports[row].port_d &= ~0b00001000; break;
+  case 13: Col_ports[row].port_d &= ~0b00000100; break;
+  case 14: Col_ports[row].port_d &= ~0b00000010; break;
+  case 15: Col_ports[row].port_d &= ~0b00000001; break;
   } // end switch (col)
 }
 
