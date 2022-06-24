@@ -2,6 +2,7 @@
 
 byte EEPROM_encoder_offset;
 
+/**
 typedef struct {
   byte min, max;
   byte flags;           // bit 0: enabled, bit 1: cycle
@@ -18,11 +19,14 @@ typedef struct {
 } encoder_t;
 
 #define NUM_ENCODERS    6
+**/
 
 encoder_t Encoders[NUM_ENCODERS];
 
+/**
 #define FUNCTION_ENCODER   0
 #define FILENAME_ENCODER   5
+**/
 
 encoder_var_t Filename_var = {0, 1, 0b11, 1, 10};
 encoder_var_t Function_var[2] = {  // Synth, Program
@@ -30,14 +34,12 @@ encoder_var_t Function_var[2] = {  // Synth, Program
   {0, 14, 0b11, 1, 5}
 };
 
-#define FUNCTION        (Function_var[SYNTH_OR_PROGRAM].value)
-
 byte setup_encoders(byte EEPROM_offset) {
   EEPROM_encoder_offset = EEPROM_offset;
 
   // Function
   Encoders[FUNCTION_ENCODER].A_sw = 2 * 9;
-  Encoders[FUNCTION_ENCODER].var = &Function_var[0];
+  Encoders[FUNCTION_ENCODER].var = &Function_var[SYNTH_OR_PROGRAM];
 
   // Function Params
   Encoders[1].A_sw = 2 * 9 + 3;
@@ -55,10 +57,10 @@ byte setup_encoders(byte EEPROM_offset) {
 
   byte i;
   for (i = 0; i < NUM_ENCODERS; i++) {
-    Switch_closed_event[Encoders[i].A_sw] = i;           // switch closed ch A
-    Switch_closed_event[Encoders[i].A_sw + 1] = i + 6;   // switch closed ch B
-    Switch_opened_event[Encoders[i].A_sw] = i + 12;      // switch opened ch A
-    Switch_opened_event[Encoders[i].A_sw + 1] = i + 18;  // switch opened ch B
+    Switch_closed_event[Encoders[i].A_sw]     = ENC_A_CLOSED(i);   // switch closed ch A
+    Switch_closed_event[Encoders[i].A_sw + 1] = ENC_B_CLOSED(i);   // switch closed ch B
+    Switch_opened_event[Encoders[i].A_sw]     = ENC_A_OPENED(i);   // switch opened ch A
+    Switch_opened_event[Encoders[i].A_sw + 1] = ENC_B_OPENED(i);   // switch opened ch B
   } // for (i)
 
   return 0;  // for now...

@@ -1,5 +1,22 @@
 // events.h
 
+// Events for Switch_closed_events, Switch_opened_events and Encoder_events.
+#define ENC_A_CLOSED(n)                    (n)
+#define ENC_B_CLOSED(n)                    (6 + n)
+#define ENC_A_OPENED(n)                    (12 + n)
+#define ENC_B_OPENED(n)                    (18 + n)
+#define SYNTH_PROGRAM_OR_FUNCTION_CHANGED  24
+#define NOTE_BT_ON                         25
+#define NOTE_BT_OFF                        26
+#define NOTE_SW_ON                         27
+#define NOTE_SW_OFF                        28
+#define CONTINUOUS                         29
+#define PULSE                              30
+#define CHANNEL_ON                         31
+#define CHANNEL_OFF                        32
+#define HARMONIC_ON                        33
+#define HARMONIC_OFF                       34
+
 extern byte setup_events(byte EEPROM_offset);
 
 extern void run_event(byte event_num, byte param);

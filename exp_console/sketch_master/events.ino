@@ -3,12 +3,14 @@
 byte EEPROM_events_offset;
 
 void run_event(byte event_num, byte param) {
+  // This runs Switch_closed_events, Switch_opened_events and Encoder_event events.
   if (event_num != 0xFF) {
     byte enc;
     byte adj;
     encoder_var_t *var;
     switch (event_num) {
-    case 0: case 1: case 2: case 3: case 4: case 5:
+    case ENC_A_CLOSED(0): case ENC_A_CLOSED(1): case ENC_A_CLOSED(2):
+    case ENC_A_CLOSED(3): case ENC_A_CLOSED(4): case ENC_A_CLOSED(5):
       // switch closed for encoders A
       enc = event_num % NUM_ENCODERS;
       var = Encoders[enc].var;
@@ -31,7 +33,8 @@ void run_event(byte event_num, byte param) {
       } // end if (enabled)
       Encoders[enc].state |= 1;
       break;
-    case 6: case 7: case 8: case 9: case 10: case 11:
+    case ENC_B_CLOSED(0): case ENC_B_CLOSED(1): case ENC_B_CLOSED(2):
+    case ENC_B_CLOSED(3): case ENC_B_CLOSED(4): case ENC_B_CLOSED(5):
       // switch closed for encoders B
       enc = event_num % NUM_ENCODERS;
       //var = Encoders[enc].var;
@@ -39,7 +42,8 @@ void run_event(byte event_num, byte param) {
       //} // end if (enabled)
       Encoders[enc].state |= 2;
       break;
-    case 12: case 13: case 14: case 15: case 16: case 17:
+    case ENC_A_OPENED(0): case ENC_A_OPENED(1): case ENC_A_OPENED(2):
+    case ENC_A_OPENED(3): case ENC_A_OPENED(4): case ENC_A_OPENED(5):
       // switch opened for encoders A
       enc = event_num % NUM_ENCODERS;
       var = Encoders[enc].var;
@@ -63,7 +67,8 @@ void run_event(byte event_num, byte param) {
       } // end if (enabled)
       Encoders[enc].state &= ~1;
       break;
-    case 18: case 19: case 20: case 21: case 22: case 23:
+    case ENC_B_OPENED(0): case ENC_B_OPENED(1): case ENC_B_OPENED(2):
+    case ENC_B_OPENED(3): case ENC_B_OPENED(4): case ENC_B_OPENED(5):
       // switch opened for encoders B
       enc = event_num % NUM_ENCODERS;
       //var = Encoders[enc].var;
@@ -71,8 +76,46 @@ void run_event(byte event_num, byte param) {
       //} // end if (enabled)
       Encoders[enc].state &= ~2;
       break;
-    case 24: // Synth_or_program or Function changed
+    case SYNTH_PROGRAM_OR_FUNCTION_CHANGED: // Synth_or_program or Function changed
       reset_function_encoders();
+      break;
+    case NOTE_BT_ON:   // tagged to note buttons
+      note_on_by_bt(param);
+      break;
+    case NOTE_BT_OFF:  // tagged to note buttons
+      note_off_by_bt(param);
+      break;
+    case NOTE_SW_ON:   // tagged to note switches
+      note_on_by_sw(param);
+      break;
+    case NOTE_SW_OFF:  // tagged to note switches
+      note_off_by_sw(param);
+      Periodic_period[PULSE_NOTES_ON] = PULSE_NOTES_PERIOD;
+      Period_offset[PULSE_NOTES_ON] = 0;
+      Periodic_period[PULSE_NOTES_OFF] = PULSE_NOTES_PERIOD;
+      Period_offset[PULSE_NOTES_OFF] = PULSE_NOTES_ON_PERIOD;
+      break;
+    case CONTINUOUS:
+      // changing from pulse to continuous, notes may be off right now!
+      Periodic_period[PULSE_NOTES_ON] = 0;
+      Periodic_period[PULSE_NOTES_OFF] = 0;
+      notes_on();
+      break;
+    case PULSE:
+      // changing from continuous to pulse, no notes may be switched on now...
+      check_pulse_on();
+      break;
+    case CHANNEL_ON:
+      channel_on(param);
+      break;
+    case CHANNEL_OFF:
+      channel_off(param);
+      break;
+    case HARMONIC_ON:
+      harmonic_on(param);
+      break;
+    case HARMONIC_OFF:
+      harmonic_off(param);
       break;
     } // end switch (event_num)
   } // end if (0xFF)
@@ -102,13 +145,13 @@ byte setup_events(byte EEPROM_offset) {
     Switch_closed_event[i] = 0xFF;
     Switch_opened_event[i] = 0xFF;
   }
-  Switch_closed_event[SAVE_PROGRAM_SWITCH] = 24;
-  Switch_opened_event[SAVE_PROGRAM_SWITCH] = 24;
+  Switch_closed_event[SAVE_PROGRAM_SWITCH] = SYNTH_PROGRAM_OR_FUNCTION_CHANGED;
+  Switch_opened_event[SAVE_PROGRAM_SWITCH] = SYNTH_PROGRAM_OR_FUNCTION_CHANGED;
 
   for (i = 0; i < NUM_ENCODERS; i++) {
     Encoder_event[i] = 0xFF;
   }
-  Encoder_event[0] = 24;
+  Encoder_event[FUNCTION_ENCODER] = SYNTH_PROGRAM_OR_FUNCTION_CHANGED;
   reset_function_encoders();
 
   return 0;  // for now...

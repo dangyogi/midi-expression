@@ -5,6 +5,9 @@
 #define SAVE_PROGRAM_SWITCH     (1 * 9 + 5)
 #define SYNTH_OR_PROGRAM        (Switches[SAVE_PROGRAM_SWITCH].current)
 
+#define FIRST_HARMONIC_SWITCH   (4 * 9)
+#define FIRST_CHANNEL_SWITCH    (6 * 9)
+
 typedef struct {
   byte current;                 // 0 == open, 1 == closed
   byte opening;                 // True or False, only when current is closed

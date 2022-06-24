@@ -68,6 +68,16 @@ const byte Numeric_7_segment_decode[] = {
   0b11110110,    // 9
   0b00000010,    // 10 (minus '-')
   0b00000000,    // 11 (all segments off)
+  0b11101110,    // 12 'A'
+  0b11111110,    // 13 'B'
+  0b10011100,    // 14 'C'
+  0b11111100,    // 15 'D'
+  0b10011110,    // 16 'E'
+  0b10001110,    // 17 'F'
+  0b10111100,    // 18 'G'
+  0b10110110,    // 19 'S'
+  0b00101110,    // 20 'h'
+  0b00011100,    // 21 'L'
 };
 
 void load_digit(byte display_num, byte digit_num, byte value, byte dp) {
@@ -118,14 +128,14 @@ void load_numeric(byte display_num, short value, byte decimal_place) {
     Errno = 32;
     Err_data = value/10;
   } else {
+    byte addr = Numeric_display_offset[display_num];
     byte i;
     // Turn off all segments on all digits
     for (i = 0; i < Numeric_display_size[display_num]; i++) {
-      load_8(0, Numeric_display_offset[display_num] + 2*i);
+      load_8(0, addr + 2*i);
     }
     byte negative = value < 0;
     value = abs(value);
-    byte addr = Numeric_display_offset[display_num];
     byte bits;
     i = 0;
     while (i == 0 || value) {
@@ -141,6 +151,42 @@ void load_numeric(byte display_num, short value, byte decimal_place) {
       load_8(bits, addr + 2*i);
     } else if (decimal_place == i + 1) {
       load_8(0b1, addr + 2*i);
+    }
+  } // end ifs
+}
+
+void load_note(byte display_num, byte note, byte sharp_flat) {
+  // display_num indexes Numeric_display_size and Numeric_display_offset.
+  // note must be 0-6 for A-G
+  // sharp_flat is 0 for natural, 1 for sharp, 2 for flat
+  if (display_num >= Num_numeric_displays) {
+    Errno = 30;
+    Err_data = display_num;
+  } else if (note > 6) {
+    Errno = 31;
+    Err_data = note;
+  } else if (sharp_flat > 2) {
+    Errno = 32;
+    Err_data = sharp_flat;
+  } else {
+    byte addr = Numeric_display_offset[display_num];
+    byte i;
+    // Turn off all segments on all digits
+    for (i = 0; i < Numeric_display_size[display_num]; i++) {
+      load_8(0, addr + 2*i);
+    }
+    byte bits = Numeric_7_segment_decode[note + 12];
+    if (sharp_flat) bits |= 0b1;  // turn on DP
+    load_8(bits, addr);
+    switch (sharp_flat) {
+    case 1: // sharp
+      load_8(Numeric_7_segment_decode[19], addr + 2*1);
+      load_8(Numeric_7_segment_decode[20], addr + 2*2);
+      break;
+    case 2: // flat
+      load_8(Numeric_7_segment_decode[17], addr + 2*1);
+      load_8(Numeric_7_segment_decode[21], addr + 2*2);
+      break;
     }
   } // end ifs
 }
