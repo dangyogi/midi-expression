@@ -32,6 +32,73 @@ I2C interface:
 
 Error Codes:
 
-  Errno, Err_data
+  Range  Function
+  1-39   receiveRequest
+  41-49  sendReport
+  51-59  other sketch_led.ino
+  61-69  step.ino
+  71-79  alpha_displays.ino
+  81-99  numeric_displays.ino
 
+  Errno, Err_data
+     1      N/A     step_receiveRequest took too long after last step call
+     2   How_many   I2C request 0-5, invalid command length, must be 1
+     3   How_many   I2C request 6, invalid command length, must be 2
+     4  EEPROM_addr I2C request 6, invalid EEPROM_addr, must be < NUM_EEPROM_USED
+     5   How_many   I2C request 8, invalid command length, must be 2
+     6   Num_rows   I2C request 8, invalid num_rows, must be < NUM_ROWS
+     7   How_many   I2C request 9, invalid command length, must be 3
+     8  EEPROM_addr I2C request 9, invalid EEPROM_addr, must be < EEPROM_AVAIL
+     9   How_many   I2C request 10, invalid command length, must be 2
+    10     disp     I2C request 10, invalid numeric display#, must be < MAX_NUMERIC_DISPLAYS
+    11   How_many   I2C request 11, invalid command length, must be 4
+    12     disp     I2C request 11, invalid numeric display#, must be < Num_numeric_displays
+    13     size     I2C request 11, invalid size, must be <= MAX_NUMERIC_DISPLAY_SIZE
+    14    offset    I2C request 11, invalid offset, must be < Num_rows*NUM_COLS/8 - 2*size
+    15   How_many   I2C request 12, invalid command length, must be 2
+    16   Num_strs   I2C request 12, invalid number of strings, must be < MAX_NUM_STRINGS
+    17   How_many   I2C request 13, invalid command length, must be 4
+    18     str#     I2C request 13, invalid str#, must be < Num_alpha_strings
+    19    max_len   I2C request 13, invalid max length, must be <= MAX_STRING_LEN
+    20     index    I2C request 13, invalid index, must be < Num_rows * NUM_COLS / 16
+    21   How_many   I2C request 14, invalid command length, must be 2
+    22   How_many   I2C request 15, invalid command length, must be 2
+    23   How_many   I2C request 16, invalid command length, must be 3
+    24   How_many   I2C request 17, invalid command length, must be 4
+    25   How_many   I2C request 18, invalid command length, must be 5
+    26   How_many   I2C request 19, invalid command length, must be 5
+    27   How_many   I2C request 20, invalid command length, must be 4
+    28   How_many   I2C request 21, invalid command length, must be 3
+    29   How_many   I2C request 22 (load string), request not long enough, must be at least 2
+    30   How_many   I2C request 22 (load string), string too long, must be <= MAX_STRING_LEN
+    31    req#      Invalid I2C request
+    35     N/A      ReceiveRequest running when another receiveRequest comes in
+    41     N/A      step_sendReport took too long after last step call
+    42 EEPROM_addr  EEPROM_addr >= NUM_EEPROM_USED
+    49     N/A      sendReport running when another sendReport comes in
+    51   step_fun   schedule_step_fun: invalid step_fun, >= NUM_STEP_FUNS
+    52     N/A      loop took too long to figure out Next_step_fun
+    53     N/A      loop took too long with no Next_Step_fun!! (how could this happen??)
+    61 EEPROM_#rows setup_step, invalid Num_rows in EEPROM
+    62   bit_num    led_on: invalid bit_num, must be < Num_rows * NUM_COLS
+    63   bit_num    led_off: invalid bit_num, must be < Num_rows * NUM_COLS
+    71 EEPROM_#strs setup_alpha_displays: invalid Num_alpha_strings in EEPROM
+    72 EEPROM_size  setup_alpha_displays: invalid Alpha_num_chars in EEPROM
+    73 EEPROM_index setup_alpha_displays: invalid Alpha_index in EEPROM
+    74   str_num    load_string: invalid string_num, must be < MAX_NUM_STRINGS
+    75   strlen     load_string: invalid strlen, must be <= MAX_STRING_LEN
+    81 EEPROM_#disp setup_numeric_displays: invalid Num_numeric_displays in EEPROM
+    82 EEPROM_size  setup_numeric_displays: invalid Numeric_display_size in EEPROM
+    83 EEPROM_offst setup_numeric_displays: invalid Numeric_display_offset in EEPROM
+    84    disp      load_digit: invalid display_num, must be < Num_numeric_displays
+    85    digit     load_digit: invalid digit_num, must be < Numeric_display_size
+    86    value     load_digit: invalid value, must be < 11
+    87    disp      load_numeric: invalid display_num, must be Num_numeric_displays
+    88   dec_pl     load_numeric: invalid decimal_place, must be <= Numeric_display_size
+    89  value/10    load_numeric: invalid value, too big to fit
+    90    disp      load_sharp_flat: invalid display_num, must be < Num_numeric_displays
+    91 sharp_flat   load_sharp_flat: invalid sharp_flat, must be <= 2
+    92    disp      load_note: invalid display_num, must be < Num_numeric_displays
+    93    note      load_note: invalid note, must be <= 6 (A-G)
+    94 sharp_flat   load_note: invalid sharp_flat, must be <= 2
 

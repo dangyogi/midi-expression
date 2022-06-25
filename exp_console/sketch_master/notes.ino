@@ -1,19 +1,5 @@
 // notes.ino
 
-/**
-#define NUM_NOTES                6
-#define FIRST_BUTTON             (8 * 9)
-#define NOTE_BUTTON(n)           (FIRST_BUTTON +  (n))
-#define FIRST_SWITCH             (5 * 9 + 3)
-#define NOTE_SWITCH(n)           (FIRST_SWITCH + (n))
-
-#define CONTINUOUS_PULSE_SW      (3 * 9 + 8)
-#define CONTINUOUS_ON            (Switches[CONTINUOUS_PULSE_SW].current)
-
-#define PULSE_NOTES_PERIOD       500
-#define PULSE_NOTES_ON_PERIOD    400
-**/
-
 #define SW_TO_NOTE(sw)  (Notes_by_sw[sw - (sw < FIRST_BUTTON ? FIRST_SWITCH : FIRST_BUTTON)])
 
 byte EEPROM_notes_offset;

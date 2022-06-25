@@ -31,7 +31,7 @@ byte setup_alpha_displays(byte my_EEPROM_offset) {
   if (b == 0xFF) {
     Serial.println("Num_alpha_strings not set in EEPROM");
   } else if (b > MAX_NUM_STRINGS) {
-    Errno = 110;
+    Errno = 71;
     Err_data = b;
   } else Num_alpha_strings = b;
 
@@ -42,7 +42,7 @@ byte setup_alpha_displays(byte my_EEPROM_offset) {
       Serial.print("Alpha_num_chars not set in EEPROM for ");
       Serial.println(i);
     } else if (b > MAX_STRING_LEN) {
-      Errno = 111;
+      Errno = 72;
       Err_data = b;
     } else Alpha_num_chars[i] = b;
 
@@ -51,7 +51,7 @@ byte setup_alpha_displays(byte my_EEPROM_offset) {
       Serial.print("Alpha_index not set in EEPROM for ");
       Serial.println(i);
     } else if (b > Num_rows * NUM_COLS) {
-      Errno = 112;
+      Errno = 73;
       Err_data = b;
     } else Alpha_index[i] = b;
   } // end for (i)
@@ -85,7 +85,7 @@ void load_string(byte string_num, char *s) {
   // Pass NULL or "" to delete the string.
   byte as_index = 0;  // where next char goes in Alpha_string
   if (string_num >= MAX_NUM_STRINGS) {
-    Errno = 70;
+    Errno = 74;
     Err_data = string_num;
   } else if (s == NULL || *s == 0) {
     // Turn off this string and set it to blanks.
@@ -94,7 +94,7 @@ void load_string(byte string_num, char *s) {
       Col_ports[Alpha_index[string_num] + as_index++] = Alpha_decoder[' '];
     }
   } else if (strlen(s) > MAX_STRING_LEN) {
-    Errno = 71;
+    Errno = 75;
     Err_data = strlen(s);
   } else {
     while (*s) {

@@ -65,7 +65,7 @@ byte setup_step(void) {
   if (b == 0xFF) {
     Serial.println("Num_rows not set in EEPROM");
   } else if (b > NUM_ROWS) {
-    Errno = 100;
+    Errno = 61;
     Err_data = b; 
   } else Num_rows = b;
 
@@ -74,7 +74,7 @@ byte setup_step(void) {
 
 void led_on(byte bit_num) {
   if (bit_num >= Num_rows * NUM_COLS) {
-    Errno = 50;
+    Errno = 62;
     Err_data = bit_num;
     return;
   }
@@ -102,7 +102,7 @@ void led_on(byte bit_num) {
 
 void led_off(byte bit_num) {
   if (bit_num >= Num_rows * NUM_COLS) {
-    Errno = 60;
+    Errno = 63;
     Err_data = bit_num;
     return;
   }

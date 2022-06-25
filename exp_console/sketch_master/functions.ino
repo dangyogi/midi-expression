@@ -181,6 +181,11 @@ byte setup_functions(byte EEPROM_offset) {
     } // end for (enc)
   } // end for (fun)
 
+  if (var_num != NUM_CHANNEL_VARS) {
+    Errno = 10;
+    Err_data = var_num;
+  }
+
   // assign var_nums to HM FUNS
   var_num = 0;
   for (fun = NUM_CH_FUNCTIONS; fun < NUM_FUNCTIONS; fun++) {
@@ -190,6 +195,11 @@ byte setup_functions(byte EEPROM_offset) {
       } // end if (enabled)
     } // end for (enc)
   } // end for (fun)
+
+  if (var_num != NUM_HARMONIC_VARS) {
+    Errno = 11;
+    Err_data = var_num;
+  }
 
   byte i;
   for (i = 0; i < NUM_CHANNELS; i++) {
@@ -207,6 +217,8 @@ byte setup_functions(byte EEPROM_offset) {
       harmonic_on(FIRST_HARMONIC_SWITCH + i);
     }
   } // end for (i)
+
+  reset_function_encoders();
 
   return 0; // for now...
 }

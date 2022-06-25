@@ -38,21 +38,21 @@ byte setup_encoders(byte EEPROM_offset) {
   EEPROM_encoder_offset = EEPROM_offset;
 
   // Function
-  Encoders[FUNCTION_ENCODER].A_sw = 2 * 9;
+  Encoders[FUNCTION_ENCODER].A_sw = SWITCH_NUM(2, 0);
   Encoders[FUNCTION_ENCODER].var = &Function_var[SYNTH_OR_PROGRAM];
 
   // Function Params
-  Encoders[1].A_sw = 2 * 9 + 3;
+  Encoders[1].A_sw = SWITCH_NUM(2, 3);
   Encoders[1].var = NULL;
-  Encoders[2].A_sw = 2 * 9 + 6;
+  Encoders[2].A_sw = SWITCH_NUM(2, 6);
   Encoders[2].var = NULL;
-  Encoders[3].A_sw = 3 * 9;
+  Encoders[3].A_sw = SWITCH_NUM(3, 0);
   Encoders[3].var = NULL;
-  Encoders[4].A_sw = 3 * 9 + 3;
+  Encoders[4].A_sw = SWITCH_NUM(3, 3);
   Encoders[4].var = NULL;
 
   // Filename
-  Encoders[FILENAME_ENCODER].A_sw = 5;
+  Encoders[FILENAME_ENCODER].A_sw = SWITCH_NUM(0, 5);
   Encoders[FILENAME_ENCODER].var = &Filename_var;
 
   byte i;

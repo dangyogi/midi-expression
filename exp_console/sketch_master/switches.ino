@@ -1,7 +1,6 @@
 // switches.ino
 
 // High (rows) -- outputs, LOW is on, HIGH is off
-#define NUM_ROWS         9
 #define ROW_0           11  /* PA16 */
 #define ROW_1            8  /* PA18 */
 #define ROW_2           12  /* PA19 */
@@ -13,7 +12,6 @@
 #define ROW_8            3  /* PB11 */
 
 // Low (cols) -- inputs w/ pull-downs, LOW is open, HIGH is closed
-#define NUM_COLS         9
 #define COL_0           A0  /* PA02 */
 #define COL_1            0  /* PB23 RX */
 #define COL_2            6  /* PA04 */
@@ -27,14 +25,6 @@
 
 byte Rows[] = {ROW_0, ROW_1, ROW_2, ROW_3, ROW_4, ROW_5, ROW_6, ROW_7, ROW_8};
 byte Cols[] = {COL_0, COL_1, COL_2, COL_3, COL_4, COL_5, COL_6, COL_7, COL_8};
-
-/**
-typedef struct {
-  byte current;                 // 0 == open, 1 == closed
-  byte opening;                 // True or False, only when current is closed
-  unsigned long open_time;      // only valid when opening
-} switch_t;
-**/
 
 switch_t Switches[NUM_SWITCHES];
 
@@ -67,14 +57,14 @@ unsigned long Longest_scan;  // uSec
 byte Close_counts[NUM_SWITCHES];
 
 void scan_switches(byte trace) {
-  // Takes 270 uSec to run.
+  // Takes 210 uSec to run with no activity.
   byte row, col;
   unsigned short cols;
   unsigned long start_scan_time = micros();
   for (row = 0; row < 9; row++) {
     digitalWrite(Rows[row], HIGH);     // turn on row
     for (col = 0; col < 9; col++) {
-      byte sw_num = row * 9 + col;
+      byte sw_num = SWITCH_NUM(row, col);
       switch_t *sw = &Switches[sw_num];
       if (digitalRead(Cols[col])) {
         // switch closed

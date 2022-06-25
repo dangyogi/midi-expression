@@ -46,7 +46,7 @@ void setup() {
   digitalWrite(ERR_LED2, LOW);
 } // end setup()
 
-#define STEP_RECEIVE_REPORT     0
+#define STEP_RECEIVE_REQUEST    0
 #define STEP_SEND_REPORT        1
 #define NUM_STEP_FUNS           2
 
@@ -83,14 +83,14 @@ byte check_ls(byte b, byte limit, byte errno) {
 int How_many;
 byte ReceiveRequest_running;
 
-void receiveRequest(int how_many) {
+void receiveRequest(int how_many) {  // Errnos 1-39
   // callback for requests from on high
   if (ReceiveRequest_running) {
-    Errno = 70;
+    Errno = 35;
   } else {
     ReceiveRequest_running = 1;
     How_many = how_many;
-    schedule_step_fun(STEP_RECEIVE_REPORT);
+    schedule_step_fun(STEP_RECEIVE_REQUEST);
   }
 }
 
@@ -102,10 +102,10 @@ void step_receiveRequest(void) {
   char s[MAX_STRING_LEN + 1];
   b0 = Wire.read();
   if (b0 < 6) {
-    if (!check_eq(How_many, 1, 1)) Report = b0;
+    if (!check_eq(How_many, 1, 2)) Report = b0;
   } else if (b0 < 7) {
     // b0 == 6
-    if (!check_eq(How_many, 2, 2)) {
+    if (!check_eq(How_many, 2, 3)) {
       b1 = Wire.read();
       if (!check_ls(b1, EEPROM[NUM_EEPROM_USED], 4)) {
         Report = b0;
@@ -115,119 +115,119 @@ void step_receiveRequest(void) {
   } else {
     switch (b0) {
     case 8:  // set num rows
-      if (check_eq(How_many, 2, 8)) break;
+      if (check_eq(How_many, 2, 5)) break;
       b1 = Wire.read();
-      if (check_ls(b1, NUM_ROWS, 9)) break;
+      if (check_ls(b1, NUM_ROWS, 6)) break;
       Num_rows = b1;
       EEPROM[EEPROM_Num_rows] = b1;
       break;
     case 9:  // store EEPROM addr, value
-      if (check_eq(How_many, 3, 20)) break;
+      if (check_eq(How_many, 3, 7)) break;
       b1 = Wire.read();
-      if (check_ls(b1, EEPROM_AVAIL, 21)) break;
+      if (check_ls(b1, EEPROM_AVAIL, 8)) break;
       b2 = Wire.read();
       if (b1 > EEPROM[NUM_EEPROM_USED]) EEPROM[NUM_EEPROM_USED] = b1;
       EEPROM[EEPROM_storage_addr(b1)] = b2;
       break;
     case 10:  // set Num_numeric_displays
-      if (check_eq(How_many, 2, 8)) break;
+      if (check_eq(How_many, 2, 9)) break;
       b1 = Wire.read();
-      if (check_ls(b1, MAX_NUMERIC_DISPLAYS, 9)) break;
+      if (check_ls(b1, MAX_NUMERIC_DISPLAYS, 10)) break;
       Num_numeric_displays = b1;
       EEPROM[EEPROM_Num_numeric_displays()] = b1;
       break;
     case 11:  // set <numeric_display>, size, offset
-      if (check_eq(How_many, 4, 8)) break;
+      if (check_eq(How_many, 4, 11)) break;
       b1 = Wire.read();
-      if (check_ls(b1, Num_numeric_displays, 9)) break;
+      if (check_ls(b1, Num_numeric_displays, 12)) break;
       b2 = Wire.read();
-      if (check_ls(b2, MAX_NUMERIC_DISPLAY_SIZE + 1, 9)) break;
+      if (check_ls(b2, MAX_NUMERIC_DISPLAY_SIZE + 1, 13)) break;
       b3 = Wire.read();
-      if (check_ls(b3, Num_rows * NUM_COLS / 8 - 2*b2, 9)) break;
+      if (check_ls(b3, Num_rows * NUM_COLS / 8 - 2*b2, 14)) break;
       Numeric_display_size[b1] = b2;
       EEPROM[EEPROM_Numeric_display_size(b1)] = b2;
       Numeric_display_offset[b1] = b3;
       EEPROM[EEPROM_Numeric_display_offset(b1)] = b3;
       break;
     case 12:  // set Num_alpha_strings
-      if (check_eq(How_many, 2, 8)) break;
+      if (check_eq(How_many, 2, 15)) break;
       b1 = Wire.read();
-      if (check_ls(b1, MAX_NUM_STRINGS, 9)) break;
+      if (check_ls(b1, MAX_NUM_STRINGS, 16)) break;
       Num_alpha_strings = b1;
       EEPROM[EEPROM_Num_alpha_strings()] = b1;
       break;
     case 13:  // set <string_num>, num_chars, index
-      if (check_eq(How_many, 4, 8)) break;
+      if (check_eq(How_many, 4, 17)) break;
       b1 = Wire.read();
-      if (check_ls(b1, Num_alpha_strings, 9)) break;
+      if (check_ls(b1, Num_alpha_strings, 18)) break;
       b2 = Wire.read();
-      if (check_ls(b2, MAX_STRING_LEN, 9)) break;
+      if (check_ls(b2, MAX_STRING_LEN + 1, 19)) break;
       b3 = Wire.read();
-      if (check_ls(b3, Num_rows * NUM_COLS / 16, 9)) break;
+      if (check_ls(b3, Num_rows * NUM_COLS / 16, 20)) break;
       Alpha_num_chars[b1] = b2;
       EEPROM[EEPROM_Alpha_num_chars(b1)] = b2;
       Alpha_index[b1] = b3;
       EEPROM[EEPROM_Alpha_index(b1)] = b3;
       break;
     case 14:  // turn on led
-      if (check_eq(How_many, 2, 9)) break;
+      if (check_eq(How_many, 2, 21)) break;
       led_on(Wire.read());
       break;
     case 15:  // turn off led
-      if (check_eq(How_many, 2, 10)) break;
+      if (check_eq(How_many, 2, 22)) break;
       led_off(Wire.read());
       break;
     case 16:  // set 8 bits
-      if (check_eq(How_many, 3, 11)) break;
+      if (check_eq(How_many, 3, 23)) break;
       b1 = Wire.read();
       load_8(Wire.read(), b1);
       break;
     case 17:  // set 16 bits
-      if (check_eq(How_many, 4, 12)) break;
+      if (check_eq(How_many, 4, 24)) break;
       b1 = Wire.read();
       us0 = Wire.read();  // MSB first
       us0 = (us0 << 8) | Wire.read();
       load_16(us0, b1);
       break;
     case 18:  // load digit
-      if (check_eq(How_many, 5, 13)) break;
+      if (check_eq(How_many, 5, 25)) break;
       b1 = Wire.read();
       b2 = Wire.read();
       b3 = Wire.read();
       load_digit(b1, b2, b3, Wire.read());
       break;
     case 19:  // load numeric
-      if (check_eq(How_many, 5, 14)) break;
+      if (check_eq(How_many, 5, 26)) break;
       b1 = Wire.read();
       ss0 = Wire.read();
       ss0 = (ss0 << 8) | Wire.read();
       load_numeric(b1, ss0, Wire.read());
       break;
     case 20:  // load note
-      if (check_eq(How_many, 4, 15)) break;
+      if (check_eq(How_many, 4, 27)) break;
       b1 = Wire.read();
       b2 = Wire.read();
       load_note(b1, b2, Wire.read());
       break;
     case 21:  // load sharp_flat
-      if (check_eq(How_many, 3, 16)) break;
+      if (check_eq(How_many, 3, 28)) break;
       b1 = Wire.read();
       load_sharp_flat(b1, Wire.read());
       break;
     case 22:  // load string
       if (How_many < 2) {
-        Errno = 17;
+        Errno = 29;
         Err_data = How_many;
         break;
       }
-      if (check_ls(How_many, MAX_STRING_LEN + 3, 18)) break;
+      if (check_ls(How_many, MAX_STRING_LEN + 3, 30)) break;
       b1 = Wire.read();
       for (b2 = 0; b2 < How_many - 2; b2++) s[b2] = Wire.read();
       s[b2] = 0;
       load_string(b1, s);
       break;
     default:
-      Errno = 110;
+      Errno = 31;
       Err_data = b0;
       break;
     } // end switch (b0)
@@ -237,10 +237,10 @@ void step_receiveRequest(void) {
 
 byte SendReport_running;
 
-void sendReport(void) {
+void sendReport(void) {  // Errnos 41-49
   // callback for reports requested from on high
   if (SendReport_running) {
-    Errno = 80;
+    Errno = 49;
   } else {
     SendReport_running = 1;
     schedule_step_fun(STEP_SEND_REPORT);
@@ -289,7 +289,7 @@ void step_sendReport(void) {
       Wire.write(EEPROM[EEPROM_storage_addr(Report_addr)]);
       Report_addr++;
     } else {
-      Errno = 4;
+      Errno = 42;
       Err_data = Report_addr;
     }
     break;
@@ -743,7 +743,7 @@ byte Step_fun_scheduled[NUM_STEP_FUNS];
 
 void schedule_step_fun(byte step_fun) {
   if (step_fun >= NUM_STEP_FUNS) {
-    Errno = 60;
+    Errno = 51;
     Err_data = step_fun;
   } else {
     Step_fun_scheduled[step_fun] = 1;
@@ -760,9 +760,10 @@ void loop() {
     Step_fun_scheduled[next_step_fun] = 0;
     Next_step_fun = 0xFF;
     switch (next_step_fun) {
-    case 0: break;  // FIX
+    case STEP_RECEIVE_REQUEST: step_receiveRequest(); break;
+    case STEP_SEND_REPORT: step_sendReport(); break; 
     } // end switch (next_step_fun)
-    step(10*(next_step_fun+1));
+    step(40*next_step_fun + 1);
     if (Next_step_fun > next_step_fun) {
       byte end = Next_step_fun == 0xFF ? NUM_STEP_FUNS : Next_step_fun;
       for (byte i = next_step_fun; i < end; i++) {
@@ -771,10 +772,10 @@ void loop() {
           break;
         }
       } // end for (i)
-      step(50);
+      step(52);
     } // end if (Next_step_fun > next_step_fun)
   } else {  // Nothing else to run...
-    step(51);
+    step(53);
   } // end if (Next_step_fun != 0xFF)
 }
 

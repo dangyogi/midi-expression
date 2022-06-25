@@ -124,17 +124,37 @@ void run_event(byte event_num, byte param) {
 byte Switch_closed_event[NUM_SWITCHES]; // 0xFF is None
 byte Switch_opened_event[NUM_SWITCHES]; // 0xFF is None
 
+byte Trace_events = 0;
+
 void switch_closed(byte sw) {
+  if (Trace_events) {
+    Serial.print("switch ");
+    Serial.print(sw);
+    Serial.print(" closed, event ");
+    Serial.println(Switch_closed_event[sw]);
+  }
   run_event(Switch_closed_event[sw], sw);
 }
 
 void switch_opened(byte sw) {
+  if (Trace_events) {
+    Serial.print("switch ");
+    Serial.print(sw);
+    Serial.print(" opened, event ");
+    Serial.println(Switch_opened_event[sw]);
+  }
   run_event(Switch_opened_event[sw], sw);
 }
 
 byte Encoder_event[NUM_ENCODERS]; // 0xFF is None
 
 void encoder_changed(byte enc) {
+  if (Trace_events) {
+    Serial.print("encoder ");
+    Serial.print(enc);
+    Serial.print(" changed, event ");
+    Serial.println(Encoder_event[enc]);
+  }
   run_event(Encoder_event[enc], enc);
 }
 
@@ -152,7 +172,8 @@ byte setup_events(byte EEPROM_offset) {
     Encoder_event[i] = 0xFF;
   }
   Encoder_event[FUNCTION_ENCODER] = SYNTH_PROGRAM_OR_FUNCTION_CHANGED;
-  reset_function_encoders();
+
+  // reset_function_encoders();  Moved to setup_functions()...
 
   return 0;  // for now...
 }
