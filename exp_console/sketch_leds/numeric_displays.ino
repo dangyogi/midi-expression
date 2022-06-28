@@ -98,19 +98,12 @@ void load_digit(byte display_num, byte digit_num, byte value, byte dp) {
   }
 }
 
-#define TEST_NUMERIC_DECODER_SCROLL_DELAY       250 /* mSec */
-
-byte Display_num;
-byte Digit_num;
-byte Value_test;    // next value to display
-byte DP_test;
-
-unsigned short test_numeric_decoder(void) {
-  if (Value_test == 10) {
-    // FIX
+void test_numeric_decoder(void) {
+  // load 12 numeric digits into 4 x 3-digit displays, with alternating DPs
+  byte i;
+  for (i = 0; i < 12; i++) {
+    load_digit(i/3, i % 3, i, i % 2);
   }
-  load_digit(Display_num, Digit_num, 11, 0);
-  return TEST_NUMERIC_DECODER_SCROLL_DELAY;
 }
 
 void load_numeric(byte display_num, short value, byte decimal_place) {

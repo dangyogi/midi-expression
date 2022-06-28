@@ -31,7 +31,7 @@ void err_led(byte led_pin1, byte led_pin2) {
 void push(int delay) {
   if (Num_delays < MAX_DELAYS) {
     Delays[Num_delays++] = delay;
-    Serial.println(delay);
+    //Serial.println(delay);
   }
 }
 

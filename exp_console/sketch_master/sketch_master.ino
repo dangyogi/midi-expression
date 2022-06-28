@@ -12,6 +12,9 @@
 
 #define ERR_LED    13   // built-in LED
 
+#define I2C_POT_CONTROLLER    0x31
+#define I2C_LED_CONTROLLER    0x32
+
 byte EEPROM_used;
 
 unsigned long get_EEPROM(byte EEPROM_addr, byte len) {
@@ -58,6 +61,8 @@ void setup() {
 byte Debug = 0;
 
 void running_help(void) {
+  Serial.println();
+  Serial.println("running:");
   Serial.println("?: help");
   Serial.println("D: go into Debug mode");
   Serial.println("L - show Longest_scan");
@@ -66,15 +71,24 @@ void running_help(void) {
   Serial.println("T - toggle Trace_events");
   Serial.println("S<row> - dump switches on row");
   Serial.println("C - dump encoders");
+  Serial.println();
 }
 
 void debug_help(void) {
+  Serial.println();
+  Serial.println("debug:");
   Serial.println("?: help");
   Serial.println("D: leave Debug mode");
+  Serial.println("E - show Errno, Err_data");
   Serial.println("S: scan for shorts");
   Serial.println("On: turn on output n");
   Serial.println("In: turn on input n");
   Serial.println("F: turn off test pin");
+  Serial.println("P<data>: send I2C command to pot_controller");
+  Serial.println("Q<len_expected>: receive I2C report from pot_controller");
+  Serial.println("L<data>: send I2C command to led_controller");
+  Serial.println("M<len_expected>: receive I2C report from led_controller");
+  Serial.println();
 }
 
 byte Debug_pin_high = 0xFF;    // 0xFF means no pins high
@@ -86,9 +100,53 @@ void turn_off_test_pin(void) {
   }
 }
 
+unsigned long I2C_send_time;    // uSec
+
+void sendRequest(byte i2c_addr, byte *data, byte data_len) {
+  unsigned long start_time = micros();
+  Wire.beginTransmission(i2c_addr);
+  Wire.write(data, data_len);
+  Wire.endTransmission();
+  unsigned long elapsed_time = micros() - start_time;
+  if (elapsed_time > I2C_send_time) I2C_send_time = elapsed_time;
+}
+
+unsigned long I2C_request_from_time;    // uSec
+unsigned long I2C_read_time;            // uSec
+
+void getResponse(byte i2c_addr, byte data_len) {
+  byte i;
+  byte data[32];
+  unsigned long start_time = micros();
+  byte bytes_received = Wire.requestFrom(i2c_addr, data_len);
+  unsigned long mid_time = micros();
+  unsigned long elapsed_time = mid_time - start_time;
+  if (elapsed_time > I2C_request_from_time) I2C_request_from_time = elapsed_time;
+  if (bytes_received > 32) {
+    Serial.print("Bytes_received too long (> 32), got "); Serial.println(bytes_received);
+  } else {
+    for (i = 0; i < bytes_received; i++) {
+      data[i] = Wire.read();
+    }
+    unsigned long read_time = micros() - mid_time;
+    if (read_time > I2C_read_time) I2C_read_time = read_time;
+    if (bytes_received != Wire.available()) {
+      Serial.print("I2C.requestFrom: bytes_received, "); Serial.print(bytes_received);
+      Serial.print(", != available(), "); Serial.println(Wire.available());
+    }
+    Serial.print("Received "); Serial.print(bytes_received); Serial.println(" bytes:");
+    Serial.print("  ");
+    for (i = 0; i < bytes_received; i++) {
+      Serial.print(data[i]); Serial.print(" ");
+    }
+    Serial.println();
+  } // end if (bytes_received > 32)
+}
+
 void loop() {
   // put your main code here, to run repeatedly:
   byte b0, b1, b2, b3;
+  byte buffer[32];
 
   if (!Debug) {
     scan_switches();
@@ -233,6 +291,14 @@ void loop() {
         } // end for (b1)
         Serial.println("Leaving Debug mode");
         break;
+      case 'E': // show Errno, Err_data
+        Serial.print("Errno: ");
+        Serial.print(Errno);
+        Serial.print(", Err_data: ");
+        Serial.println(Err_data);
+        Errno = 0;
+        Err_data = 0;
+        break;
       case 'S': // scan for shorts
         turn_off_test_pin();     
 
@@ -324,6 +390,68 @@ void loop() {
       case 'F': // turn off test pin
         turn_off_test_pin();
         Serial.println("test pin off");
+        break;
+      case 'P': // send I2C command to pot_controller
+        buffer[0] = Serial.parseInt(SKIP_WHITESPACE);
+        for (b1 = 1; b1 < 32; b1++) {
+          b2 = Serial.read();
+          if (b2 == '\n') {
+            sendRequest(I2C_POT_CONTROLLER, buffer, b1);
+            Serial.print("I2C_send_time "); Serial.print(I2C_send_time);
+            Serial.println(" uSec");
+            I2C_send_time = 0;
+            break;
+          } else if (b2 != ',') {
+            Serial.println("comma expected between bytes");
+            break;
+          }
+          buffer[b1] = Serial.parseInt(SKIP_WHITESPACE);
+        } // end for (b1)
+        break;
+      case 'Q': // receive I2C report from pot_controller
+        b1 = Serial.parseInt(SKIP_WHITESPACE);
+        if (b1 > 32) {
+          Serial.println("ERROR: len_expected > 32");
+        } else {
+          getResponse(I2C_POT_CONTROLLER, b1);
+          Serial.print("I2C_request_from_time "); Serial.print(I2C_request_from_time);
+          Serial.println(" uSec");
+          I2C_request_from_time = 0;
+          Serial.print("I2C_read_time "); Serial.print(I2C_read_time);
+          Serial.println(" uSec");
+          I2C_read_time = 0;
+        }
+        break;
+      case 'L': // send I2C command to led_controller
+        buffer[0] = Serial.parseInt(SKIP_WHITESPACE);
+        for (b1 = 1; b1 < 32; b1++) {
+          b2 = Serial.read();
+          if (b2 == '\n') {
+            sendRequest(I2C_LED_CONTROLLER, buffer, b1);
+            Serial.print("I2C_send_time "); Serial.print(I2C_send_time);
+            Serial.println(" uSec");
+            I2C_send_time = 0;
+            break;
+          } else if (b2 != ',') {
+            Serial.println("comma expected between bytes");
+            break;
+          }
+          buffer[b1] = Serial.parseInt(SKIP_WHITESPACE);
+        } // end for (b1)
+        break;
+      case 'M': // receive I2C report from led_controller
+        b1 = Serial.parseInt(SKIP_WHITESPACE);
+        if (b1 > 32) {
+          Serial.println("ERROR: len_expected > 32");
+        } else {
+          getResponse(I2C_LED_CONTROLLER, b1);
+          Serial.print("I2C_request_from_time "); Serial.print(I2C_request_from_time);
+          Serial.println(" uSec");
+          I2C_request_from_time = 0;
+          Serial.print("I2C_read_time "); Serial.print(I2C_read_time);
+          Serial.println(" uSec");
+          I2C_read_time = 0;
+        }
         break;
       case ' ': case '\t': case '\n': case '\r': break;
       default: debug_help(); break;

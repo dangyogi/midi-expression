@@ -116,4 +116,28 @@ void load_string(byte string_num, char *s) {
   }
 }
 
+#define TEST_ALPHA_DECODER_STRING_DELAY   (SCROLL_DELAY * 33 + 1000)
+#define TEST_STRING1                      "! $&*+-./0123456789<=>\\_|"   
+#define TEST_STRING2                      "A'B`CD\"E\"FGHIJKLMNOPQRSTUVWXYZ"   
+
+byte Test_i;
+
+// Activate by setting Timeout_fun_runtime[TEST_ALPHA_DECODER] = 1;
+
+unsigned short test_alpha_decoder(void) {
+  if (Test_i == 0) {
+    load_string(0, TEST_STRING1);
+    Test_i++;
+    return (strlen(TEST_STRING1) + 3) * SCROLL_DELAY + TEST_ALPHA_DECODER_STRING_DELAY;
+  }
+  if (Test_i == 1) {
+    load_string(0, TEST_STRING2);
+    Test_i++;
+    return (strlen(TEST_STRING2) + 3) * SCROLL_DELAY + TEST_ALPHA_DECODER_STRING_DELAY;
+  }
+  load_string(0, "");
+  Test_i = 0;
+  return 0;
+}
+
 // vim: sw=2

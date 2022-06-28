@@ -13,7 +13,7 @@ I2C interface:
 
   Reports to on high:
     0: Errno, Err_data, pot.value (1 byte each) for each pot (2 + num_pots bytes total)
-    1: num_pots, NUM_A_PINS, EEPROM_AVAIL EEPROM_USED (4 bytes total)
+    1: num_pots, NUM_A_PINS, EEPROM_AVAIL, EEPROM_USED (4 bytes total)
     2: Errno, Err_data (2 bytes total)
     3: Num_pots for each a_pin (NUM_A_PINS bytes total)
     4: Cycle_time (uSec, 4 bytes total)

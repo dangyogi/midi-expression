@@ -300,8 +300,7 @@ devices:
         num-elements: 1
         pins:
           - name: C
-            connect: [[32.4ohm, series]] # 34ohm gives 62mA, == 3.9mA continuous, 989mA max/row
-                                         # 32.4ohm gives 64.8mA, == 4.1mA continuous, 1.04A max/row
+            connect: [[47ohm, series]]   # 47 gives 54mA, == 3.4mA continuous, 864mA max/row
           - name: B
             connect: [[3.9kohm, series]] # 1mA
           - name: E

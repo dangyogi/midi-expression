@@ -317,15 +317,19 @@ void help(void) {
   Serial.println("W<word_addr>,<4hex> - set 16 bits");
   Serial.println("G<disp_addr>,<digit>,<value>,<dp> - load digit");
   Serial.println("M<disp_addr>,<value>,<decimal_place> - load numeric");
-  Serial.println("O<disp_addr>,<note>,<sharp_flat> - load note, sharp_flat 1=sharp, 2=flat");
-  Serial.println("H<disp_addr>,<sharp_flat> - load shart_flat, 1=sharp, 2=flat");
+  Serial.println("O<disp_addr>,<note>,<sharp_flat> - load note/sharp_flat 0=nat, 1=#, 2=b");
+  Serial.println("H<disp_addr>,<sharp_flat> - load sharp_flat, 0=nat, 1=sharp, 2=flat");
   Serial.println("I<str#>,<string> - load string");
+  //--- avail letters: J, K, Q, V, Y, Z
+  Serial.println("J - test led order");
+  Serial.println("Q - test numeric decoder");
+  Serial.println("Z - test alpha decoder");
 }
 
 #define NUM_TIMEOUT_FUNS        3
 #define ADVANCE_STRINGS         0
 #define TEST_LED_ORDER          1
-#define TEST_NUMERIC_DECODER    2
+#define TEST_ALPHA_DECODER      2
 
 // 0 means "off"
 unsigned long Timeout_fun_runtime[NUM_TIMEOUT_FUNS];
@@ -353,6 +357,7 @@ void timeout(void) {
       switch (i) {
       case ADVANCE_STRINGS: delay = advance_strings(); break;
       case TEST_LED_ORDER: delay = test_led_order(); break;
+      case TEST_ALPHA_DECODER: delay = test_alpha_decoder(); break;
       } // end switch (i)
       if (delay == 0) {
         Timeout_fun_runtime[i] = 0;
@@ -729,6 +734,18 @@ void timeout(void) {
         s[b1] = 0;
         load_string(b0, s);
       }
+      break;
+    case 'J':  // test_led_order
+      Timeout_fun_runtime[TEST_LED_ORDER] = 1;
+      Serial.println("test_led_order started");
+      break;
+    case 'Q':  // test_numeric_decoder
+      test_numeric_decoder();
+      Serial.println("test_numeric_decoder done");
+      break;
+    case 'Z':  // test_alpha_decoder
+      Timeout_fun_runtime[TEST_ALPHA_DECODER] = 1;
+      Serial.println("test_alpha_decoder done");
       break;
     case ' ': case '\t': case '\n': case '\r': break;
     default: help(); break;

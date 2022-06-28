@@ -17,7 +17,7 @@ Segment_map = {
     'A': frozenset("F H G1 E K".split()),
     'B': frozenset("A F J G1 E K D".split()),
     'C': frozenset("A F E D".split()),
-    'D': frozenset("F H E M".split()),
+    'D': frozenset("A B C D I L".split()),
     'E': frozenset("A F G1 E D".split()),
     'F': frozenset("A F G1 E".split()),
     'G': frozenset("A F G2 E C D".split()),
@@ -132,7 +132,7 @@ if __name__ == "__main__":
 
     print("// Alpha_decoder.h")
     print()
-    print("const struct col_ports_s Alpha_decoder[] = {")
+    print("const col_ports_t Alpha_decoder[] = {")
     for i in range(128):
         c = chr(i).upper()
         #if c not in Segment_map:
@@ -151,8 +151,14 @@ if __name__ == "__main__":
         print(', '.join((port_nums[port] if port in port_nums else "0b0")
                         for port in Port_order), end='')
         if i < 127:
-            print("},")
+            print("},    //", hex(i), end='')
         else:
-            print("}")
+            print("}     //", hex(i), end='')
+        if i < 0x20 or i == 0x7f:
+            print(" <unknown>");
+        elif c not in Segment_map:
+            print(f" '{chr(i)}' <unknown>");
+        else:
+            print(f" '{chr(i)}'");
     print("};")
 

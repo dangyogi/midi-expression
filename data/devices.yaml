@@ -993,9 +993,10 @@ Bipolar-NPN:
         2.1V for LED, and 0.15V for transistor) this gives:
           255ohm for 10mA
           128ohm for 20mA
-           41ohm for 62.5mA
+           53ohm for 48mA (== 3 * 16)
+           41ohm for 62.5mA (== 3.9 * 16, x16 == 1A)
            34ohm for 75mA
-           32.4ohm for 79mA
+           32.4ohm for 79mA (x16 == 1.26A) 
            26ohm for 100mA
     - name: B
       comment: |
@@ -1043,4 +1044,4 @@ Little-stuff:
     num-onhand: 10
   "8.2ohm":
     num-onhand: 20
-  
+
