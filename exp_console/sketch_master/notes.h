@@ -12,7 +12,9 @@
 #define PULSE_NOTES_PERIOD       500
 #define PULSE_NOTES_ON_PERIOD    400
 
-extern byte Notes_by_sw[];       // MIDI note by note sw#
+extern byte MIDI_note[];         // MIDI note by note# (0-5)
+
+extern byte Notes_currently_on;  // Set/reset by notes_on/notes_off
 
 extern void note_on_by_bt(byte sw);
 extern void note_off_by_bt(byte sw);

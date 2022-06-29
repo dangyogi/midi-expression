@@ -18,6 +18,9 @@ I2C interface:
     20<disp><note><sharp_flat>: load note
     21<disp><sharp_flat>: load sharp_flat
     22<str><string>: load string
+    23: test led order
+    24: test numeric decoder
+    25: test alpha decoder
 
   Reports to on high:
     0: Errno, Err_data (2 bytes total)

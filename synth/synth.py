@@ -284,13 +284,13 @@ class Instrument(Actor):
     def note_off(self, command, channel, bytes):            # 0x80
         midi_note, velocity = bytes
         self.num_note_offs += 1
-        #print(f"note_off {midi_note=}, {velocity=}")
         if midi_note in self.notes_playing:
+            print(f"note_off: {midi_note=}, {velocity=}")
             for ph in self.notes_playing[midi_note]:
                 ph.note_off(velocity)
         else:
             self.num_notes_not_playing += 1
-            print(f"note_off: note {midi_note=} not playing!")
+            print(f"note_off: {midi_note=} not playing!")
 
     def aftertouch(self, command, channel, bytes):          # 0xA0
         midi_note, pressure = bytes

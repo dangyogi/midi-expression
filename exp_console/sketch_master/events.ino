@@ -90,10 +90,6 @@ void run_event(byte event_num, byte param) {
       break;
     case NOTE_SW_OFF:  // tagged to note switches
       note_off_by_sw(param);
-      Periodic_period[PULSE_NOTES_ON] = PULSE_NOTES_PERIOD;
-      Period_offset[PULSE_NOTES_ON] = 0;
-      Periodic_period[PULSE_NOTES_OFF] = PULSE_NOTES_PERIOD;
-      Period_offset[PULSE_NOTES_OFF] = PULSE_NOTES_ON_PERIOD;
       break;
     case CONTINUOUS:
       // changing from pulse to continuous, notes may be off right now!

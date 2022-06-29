@@ -1,39 +1,45 @@
 // notes.ino
 
-#define SW_TO_NOTE(sw)  (Notes_by_sw[sw - (sw < FIRST_BUTTON ? FIRST_SWITCH : FIRST_BUTTON)])
+#define SW_TO_NOTE_NUM(sw)   (sw - (sw < FIRST_BUTTON ? FIRST_SWITCH : FIRST_BUTTON))
 
 byte EEPROM_notes_offset;
 
-byte Notes_by_sw[] = {57, 60, 64, 67, 70, 72};  // A3, C4, E4, G4, Bb4, C5
+byte MIDI_note[] = {57, 60, 64, 67, 70, 72};  // A3, C4, E4, G4, Bb4, C5
+
+byte Notes_currently_on;  // Set/Reset during pulsing
 
 void note_on_by_bt(byte sw) {
-  byte note = SW_TO_NOTE(sw);
+  byte note = SW_TO_NOTE_NUM(sw);
   // Switch takes precedence over button...
   if (!Switches[NOTE_SWITCH(note)].current) note_on(note);
 }
 
 void note_off_by_bt(byte sw) {
-  byte note = SW_TO_NOTE(sw);
+  byte note = SW_TO_NOTE_NUM(sw);
   // Switch takes precedence over button...
   if (!Switches[NOTE_SWITCH(note)].current) note_off(note);
 }
 
 void note_on_by_sw(byte sw) {
-  byte note = SW_TO_NOTE(sw);
-  if (!Switches[NOTE_BUTTON(note)].current) note_on(note);
-  if (!CONTINUOUS_ON) {
+  byte note = SW_TO_NOTE_NUM(sw);
+  if (CONTINUOUS_ON) {
+    if (!Switches[NOTE_BUTTON(note)].current) note_on(note);
+  } else {
     // Pulse mode!  Make sure pulsing is on...
     Periodic_period[PULSE_NOTES_ON] = PULSE_NOTES_PERIOD;
     Period_offset[PULSE_NOTES_ON] = 0;
     Periodic_period[PULSE_NOTES_OFF] = PULSE_NOTES_PERIOD;
     Period_offset[PULSE_NOTES_OFF] = PULSE_NOTES_ON_PERIOD;
+    if (Notes_currently_on) note_on(note);
   }
 }
 
 void note_off_by_sw(byte sw) {
   byte i;
-  byte note = SW_TO_NOTE(sw);
-  if (!Switches[NOTE_BUTTON(note)].current) note_off(note);
+  byte note = SW_TO_NOTE_NUM(sw);
+  if (!Switches[NOTE_BUTTON(note)].current && (CONTINUOUS_ON || Notes_currently_on)) {
+    note_off(note);
+  }
   if (!CONTINUOUS_ON) check_pulse_off();
 }
 
@@ -67,30 +73,36 @@ void check_pulse_off(void) {
 }
 
 void note_on(byte note) {
-  midiEventPacket_t noteOn = {0x09, 0x90, note, 50};
+  midiEventPacket_t noteOn = {0x09, 0x90, MIDI_note[note], 50};
   MidiUSB.sendMIDI(noteOn);
 }
 
 void note_off(byte note) {
-  midiEventPacket_t noteOff = {0x08, 0x80, note, 0};
+  midiEventPacket_t noteOff = {0x08, 0x80, MIDI_note[note], 0};
   MidiUSB.sendMIDI(noteOff);
 }
 
 void notes_on(void) {
   byte i;
-  for (i = 0; i < NUM_NOTES; i++) {
-    if (Switches[NOTE_SWITCH(i)].current) {
-      note_on(i);
+  if (!Notes_currently_on) {
+    for (i = 0; i < NUM_NOTES; i++) {
+      if (Switches[NOTE_SWITCH(i)].current) {
+        note_on(i);
+      }
     }
+    Notes_currently_on = 1;
   }
 }
 
 void notes_off(void) {
   byte i;
-  for (i = 0; i < NUM_NOTES; i++) {
-    if (Switches[NOTE_SWITCH(i)].current) {
-      note_off(i);
+  if (Notes_currently_on) {
+    for (i = 0; i < NUM_NOTES; i++) {
+      if (Switches[NOTE_SWITCH(i)].current) {
+        note_off(i);
+      }
     }
+    Notes_currently_on = 0;
   }
 }
 

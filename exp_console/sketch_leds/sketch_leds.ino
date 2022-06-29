@@ -226,6 +226,15 @@ void step_receiveRequest(void) {
       s[b2] = 0;
       load_string(b1, s);
       break;
+    case 23:  // test led order
+      Timeout_fun_runtime[TEST_LED_ORDER] = 1;
+      break;
+    case 24:  // test numeric decoder
+      test_numeric_decoder();
+      break;
+    case 25:  // test alpha decoder
+      Timeout_fun_runtime[TEST_ALPHA_DECODER] = 1;
+      break;
     default:
       Errno = 31;
       Err_data = b0;
