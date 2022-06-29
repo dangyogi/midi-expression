@@ -1,6 +1,6 @@
 # parse_wiring.py
 
-from itertools import zip_longest, chain, repeat, groupby, cycle
+from itertools import zip_longest, chain, repeat, groupby, cycle, dropwhile
 from operator import itemgetter
 from collections import defaultdict, Counter
 
@@ -11,12 +11,19 @@ from .parse_devices import Attrs, load_devices, get_device, all_devices, convert
 Parts = {}
 Little_stuff = Counter()
 
+
+Last_part_list = None  # [device, [Part]]
+Last_part_order = 0
+
 class Part(Attrs):
-    dont_inherit = Attrs.dont_inherit.union(('pins_by_name', 'pins_by_number'))
+    dont_inherit = Attrs.dont_inherit.union(('pins_by_name', 'pins_by_number',
+                     'connected', 'next_col', 'position', 'part_order'))
     dont_attrs = Attrs.dont_attrs.union(('pins',))
     pins = ()
     fans_out_to = ()
     connected = False
+    position = None
+    next_col = None
 
     def __init__(self, name, device, attrs={}):
         Attrs.__init__(self, name, attrs, uses=device)
@@ -27,6 +34,7 @@ class Part(Attrs):
         self.init2()
 
     def init2(self):
+        global Last_part_list, Last_part_order
         self.device.add_instance(self)
         self.pins_by_name = {}
         my_pins = {}
@@ -43,6 +51,18 @@ class Part(Attrs):
                 my_pin = Pin(device_pin.name, {}, parent=self, uses=device_pin)
                 self.pins_by_number.append(my_pin)
                 self.pins_by_name[device_pin.name] = my_pin
+
+        # Link to last Part, if same device:
+        if Last_part_list is not None and Last_part_list[0] == self.device:
+            # link myself to the previous Part
+            Last_part_list[1][-1].next_col = self
+            Last_part_list[1].append(self)
+        else:
+            # device changed, start a new list.  Maybe the next Part will link up...
+            Last_part_list = [self.device, [self]]
+
+        self.part_order = Last_part_order
+        Last_part_order += 1
 
     def __repr__(self):
         return f"<{self.__class__.__name__} {self.name}>"
@@ -106,7 +126,8 @@ class Part(Attrs):
                 else:
                     lines.append(f"{pin_number} {pin_name} -> {', '.join(groups[0])}")
                     for group in groups[1:]:
-                        lines.append(' ' * (len(pin_number) + len(pin_name) + 5) + ', '.join(group))
+                        lines.append(' ' * (len(pin_number) + len(pin_name) + 5)
+                                     + ', '.join(group))
         else:
             lines.append(' ' * ((max_line_len - len(title) + 1)//2 + 1) + title)
             lines.append('')
@@ -531,6 +552,7 @@ def parse_wiring(yaml, quiet):
     ans = {}
     ans['controls'] = parse_controls(prefixes, yaml['controls'])
     ans['devices'] = parse_devices(yaml['devices'])
+    parse_internal_numbers(yaml['internal-numbers'])
     for p in Parts.values():
         p.make_connections(quiet)
     return ans
@@ -539,15 +561,15 @@ def parse_prefixes(prefixes):
     return {prefix: get_device(device_name)
             for prefix, device_name in prefixes.items()}
 
-def parse_controls(prefixes, controls, into=None):
+def parse_controls(prefixes, controls, into=None, position=None):
     if into is None:
         into = {}
     if isinstance(controls, dict):
         for key, value in controls.items():
             parse_controls(prefixes, value, into)
     elif isinstance(controls, (tuple, list)):
-        for l2 in controls:
-            parse_controls(prefixes, l2, into)
+        for i, l2 in enumerate(controls):
+            parse_controls(prefixes, l2, into, i)
     else:
         assert isinstance(controls, str)
         under = controls.find('_')
@@ -560,8 +582,113 @@ def parse_controls(prefixes, controls, into=None):
         else:
             prefix = controls[:min(under, hyphen)]
         device = prefixes[prefix]
-        into[controls] = Part(controls, device)
+        into[controls] = Part(controls, device, dict(position=position))
     return into
+
+def parse_internal_numbers(internal_numbers):
+    parse_pot_numbers(internal_numbers['pots'])
+    parse_switch_numbers(internal_numbers['switches'])
+    parse_led_numbers(internal_numbers['leds'])
+    parse_numeric_display_numbers(internal_numbers['numeric-displays'])
+    parse_alpha_display_numbers(internal_numbers['alpha-displays'])
+
+def parse_pot_numbers(pots):
+    i = 0
+    for name in pots:
+        p = Parts[name]
+        while p is not None:
+            print(f"{p.name}.pot_number is {i}")
+            p.pot_number = i
+            i += 1
+            p = p.next_col
+
+def parse_switch_numbers(switches):
+    encoder_num = 0
+    for row_num, row in enumerate(switches):
+        col_num = 0
+        for name in row:
+            p = Parts[name]
+            while p is not None and col_num < 9:
+                if p.device.name == 'Rotary Encoder':
+                    print(f"{p.name}.encoder_number is {encoder_num}, "
+                          f"switch_number is {9 * row_num + col_num}")
+                    p.encoder_number = encoder_num
+                    encoder_num += 1
+                    p.switch_number = 9 * row_num + col_num
+                    col_num += 3
+                else:
+                    print(f"{p.name}.switch_number is {9 * row_num + col_num}")
+                    p.switch_number = 9 * row_num + col_num
+                    col_num += 1
+                p = p.next_col
+            if col_num >= 9:
+                break
+
+def parse_led_numbers(leds):
+    row_num = 0
+    for row in leds:
+        col_num = 0
+        for name in led_row(row):
+            p = Parts[name]
+            print(f"{p.name}.led_number is {16 * row_num + col_num}")
+            p.led_number = 16 * row_num + col_num
+            if p.device.name == 'LED-numeric-display':
+                if col_num == 0:  # first of a pair making up 3 rows
+                    col_num += 8
+                else:             # second of a pair making up 3 rows
+                    row_num += 2  # plus 1 more after the for loop...
+            elif p.device.name == 'LED-alpha-display':
+                col_num += 15
+            else:
+                col_num += 1
+            if col_num >= 16:
+                break
+        row_num += 1
+
+def led_row(row):
+    for name in row:
+        if isinstance(name, (tuple, list)):
+            if isinstance(name[0], int):
+                pos_matches = tuple(
+                  filter(lambda p: isinstance(p, Part) and p.position == name[0],
+                         Parts.values()))
+                #print(f"led_row got position {name[0]}, {pos_matches=}")
+                sorted_matches = sorted(pos_matches, key=lambda p: p.part_order)
+                #print(f"{sorted_matches=}")
+                for p in dropwhile(lambda p: p.name != name[1], sorted_matches):
+                    yield p.name
+                    if p.name == name[2]:
+                        break
+            elif name[0] == 'chain':
+                for n in name[1:]:
+                    p = Parts[n]
+                    while p is not None:
+                        yield p.name
+                        p = p.next_col
+            elif name[0] == 'range':
+                prefix = name[1]
+                while prefix[-1].isdigit(): prefix = prefix[:-1]
+                start = int(name[1][len(prefix):])
+                end = int(name[2][len(prefix):])
+                for i in range(start, end + 1):
+                    yield f"{prefix}{i}"
+            else:
+                raise AssertionError(f"parse_led_numbers: unknown order {name[0]!r}")
+        else:
+            yield name
+
+def parse_numeric_display_numbers(numeric_displays):
+    for i, name in enumerate(numeric_displays):
+        p = Parts[name]
+        print(f"{p.name}.numeric_display_number is {i}")
+        p.numeric_display_number = i
+
+def parse_alpha_display_numbers(alpha_displays):
+    for i, units in enumerate(alpha_displays):
+        for name in units:
+            p = Parts[name]
+            print(f"{p.name}.alpha_display_number is {i}")
+            p.alpha_display_number = i
 
 def parse_devices(devices):
     ans = {}

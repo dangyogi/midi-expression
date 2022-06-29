@@ -67,6 +67,33 @@ prefixes:
   al: LED-alpha-display
   nd: LED-numeric-display
 
+internal-numbers:
+  pots: [pot-vol-1, pot-tempo, pot-ch-vol]
+  switches:
+    - [sw-send-ch-1, re-filename]                        # Row 0
+    - [bt-send-ch-1, sw-save, bt-load, bt-sync]          # Row 1
+    - [re-function]                                      # Row 2
+    - [re-3, sw-hm, sw-ch, sw-continuous-pulse]          # Row 3
+    - [sw-hm-1]                                          # Row 4
+    - [sw-hm-10, bt-hm, bt-ch, sw-A3]                    # Row 5
+    - [sw-synth]                                         # Row 6
+    - [sw-ch-9]                                          # Row 7
+    - [bt-A3]                                            # Row 8
+  leds:
+    - [al-1]                                             # Row 0
+    - [al-2]                                             # Row 1
+    - [al-3]                                             # Row 2
+    - [al-4]                                             # Row 3
+    - [led-save, led-load, [chain, led-send-ch-1],
+       led-major, led-minor,
+       led-1/4-comma, led-1/5-comma]                     # Row 4
+    - [nd-1, nd-2]                                       # Row 5, 6, 7
+    - [nd-3, nd-4]                                       # Row 8, 9, 10
+    - [[0, led-key, led-release]]                        # Row 11
+    - [[range, led-just-1, led-just-14], led-hm, led-ch] # Row 12
+  numeric-displays: [nd-1, nd-2, nd-3, nd-4]
+  alpha-displays:
+    - [al-1, al-2, al-3, al-4]
 
 devices:
   pot-mux-1:
@@ -424,3 +451,4 @@ devices:
       - name: GND
         connect: [[led-lc-err, cathode]]
 
+# vim: sw=2
