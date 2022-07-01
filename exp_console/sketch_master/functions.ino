@@ -73,10 +73,10 @@ void set_function_encoder_values(void) {
       encoder_var_t *var = Encoders[Function_encoders[i]].var;
       if (var != NULL && (var->flags & 1)) {
         if (fun < NUM_CH_FUNCTIONS) {
-          var->value = Channel_values[SYNTH_OR_PROGRAM][Lowest_channel][var->var_num];
+          var->value = Channel_values[SAVE_OR_SYNTH][Lowest_channel][var->var_num];
         } else if (Lowest_harmonic != 0xFF) {
-          var->value = Harmonic_values[SYNTH_OR_PROGRAM][Lowest_channel]
-                                                        [Lowest_harmonic][var->var_num];
+          var->value = Harmonic_values[SAVE_OR_SYNTH][Lowest_channel]
+                                                     [Lowest_harmonic][var->var_num];
         } // end if (channel or harmonic)
       } // end if (encoder enabled)
     } // end for (i)
@@ -93,11 +93,11 @@ void copy_function_encoder_values(void) {
       for (ch = 0; ch < NUM_CHANNELS; ch++) {
         if (Switches[FIRST_CHANNEL_SWITCH + ch].current) {
           if (fun < NUM_CH_FUNCTIONS) {
-            Channel_values[SYNTH_OR_PROGRAM][ch][var->var_num] = var->value;
+            Channel_values[SAVE_OR_SYNTH][ch][var->var_num] = var->value;
           } else {
             for (hm = 0; hm < NUM_HARMONICS; hm++) {
               if (Switches[FIRST_HARMONIC_SWITCH + hm].current) {
-                Harmonic_values[SYNTH_OR_PROGRAM][ch][hm][var->var_num] = var->value;
+                Harmonic_values[SAVE_OR_SYNTH][ch][hm][var->var_num] = var->value;
               } // end if (hm switch on)
             } // end for (hm)
           } // end if (channel or harmonic)
@@ -158,7 +158,7 @@ void channel_off(byte sw) {
 }
 
 void reset_function_encoders(void) {
-  Encoders[FUNCTION_ENCODER].var = &Function_var[SYNTH_OR_PROGRAM];
+  Encoders[FUNCTION_ENCODER].var = &Function_var[SAVE_OR_SYNTH];
   byte i;
   for (i = 0; i < NUM_FUNCTION_ENCODERS; i++) {
     Encoders[Function_encoders[i]].var = &Functions[FUNCTION][i];

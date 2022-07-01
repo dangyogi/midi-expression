@@ -2,264 +2,180 @@
 
 ---
 
-inputs:
-  top:
-    sw-vol-harmonics:
-      type: toggle-switch
-      up: harmonics
-      down: vol
+triggers:
+  chord-1-trigger: [sw-send-ch-1, led-send-ch-1, bt-send-ch-1]
+  chord-2-trigger: [sw-send-ch-2, led-send-ch-2, bt-send-ch-2]
+  chord-3-trigger: [sw-send-ch-3, led-send-ch-3, bt-send-ch-3]
+  chord-4-trigger: [sw-send-ch-4, led-send-ch-4, bt-send-ch-4]
+  chord-5-trigger: [sw-send-ch-5, led-send-ch-5, bt-send-ch-5]
+  function-trigger: [sw-hm, led-hm, bt-hm]
+  channels-trigger: [sw-ch, led-ch, bt-ch]
 
-    sw-even-odd:
-      type: toggle-switch
-      up: even
-      down: odd
+multi-selectors:
+  channel-selectors: [sw-ch-1, sw-ch-2, sw-ch-3, sw-ch-4, sw-ch-5, sw-ch-6,
+                      sw-ch-7, sw-ch-8, sw-ch-9, sw-ch-10, sw-ch-11, sw-ch-12,
+                      sw-ch-13, sw-ch-14, sw-ch-15, sw-synth]
+  harmonic-selectors: [sw-hm-1, sw-hm-2, sw-hm-3, sw-hm-4, sw-hm-5,
+                       sw-hm-6, sw-hm-7, sw-hm-8, sw-hm-9, sw-hm-10]
 
-    [pot-1l, pot-2l, pot-3l, pot-4l, pot-5l]:
-      type: slide-pot
-      display:
-        label:
-          device: [lcd-pot-1a, lcd-pot-2a, lcd-pot-3a, lcd-pot-4a, lcd-pot-5a]
-          offset: 0
-          length: 7
-          background:
-            str: "||"
-            offset: 7
-        value:
-          device: [lcd-pot-1b, lcd-pot-2b, lcd-pot-3b, lcd-pot-4b, lcd-pot-5b]
-          offset: 0
-          length: 7
-          background:
-            str: "||"
-            offset: 7
-      active-led: [led-1l, led-2l, led-3l, led-4l, led-5l]
-      harmonic:
-        values: [[1, 2], [3, 4], [5, 6], [7, 8], [9, 10]]
-        second-index: [sw-even-odd, odd, even]
-      channel:
-        values: [[null, null], [1, 10], [3], [5], [7]]
-        second-index: [sw-even-odd, odd, even]
+single-selectors:
+  function:
+    re: re-function
+    leds: [led-key, led-tune-abs, led-match-tuning, led-eq-temp, led-well-temp,
+           led-meantone, led-just, led-pyth, led-harm-basics, led-fe-ramp,
+           led-fe-sine, led-attack, led-decay, led-sustain, led-release]
+    names: [key-signature, tune-absolute, match-tuning, eq-temperament, well-tempered,
+            meantone, just-intonation, pythagorean, harmonic-basics, freq_env-ramp,
+            freq_env-sine, attack, decay, sustain, release]
 
-    [pot-1r, pot-2r, pot-3r, pot-4r, pot-5r]:
-      type: slide-pot
-      display:
-        label:
-          device: [lcd-pot-1a, lcd-pot-2a, lcd-pot-3a, lcd-pot-4a, lcd-pot-5a]
-          offset: 10
-          length: 7
-          background:
-            str: "||"
-            offset: 7
-        value:
-          device: [lcd-pot-1b, lcd-pot-2b, lcd-pot-3b, lcd-pot-4b, lcd-pot-5b]
-          offset: 10
-          length: 7
-          background:
-            str: "||"
-            offset: 7
-      active-led: [led-1r, led-2r, led-3r, led-4r, led-5r]
-      harmonic:
-        value: [[1, 2], [3, 4], [5, 6], [7, 8], [9, 10]]
-        second-index: [sw-even-odd, odd, even]
-      channel: 
-        value: [[0, 9], [2, 11], [4], [6], [8]]
-        second-index: [sw-even-odd, odd, even]
+  major-minor:
+    selection: key-signature
+    re: re-4
+    leds: [led-major, led-minor]
 
-    [bt-no-1l, bt-no-1r, bt-no-1l, bt-no-1r, bt-no-1l, bt-no-1r, bt-no-1l, bt-no-1r, bt-no-1l, bt-no-1r]:
-      type: button
-      active-led: led-new-old
+  meantone-pct-comma-fudge:
+    selection: meantone
+    re: re-4
+    leds: [led-1/4-comma, led-1/5-comma]
 
-    [sw-course-fine-1, sw-course-fine-2, sw-course-fine-3, sw-course-fine-4, sw-course-fine-5]: 
-      type: toggle-switch
-      up: fine
-      down: course
-      active-led: led-crs-fine
+  just-tuning:
+    selection: just-intonation
+    re: re-4
+    leds: [led-just-1, led-just-2, led-just-3, led-just-4, led-just-5, led-just-6,
+           led-just-7, led-just-8, led-just-9, led-just-10, led-just-11, led-just-12,
+           led-just-13, led-just-14]
 
-    [sw-mult-cents-1, sw-mult-cents-2, sw-mult-cents-3, sw-mult-cents-4, sw-mult-cents-5]: 
-      type: toggle-switch
-      up: cents
-      down: mult
-      active-led: led-mult-cents
+displays:
+  re-1: nd-1
+  re-2: nd-2
+  re-3: nd-3
+  re-4: nd-4
 
-  lower-left:
-    sw-inst-synth:
-      type: toggle-switch
-      up: inst
-      down: synth
-      active-led: led-inst-synth
+chord-settings:
+  channel: channel-selectors
+  chord-1:
+    trigger: chord-1-trigger
+    chord-vol-1: pot-vol-1
+    chord-note-on-delay-1: pot-on-1
+    chord-note-off-delay-1: pot-off-1
+  chord-2:
+    trigger: chord-2-trigger
+    chord-vol-2: pot-vol-2
+    chord-note-on-delay-2: pot-on-2
+    chord-note-off-delay-2: pot-off-2
+  chord-3:
+    trigger: chord-3-trigger
+    chord-vol-3: pot-vol-3
+    chord-note-on-delay-3: pot-on-3
+    chord-note-off-delay-3: pot-off-3
+  chord-4:
+    trigger: chord-4-trigger
+    chord-vol-4: pot-vol-4
+    chord-note-on-delay-4: pot-on-4
+    chord-note-off-delay-4: pot-off-4
+  chord-5:
+    trigger: chord-5-trigger
+    chord-vol-5: pot-vol-5
+    chord-note-on-delay-5: pot-on-5
+    chord-note-off-delay-5: pot-off-5
 
-    sw-major-minor:
-      type: toggle-switch
-      up: major
-      down: minor
-      display:
-        label:
-          device: lcd-lower-left-1a
-          offset: 0
-          length: 7
-          background:
-            str: "||"
-            offset: 7
-        value:
-          device: lcd-lower-left-1b
-          offset: 0
-          length: 7
-          background:
-            str: "||"
-            offset: 7
-      active-led: led-major-minor
+tempo-setting:
+  tempo: pot-tempo
 
-    [re-2l, re-3l]:
-      type: rotary-encoder
-      display:
-        label:
-          device: [lcd-lower-left-2a, lcd-lower-left-3a]
-          offset: 0
-          length: 7
-          background:
-            str: "||"
-            offset: 7
-        value:
-          device: [lcd-lower-left-2b, lcd-lower-left-3b]
-          offset: 0
-          length: 7
-          background:
-            str: "||"
-            offset: 7
-      active-led: [led-re-2l, led-re-3l]
+vol-setting:
+  volume: pot-sy-vol
 
-    [re-1r, re-2r, re-3r]:
-      type: rotary-encoder
-      display:
-        label:
-          device: [lcd-lower-left-1a, lcd-lower-left-2a, lcd-lower-left-3a]
-          offset: 0
-          length: 7
-          background:
-            str: "||"
-            offset: 7
-        value:
-          device: [lcd-lower-left-1b, lcd-lower-left-2b, lcd-lower-left-3b]
-          offset: 0
-          length: 7
-          background:
-            str: "||"
-            offset: 7
-      active-led: [led-re-1r, led-re-2r, led-re-3r]
+channel-settings:
+  channel: channel-selectors
+  trigger: channels-trigger
+  channel-volume: pot-ch-vol
+  channel-note-on-delay: pot-ch-on
+  channel-note-off-delay: pot-ch-off
 
-  lower-right: null
+function-settings:
+  channel: channel-selectors
+  trigger: function-trigger
+  settings:
+    key_signature:
+      selection: key-signature
+      minor: major-minor
+      flats_sharps: re-2
+    tune_absolute:
+      selection: tune-absolute
+      note_to_tune: re-2
+      octave: re-3
+      freq_Hz: re-4
+    tune_match:
+      selection: match-tuning
+      note_to_tune: re-2
+      channel_#_of_other_instrument: re-3
+    Equal_temperament:
+      selection: eq-temperament
+      Cents/Semitone: re-3
+    Well_temperament:
+      selection: well-tempered
+      tonic: re-1
+      tonic_offset: re-2
+    Just_intonation:
+      selection: just-intonation
+      tonic: re-1
+      tonic_offset: re-2
+      tuning: just-tuning
+    Meantone:
+      selection: meantone
+      tonic: re-1
+      tonic_offset: re-2
+      pct_comma_fudge: meantone-pct-comma-fudge
+      max_octave_fudge: re-3
+    Pythagorean_tuning:
+      selection: pythagorean
+      tonic: re-1
+      max_octave_fudge: re-3
 
-  notes:
-    sw-continuous-pulse:
-      type: toggle-switch
-      up: pulse
-      down: continuous
-
-actions:
-  set-up-top-vol:
-    steps:
-      - [led-on, pot-leds]
-      - [led-on, led-new-old]
-      - [led-off, led-crs-fine]
-      - [led-off, led-mult-cents]
-      - [lcd-clear, pot-lcds]
-                                 #  1234567890123456
-      - [lcd-write, lcd-pot-1a, 0, " Synth || CH-1"]
-                                 # "XX.X dB||XX.X dB"
-      - [lcd-write, lcd-pot-2a, 0, " CH-2  || CH-3"]
-      - [lcd-write, lcd-pot-3a, 0, " CH-4  || CH-5"]
-      - [lcd-write, lcd-pot-4a, 0, " CH-6  || CH-7"]
-      - [lcd-write, lcd-pot-5a, 0, " CH-8  || CH-9"]
-
-      - [pot-on-change send-midi synth-volume
-
-  pot-leds:
-    - led-1l
-    - led-1r
-    - led-2l
-    - led-2r
-    - led-3l
-    - led-3r
-    - led-4l
-    - led-4r
-    - led-5l
-    - led-5r
-
-  pot-lcds:
-    - lcd-1a
-    - lcd-1b
-    - lcd-2a
-    - lcd-2b
-    - lcd-3a
-    - lcd-3b
-    - lcd-4a
-    - lcd-4b
-    - lcd-5a
-    - lcd-5b
+harmonic-settings:
+  channel: channel-selectors
+  harmonic: harmonic-selectors
+  trigger: function-trigger
+  settings:
+    freq_offset:
+      selection: harmonic-basics
+      offset: [re-2, re-3]
+    ampl_offset:
+      selection: harmonic-basics
+      offset: re-1
+    Ramp:
+      selection: freq_env-ramp
+      scale_3: re-1
+      start: re-2
+      duration: re-3
+      bend: re-4
+    Sine:
+      selection: freq_env-sine
+      scale_3: re-1
+      cycle_time: re-2
+      ampl_swing: re-3
+    attack:
+      selection: attack
+      scale_3: re-1
+      start: re-2
+      duration: re-3
+      bend: re-4
+    decay:
+      selection: decay
+      scale_3: re-1
+      duration: re-3
+      bend: re-4
+    sustain:
+      selection: sustain
+      scale_3: re-1
+      cycle_time: re-2
+      ampl_swing: re-3
+      center_ampl: re-4
+    release:
+      selection: release
+      scale_3: re-1
+      duration: re-3
+      bend: re-4
 
 
-outputs:
-  led-1l: off
-  led-1r: off
-  led-2l: off
-  led-2r: off
-  led-3l: off
-  led-3r: off
-  led-4l: off
-  led-4r: off
-  led-5l: off
-  led-5r: off
-  led-new-old: off
-  led-crs-find: off
-  led-mult-cents: off
-  lcd-pot-1a:
-  lcd-pot-1b:
-  lcd-pot-2a:
-  lcd-pot-2b:
-  lcd-pot-3a:
-  lcd-pot-3b:
-  lcd-pot-4a:
-  lcd-pot-4b:
-  lcd-pot-5a:
-  lcd-pot-5b:
-
-  midi-commands:
-    synth_volume:
-      select: [sw-vol-harmonics, vol]
-      name: volume
-      params:
-        offset: pot-1l
-      type: system_common
-      send: [sw-send-top, bt-send-top]
-      display-label: [write, Synth, [pot-1l, label]]
-      display-value: [write, value, [pot-1l, value]]
-
-    ch_volume:
-      select: [sw-vol-harmonics, vol]
-      name: volume
-      offsets: [slice [pot-1r, pot-2l, pot-2r, pot-3l, pot-3r, pot-4l, pot-4r, pot-5l, pot-5r,
-                       pot-1r, pot-2l, pot-2r]
-                 [if [sw-even-odd odd] 0 9]   # start
-                 [if [sw-even-odd odd] 9 3]]  # number
-      params:
-        offset: [from, offsets]
-        channel: [get-index, offsets]
-      type: control_change
-      send: [sw-send-top, bt-send-top]
-
-    synth_key_sig:
-      select: [sw-inst-synth, synth]
-      name: key_signature
-      params:
-        minor: sw-major-minor
-        flats_sharps: re-1r
-      type: system_common
-      send: bt-send-lower-left
-    inst_key_sig:
-      select: [sw-inst-synth, inst]
-      name: key_signature
-      params:
-        channel: rsw-channel
-        minor: sw-major-minor
-        flats_sharps: re-1r
-      type: control_change
-      send: bt-send-lower-left
+# vim: sw=2

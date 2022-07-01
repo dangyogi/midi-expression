@@ -7,7 +7,7 @@
 
 #define SWITCH_NUM(row, col)    ((row) * NUM_COLS + (col))
 #define SAVE_PROGRAM_SWITCH     SWITCH_NUM(1, 5)
-#define SYNTH_OR_PROGRAM        (Switches[SAVE_PROGRAM_SWITCH].current)
+#define SAVE_OR_SYNTH           (Switches[SAVE_PROGRAM_SWITCH].current)
 
 #define FIRST_HARMONIC_SWITCH   SWITCH_NUM(4, 0)
 #define FIRST_CHANNEL_SWITCH    SWITCH_NUM(6, 0)
@@ -15,6 +15,7 @@
 typedef struct {
   byte current;                 // 0 == open, 1 == closed
   byte opening;                 // True or False, only when current is closed
+  byte tag;                     // for use by other parts of the software
   unsigned long open_time;      // only valid when opening
 } switch_t;
 

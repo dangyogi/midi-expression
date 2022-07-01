@@ -16,6 +16,7 @@
 #define CHANNEL_OFF                        32
 #define HARMONIC_ON                        33
 #define HARMONIC_OFF                       34
+#define NEXT_AVAIL_EVENT                   35
 
 extern byte Trace_events;
 

@@ -15,6 +15,7 @@ typedef struct {
 typedef struct {
   byte state;           // bit 0: last A, bit 1: last B
   byte A_sw;
+  byte tag;
   encoder_var_t *var;   // disabled if NULL
 } encoder_t;
 
@@ -39,7 +40,7 @@ byte setup_encoders(byte EEPROM_offset) {
 
   // Function
   Encoders[FUNCTION_ENCODER].A_sw = SWITCH_NUM(2, 0);
-  Encoders[FUNCTION_ENCODER].var = &Function_var[SYNTH_OR_PROGRAM];
+  Encoders[FUNCTION_ENCODER].var = &Function_var[SAVE_OR_SYNTH];
 
   // Function Params
   Encoders[1].A_sw = SWITCH_NUM(2, 3);

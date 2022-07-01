@@ -12,6 +12,7 @@ typedef struct {
 typedef struct {
   byte state;           // bit 0: last A, bit 1: last B
   byte A_sw;
+  byte tag;             // for use elsewhere...
   encoder_var_t *var;   // disabled if NULL
 } encoder_t;
 
@@ -25,7 +26,7 @@ extern encoder_t Encoders[NUM_ENCODERS];
 extern encoder_var_t Filename_var;
 extern encoder_var_t Function_var[2];
 
-#define FUNCTION        (Function_var[SYNTH_OR_PROGRAM].value)
+#define FUNCTION        (Function_var[SAVE_OR_SYNTH].value)
 
 extern byte setup_encoders(byte EEPROM_offset);
 

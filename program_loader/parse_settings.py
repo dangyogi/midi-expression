@@ -40,6 +40,7 @@ class Thing:
                    ignore_control_codes=[],
                    subordinates={},
                    settings={},
+                   channel=None,
               )
 
     def __init__(self, name, location, parent=None, **args):
@@ -108,11 +109,13 @@ class Setting:
             if key not in seen:
                 setattr(self, key, default)
         self.parameters = parse_parameters(self.parameters, self.full_name, self)
-        offset = system_common_offset = 0
+        offset = key_on_offset = 0   # offset are LSB from right, or amount to right shift
+                                     # before masking.  i.e. 0 means no shifting needed,
+                                     # just masking, to access the value.
         for p in self.parameters:
             p.offset = offset
-            p.system_common_offset = system_common_offset
-            system_common_offset += p.bits
+            p.key_on_offset = key_on_offset
+            key_on_offset += p.bits
             if not p.is_constant:
                 offset += p.bits
         self.message_formatters = []
@@ -192,23 +195,8 @@ class Message_format:
     def keys(self):
         if self.add is None:
             return [self.my_code]
-        return [self.my_code + v for v in range(self.param.limit - self.param.start + 1)]
+        return [self.code + v for v in range(self.param.start, self.param.limit + 1)]
 
-
-class Non_registered_parameter(Message_format):
-    NR_param_numbers_used = set()
-
-    def init(self):
-        if self.add is None or self.constant_param:
-            codes_to_check = (self.my_code,)
-        else:
-            codes_to_check = range(self.code,
-                                   self.code + (self.param.limit - self.param.start) + 1)
-        #print("NR param nums:", ', '.join(hex(c) for c in codes_to_check))
-        for code in codes_to_check:
-            assert code not in self.NR_param_numbers_used, \
-              f"{self.setting} non_registered_parameter: 0x{code:04X} is already assigned"
-            self.NR_param_numbers_used.add(code)
 
 
 class Control_change(Message_format):
@@ -230,43 +218,105 @@ class Control_change(Message_format):
 
 
 
+Offset_lengths = {}   # {(class, code): (length, offset)}
+# Offset is always 0  
+Length = {}           # {class: Length}
+
 class System_common(Message_format):
     allow_options = ("key_on",)
 
-    Offset_lengths = {}   # {code: (length, offset)}
-    Offset = 0
-    Length = 0
+    @classmethod
+    def get_Offset_lengths(cls, code):
+        return Offset_lengths[cls, code]
+
+    @classmethod
+    def set_Offset_lengths(cls, code, length, offset):
+        Offset_lengths[cls, code] = (length, offset)
+
+    @classmethod
+    def in_Offset_lengths(cls, code):
+        return (cls, code) in Offset_lengths
+
+    @classmethod
+    def get_Length(cls):
+        return Length.get(cls, 0)
+
+    @classmethod
+    def set_Length(cls, length):
+        Length[cls] = length
+
+    @classmethod
+    def in_Length(cls):
+        return cls in Length
 
     def init(self):
-        assert self.code not in Reserved_system_common, \
-          f"{self.setting} system_common: 0x{self.code:02X} is a reserved code"
+        assert self.my_code not in self.get_reserved_codes(), \
+          f"{self.setting} {self.__class__.__name__}: 0x{self.my_code:02X} " \
+          "is a reserved code"
         if self.key_on is None:
-            if self.code not in self.Offset_lengths:
-                self.Offset_lengths[self.code] = (0, 0)
+            if not self.in_Offset_lengths(self.my_code):
+                self.set_Offset_lengths(self.my_code, 0, 0)
             else:
-                assert self.Offset_lengths[self.code] == (0, 0), \
-                  f"{self.setting} system_common: Conflict with other key_on setting " \
-                  f"{self.Offset_lengths[self.code]}"
+                assert self.get_Offset_lengths(self.my_code) == (0, 0), \
+                  f"{self.setting} {self.__class__.__name__}: Conflict with other key_on " \
+                  f"setting {self.get_Offset_lengths(self.my_code)}"
         else:
             assert self.constant_param, \
-              f"{self.setting} system_common: key_on parameter must be constant"
+              f"{self.setting} {self.__class__.__name__}: key_on parameter must be constant"
             length = self.param.bits
-            offset = self.param.system_common_offset
-            if self.code not in self.Offset_lengths:
-                self.Offset_lengths[self.code] = (length, offset)
+            offset = self.param.key_on_offset
+            if not self.in_Offset_lengths(self.my_code):
+                self.set_Offset_lengths(self.my_code, length, offset)
             else:
-                assert self.Offset_lengths[self.code] == (length, offset), \
-                  f"{self.setting} system_common ({length}, {offset}): " \
-                  f"Conflict with other key_on setting {self.Offset_lengths[self.code]}"
-            System_common.Offset = offset
-            System_common.Length = length
+                assert self.get_Offset_lengths(self.my_code) == (length, offset), \
+                  f"{self.setting} {self.__class__.__name__} ({length}, {offset}): "  \
+                  f"Conflict with other key_on setting "                              \
+                  f"{self.get_Offset_lengths(self.my_code)}"
+            new_length = length + offset
+            self.set_Length(max(new_length, self.get_Length()))
+
+    def get_reserved_codes(self):
+        return Reserved_system_common
 
     def keys(self):
         if self.key_on is not None:
-            return [(self.my_code, self.param.value)]
-        if self.Length:
-            return [(self.my_code, value) for value in range(2**self.Length)]
+            # In theory, there could be several key_on clauses with different offsets and
+            # lengths.  This code adds all combinations of unspecified bits on the left
+            # and right to the target value (self.param.value) to generate all possible
+            # keys with the target bits in the middle.  If there are no unspecified bits on
+            # the left or right, then only one (code, value) pair is returned.
+            target_shifted = self.param.value << self.param.key_on_offset
+            left_shift = self.param.key_on_offset + self.param.bits
+            left_bits = self.get_Length() - left_shift
+            return [(self.my_code, (left << left_shift) | target_shifted | right)
+                    for right in range(2**self.param.key_on_offset)
+                    for left in range(2**left_bits)]
+        if self.get_Length():
+            return [(self.my_code, value) for value in range(2**self.get_Length())]
         return [self.my_code]
+
+
+
+class Non_registered_parameter(System_common):
+    allow_options = ("add", "key_on",)
+    NR_param_numbers_used = set()
+
+    #def init(self):
+    #    super().init()
+    #    if self.add is None or self.constant_param:
+    #        codes_to_check = (self.my_code,)
+    #    else:
+    #        codes_to_check = range(self.code,
+    #                               self.code + (self.param.limit - self.param.start) + 1)
+    #    #print("NR param nums:", ', '.join(hex(c) for c in codes_to_check))
+    #    for code in codes_to_check:
+    #        assert code not in self.NR_param_numbers_used, \
+    #          f"{self.setting} non_registered_parameter: 0x{code:04X} is already assigned"
+    #        self.NR_param_numbers_used.add(code)
+
+    def get_reserved_codes(self):
+        return frozenset()
+
 
 
 class Group:
@@ -607,7 +657,7 @@ def get_settings(filename="synth_settings.yaml"):
     synth_settings = read_yaml(filename)
     top_level = parse_things(synth_settings)
     assert len(top_level) == 1
-    synth = top_level["Synth"]
+    synth = top_level.popitem()[1]
     return synth, Settings
 
 def parse_things(things, location=None, parent=None):
@@ -631,7 +681,7 @@ def parse_parameters(parameters, location, setting):
     return tuple(parse_parameter(p, location, setting) for p in parameters)
 
 def parse_parameter(parameter, location, setting):
-    assert len(parameter) == 1
+    assert len(parameter) == 1, f"{location}: len(parameter) != 1, got {len(parameter)}"
     for name, arguments in parameter.items():
         for key in arguments.keys():
             assert isinstance(key, str), f"{location=}, got argument {key=!r}"
@@ -643,8 +693,15 @@ def parse_parameter(parameter, location, setting):
 
 
 if __name__ == "__main__":
-    Synth, settings = get_settings()
-    Synth.dump()
+    import argparse
+
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument("filename")
+
+    args = argparser.parse_args()
+
+    top_level, settings = get_settings(args.filename)
+    top_level.dump()
     print()
     print("Number of Settings", len(settings))
     print("Number of Parameters", sum(len(s.parameters) for s in settings))

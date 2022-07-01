@@ -114,7 +114,7 @@ Bottom:
           - start: rotary encoder
           - duration: rotary encoder
           - bend: rotary encoder
-        6. Sin freq_env
+        6. Sine freq_env
           - scale_3: rotary encoder
           - cycle_time: rotary encoder
           - ampl_swing: rotary encoder

@@ -1,0 +1,302 @@
+# player_settings.yaml
+
+---
+
+Player:
+  channel: 16
+
+  Ignore_control_codes: [0x01, 0x06, 0x0A, 0x0B,
+             # 0x0E, 0x0F,   # What are these???
+             0x26, 0x40, 0x60, 0x61, 0x62, 0x63, 0x64, 0x65, 0x79, 0x7B]
+
+  Settings:
+    volume:
+      parameters:
+        - level:
+            range: [0, 90]
+            units: dB
+            to_python:
+              as_percent_of: 90
+      control_change: 0x07
+
+    tempo:
+      parameters:
+        - offset:       # targeting 1/5 - 5
+            progression: geom
+            start: 0.20
+            limit: 5
+            bits: 7
+      control_change: 0x14
+
+    channel-volume:
+      parameters:
+        - channel_setting_type:
+            bits: 3
+            value: 0
+        - channel:
+            range: [1, 15]
+        - offset:       # targeting +/- 20 dB
+            range: [-20, 20]
+            steps_per_unit: 1
+            units: dB
+      non_registered_parameter:
+        code: 0x0001
+        key_on: channel_setting_type
+
+    channel-note-on-delay:
+      parameters:
+        - channel_setting_type:
+            bits: 3
+            value: 1
+        - channel:
+            range: [1, 15]
+        - delay:       # targeting +/- 300 mSec
+            units: mSec
+            range: [-300, 300]
+            steps_per_unit: 10
+      non_registered_parameter:
+        code: 0x0001
+        key_on: channel_setting_type
+
+    channel-note-off-delay:
+      parameters:
+        - channel_setting_type:
+            bits: 3
+            value: 2
+        - channel:
+            range: [1, 15]
+        - delay:       # targeting +/- 300 mSec
+            units: mSec
+            range: [-300, 300]
+            steps_per_unit: 10
+      non_registered_parameter:
+        code: 0x0001
+        key_on: channel_setting_type
+
+    chord-vol-1:
+      parameters:
+        - chord_setting_type:
+            bits: 4
+            value: 0
+        - channel:
+            range: [1, 15]
+        - offset:       # targeting +/- 20 dB
+            range: [-20, 20]
+            steps_per_unit: 1
+            units: dB
+      non_registered_parameter:
+        code: 0x0002
+        key_on: chord_setting_type
+
+    chord-note-on-delay-1:
+      parameters:
+        - chord_setting_type:
+            bits: 4
+            value: 1
+        - channel:
+            range: [1, 15]
+        - delay:       # targeting +/- 300 mSec
+            units: mSec
+            range: [-300, 300]
+            steps_per_unit: 10
+      non_registered_parameter:
+        code: 0x0002
+        key_on: chord_setting_type
+
+    chord-note-off-delay-1:
+      parameters:
+        - chord_setting_type:
+            bits: 4
+            value: 2
+        - channel:
+            range: [1, 15]
+        - delay:       # targeting +/- 300 mSec
+            units: mSec
+            range: [-300, 300]
+            steps_per_unit: 10
+      non_registered_parameter:
+        code: 0x0002
+        key_on: chord_setting_type
+
+    chord-vol-2:
+      parameters:
+        - chord_setting_type:
+            bits: 4
+            value: 3
+        - channel:
+            range: [1, 15]
+        - offset:       # targeting +/- 20 dB
+            range: [-20, 20]
+            steps_per_unit: 1
+            units: dB
+      non_registered_parameter:
+        code: 0x0002
+        key_on: chord_setting_type
+
+    chord-note-on-delay-2:
+      parameters:
+        - chord_setting_type:
+            bits: 4
+            value: 4
+        - channel:
+            range: [1, 15]
+        - delay:       # targeting +/- 300 mSec
+            units: mSec
+            range: [-300, 300]
+            steps_per_unit: 10
+      non_registered_parameter:
+        code: 0x0002
+        key_on: chord_setting_type
+
+    chord-note-off-delay-2:
+      parameters:
+        - chord_setting_type:
+            bits: 4
+            value: 5
+        - channel:
+            range: [1, 15]
+        - delay:       # targeting +/- 300 mSec
+            units: mSec
+            range: [-300, 300]
+            steps_per_unit: 10
+      non_registered_parameter:
+        code: 0x0002
+        key_on: chord_setting_type
+
+    chord-vol-3:
+      parameters:
+        - chord_setting_type:
+            bits: 4
+            value: 6
+        - channel:
+            range: [1, 15]
+        - offset:       # targeting +/- 20 dB
+            range: [-20, 20]
+            steps_per_unit: 1
+            units: dB
+      non_registered_parameter:
+        code: 0x0002
+        key_on: chord_setting_type
+
+    chord-note-on-delay-3:
+      parameters:
+        - chord_setting_type:
+            bits: 4
+            value: 7
+        - channel:
+            range: [1, 15]
+        - delay:       # targeting +/- 300 mSec
+            units: mSec
+            range: [-300, 300]
+            steps_per_unit: 10
+      non_registered_parameter:
+        code: 0x0002
+        key_on: chord_setting_type
+
+    chord-note-off-delay-3:
+      parameters:
+        - chord_setting_type:
+            bits: 4
+            value: 8
+        - channel:
+            range: [1, 15]
+        - delay:       # targeting +/- 300 mSec
+            units: mSec
+            range: [-300, 300]
+            steps_per_unit: 10
+      non_registered_parameter:
+        code: 0x0002
+        key_on: chord_setting_type
+
+    chord-vol-4:
+      parameters:
+        - chord_setting_type:
+            bits: 4
+            value: 9
+        - channel:
+            range: [1, 15]
+        - offset:       # targeting +/- 20 dB
+            range: [-20, 20]
+            steps_per_unit: 1
+            units: dB
+      non_registered_parameter:
+        code: 0x0002
+        key_on: chord_setting_type
+
+    chord-note-on-delay-4:
+      parameters:
+        - chord_setting_type:
+            bits: 4
+            value: 10
+        - channel:
+            range: [1, 15]
+        - delay:       # targeting +/- 300 mSec
+            units: mSec
+            range: [-300, 300]
+            steps_per_unit: 10
+      non_registered_parameter:
+        code: 0x0002
+        key_on: chord_setting_type
+
+    chord-note-off-delay-4:
+      parameters:
+        - chord_setting_type:
+            bits: 4
+            value: 11
+        - channel:
+            range: [1, 15]
+        - delay:       # targeting +/- 300 mSec
+            units: mSec
+            range: [-300, 300]
+            steps_per_unit: 10
+      non_registered_parameter:
+        code: 0x0002
+        key_on: chord_setting_type
+
+    chord-vol-5:
+      parameters:
+        - chord_setting_type:
+            bits: 4
+            value: 12
+        - channel:
+            range: [1, 15]
+        - offset:       # targeting +/- 20 dB
+            range: [-20, 20]
+            steps_per_unit: 1
+            units: dB
+      non_registered_parameter:
+        code: 0x0002
+        key_on: chord_setting_type
+
+    chord-note-on-delay-5:
+      parameters:
+        - chord_setting_type:
+            bits: 4
+            value: 13
+        - channel:
+            range: [1, 15]
+        - delay:       # targeting +/- 300 mSec
+            units: mSec
+            range: [-300, 300]
+            steps_per_unit: 10
+      non_registered_parameter:
+        code: 0x0002
+        key_on: chord_setting_type
+
+    chord-note-off-delay-5:
+      parameters:
+        - chord_setting_type:
+            bits: 4
+            value: 14
+        - channel:
+            range: [1, 15]
+        - delay:       # targeting +/- 300 mSec
+            units: mSec
+            range: [-300, 300]
+            steps_per_unit: 10
+      non_registered_parameter:
+        code: 0x0002
+        key_on: chord_setting_type
+
+
+# vim: sw=2

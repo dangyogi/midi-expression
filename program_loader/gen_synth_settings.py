@@ -147,9 +147,8 @@ def compile_system_common(self):
     fn_name = f"system_common_0x{self.my_code:02X}"
     body = []
     System_common_fns.append((self.keys(), fn_name, body))
-    assert self.Offset == 0
-    if self.Length:
-        System_common_key = f"(command, value.peek({self.Length}))"
+    if self.get_Length():
+        System_common_key = f"(command, value.peek({self.get_Length()}))"
     p_names = []
     body.append('kill = False')
     body.append('params = {}')
