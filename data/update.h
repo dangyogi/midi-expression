@@ -3,58 +3,80 @@
 {#  Template expects:
     
     num_triggers
-    max_commands_per_param
-    num_parameters
+    num_param_commands
+    num_internal_params
+    num_pot_params
+    num_display_params
 
     num_lin_ptypes
     num_geom_ptypes
-    num_constant_ptypes
-    num_choices_ptypes
+    num_choice_notes_ptypes
+    num_choice_leds_ptypes
     max_choice_leds
 
     num_commands
 #}
 
-#define MAX_COMMANDS_PER_PARAM          ( {{ max_commands_per_param }} )
-#define NUM_PARAMETERS                  ( {{ num_parameters }} )
-#define NUM_COMMANDS                    ( {{ num_commands }} )
+#define NUM_COMMANDS                ( {{ num_commands }} )
 
-extern byte First_changed_param;       // NULL if none changed.
 
-#define PTYPE_LIN               0
-#define PTYPE_GEOM              1
-#define PTYPE_CONSTANT          2
-#define PTYPE_CHOICES           3
+// param is dependent on function, but independent of channel and harmonic
 
-#define NUM_LIN_PTYPES          ( {{ num_lin_ptypes }} )
-#define NUM_GEOM_PTYPES         ( {{ num_geom_ptypes }} )
-#define NUM_CONSTANT_PTYPES     ( {{ num_constant_ptypes }} )
-#define NUM_CHOICES_PTYPES      ( {{ num_choices_ptypes }} )
+#define NUM_PARAM_COMMANDS          ( {{ num_param_commands }} )
+#define NUM_INTERNAL_PARAMS         ( {{ num_internal_params }} )
+#define NUM_POT_PARAMS              ( {{ num_pot_params }} )
+#define NUM_DISPLAY_PARAMS          ( {{ num_display_params }} )
 
-typedef struct {
-  byte type;                    // see PTYPE_<X> #defines
-  byte ptype_num;
+#define NUM_LIN_PTYPES              ( {{ num_lin_ptypes }} )
+#define NUM_GEOM_PTYPES             ( {{ num_geom_ptypes }} )
+#define NUM_CHOICE_NOTES_PTYPES     ( {{ num_choice_notes_ptypes }} )
+#define NUM_CHOICE_LEDS_PTYPES      ( {{ num_choice_leds_ptypes }} )
+
+#define PTYPE_CONSTANT          0
+#define PTYPE_CHANNEL           1
+#define PTYPE_HARMONIC          2
+#define PTYPE_LIN               3
+#define PTYPE_GEOM              4
+#define PTYPE_CHOICE_NOTES      5
+#define PTYPE_CHOICE_LEDS       6
+
+struct internal_param_s { // internal params: PTYPE_CONSTANT, PTYPE_CHANNEL, PTYPE_HARMONIC
+  byte type;              // see PTYPE_<X> #defines
+  byte value_bit_offset;  // value for PTYPE_CONSTANT (value_bit_offset always 0)
   byte bits;
-  byte value_bit_offset;        // how many bits to shift left
-  byte next_changed_param;      // 0xff == not changed
-  byte first_command_function;
-  byte num_commands;
-  byte commands[MAX_COMMANDS_PER_PARAM];        // Arranged by function, starting at
-                                                // first_command_function, for num_commands.
-  byte new_raw_value;
-  byte current_raw_value;
-} param_t;
+  byte first_command;     // index into Param_commands
+  byte num_commands;      // index into Param_commands
+};
 
-extern param_t Params[NUM_PARAMETERS];
+extern internal_param_s Internal_params[NUM_INTERNAL_PARAMS];
 
-extern void param_changed(byte param_num, byte new_raw_value);
+byte Param_commands[NUM_PARAM_COMMANDS];
+
+struct pot_param_s: internal_param_s {  // value not displayed or saved
+  byte new_value;
+  byte current_setting_value;
+};
+
+extern pot_param_s Pot_params[NUM_POT_PARAMS];
+
+struct display_param_s: panel_param_s {
+  byte ptype_num;           // not used for PTYPE_CONSTANT, PTYPE_CHANNEL or PTYPE_HARMONIC
+  byte current_display_value;
+};
+
+extern display_param_s Display_params[NUM_DISPLAY_PARAMS];
+
+
+extern void param_changed(byte param_num, byte new_raw_value, byte display_num);
+
+
+// ptypes are independent of function, channel and harmonic
 
 typedef struct {
   // value = step_size*param + start
   unsigned short start;
   unsigned short step_size;
   unsigned short limit;
-  byte bits;
   byte decimal_pt;
 } lin_ptype_t;
 
@@ -67,58 +89,71 @@ typedef struct {
   unsigned short c;
   unsigned short start;
   unsigned short limit;
-  byte bits;
   byte decimal_pt;
 } geom_ptype_t;
 
 extern geom_ptype_t Geom_ptypes[NUM_GEOM_PTYPES];
 
-typedef struct {
-  unsigned short value;
-  byte bits;
-} constant_ptype_t;
-
-extern constant_ptype_t Constant_ptypes[NUM_CONSTANT_PTYPES];
-
-#define CHOICE_TYPE_LEDS        0
-#define CHOICE_TYPE_NOTES       1
-#define MAX_CHOICE_LEDS         ( {{ max_choice_leds }} )
-
-typedef struct {
-  byte type;
-  byte bits;
+struct choice_notes_s {
   byte null_value;                     // 0xff is none
   byte limit;
+};
+
+extern choice_notes_s Choice_notes_ptypes[NUM_CHOICE_NOTES_PTYPES];
+
+struct choice_leds_s: choice_notes_s {
   byte num_leds;
   byte led[MAX_CHOICE_LEDS];
-} choices_ptype_t;
+};
 
-extern choices_ptype_t Choices_ptypes[NUM_CHOICES_PTYPES];
+extern choice_leds_s Choice_leds_ptypes[NUM_CHOICE_LEDS_PTYPES];
+
+
+// command is dependent on function, but independent of channel and harmonic
 
 extern byte First_changed_command;     // NULL if none changed.
 
-typedef struct {
+#define COMMAND_BIT_NR_PARAM           0x01
+#define COMMAND_BIT_KEY_ON             0x02
+#define COMMAND_BIT_ADD                0x04
+#define COMMAND_BIT_SYNTH_F4           0x08
+#define COMMAND_BIT_SYNTH_F4_F5        0x10
+#define COMMAND_BIT_PLAYER_CHANNEL     0x20
+
+struct single_command_s {
+  unsigned short MIDI_code;
   unsigned short MIDI_value;
+  byte flags;                          // bits: see COMMAND_BIT_<X> #defines
   byte next_changed_command;           // 0xff == not changed
-} command_t;
+};
+
+struct channel_command_s: single_command_s {
+  byte trigger_num;
+  byte channel_param;
+};
+
+struct harmonic_command_s: channel_command_s {
+  byte harmonic_param;
+};
 
 extern command_t Commands[NUM_COMMANDS];
 
 extern void command_changed(byte command_num, unsigned short and_value,
                             unsigned short or_value);
 
+// trigger is independent of function, channel and harmonic
+
 typedef struct {
   byte sw;
   byte led;     // on iff not SAVE_OR_SYNTH and sw on
   byte bt;
-  byte state;   // 0 - Manual-idle, 1 - Manual-triggered, 2 - stream,
-                // 3 - save (only bt works for save, led off)
+  byte flags;   // bit map: 1 - triggered, 2 - stream/Manual, 4 - save/synth, 8 - led on
 } trigger_t;
 
-#define TRIGGER_STATE_MANUAL_IDLE       0
-#define TRIGGER_STATE_MANUAL_TRIGGERED  1
-#define TRIGGER_STATE_STREAM            2
-#define TRIGGER_STATE_SAVE              3
+#define TRIGGER_FLAGS_TRIGGERED         1
+#define TRIGGER_FLAGS_STREAM_MANUAL     2
+#define TRIGGER_FLAGS_SAVE_SYNTH        4
+#define TRIGGER_FLAGS_LED_ON            8
 
 #define NUM_TRIGGERS            ( {{ num_triggers }} )
 

@@ -160,6 +160,7 @@ class Setting:
 
 class Message_format:
     allow_options = ("add",)
+    allow_attrs = ()
 
     def __init__(self, setting, config):
         self.setting = setting
@@ -188,6 +189,12 @@ class Message_format:
                     raise AssertionError(
                             f"{setting} {self.__class__.__name__}: "
                             f"{option} parameter, '{name}', not found")
+        for attr in self.allow_attrs:
+            if attr not in config:
+                setattr(self, attr, None)
+            else:
+                value = config.pop(attr)
+                setattr(self, attr, value)
         assert not config, f"{setting} {self.__class__.__name__}: " \
                            f"unknown parameters {tuple(config.keys())}"
         self.init()
@@ -224,6 +231,7 @@ Length = {}           # {class: Length}
 
 class System_common(Message_format):
     allow_options = ("key_on",)
+    allow_attrs = ("code2",)
 
     @classmethod
     def get_Offset_lengths(cls, code):
@@ -299,6 +307,7 @@ class System_common(Message_format):
 
 class Non_registered_parameter(System_common):
     allow_options = ("add", "key_on",)
+    allow_attrs = ()
     NR_param_numbers_used = set()
 
     #def init(self):

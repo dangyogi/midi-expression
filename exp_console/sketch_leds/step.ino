@@ -64,6 +64,7 @@ byte setup_step(void) {
   byte b = EEPROM[EEPROM_Num_rows];
   if (b == 0xFF) {
     Serial.println("Num_rows not set in EEPROM");
+    Num_rows = NUM_ROWS;
   } else if (b > NUM_ROWS) {
     Errno = 61;
     Err_data = b; 
@@ -207,7 +208,7 @@ byte load_16(unsigned short bits, byte word_num) {
   return load_8(byte(bits), word_num) && load_8(byte(bits >> 8), word_num + 1);
 }
 
-unsigned short On_start, On_end;
+unsigned short On_start, On_end = 10000;
 
 byte Current_row = NUM_ROWS - 1;
 
@@ -215,6 +216,8 @@ void step(byte who_dunnit_errno) {
   // caller has 100 uSec (1600 processor clock cycles) to call this after prior call.
   // caller identifies himself by a who_dunnit_errno.  Err_data will be time in excess
   // in 0.01 mSecs.
+
+  // step overhead is 30 uSec/row.
   
   unsigned short now = (unsigned short)micros();
   if (On_end > On_start) {
@@ -224,7 +227,7 @@ void step(byte who_dunnit_errno) {
     } else {
       // wait for On_end time...
       now = (unsigned short)micros();
-      while (!(now >= On_end || now < On_start)) ;
+      while (!(now >= On_end || now < On_start)) now = (unsigned short)micros();
     }
   } else {
     if (now >= On_end && now < On_start) {
@@ -233,7 +236,7 @@ void step(byte who_dunnit_errno) {
     } else {
       // wait for On_end time...
       now = (unsigned short)micros();
-      while (!(now >= On_end && now < On_start)) ;
+      while (!(now >= On_end && now < On_start)) now = (unsigned short)micros();
     }
   }
 

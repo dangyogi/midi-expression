@@ -3,7 +3,6 @@
 {# Template expects:
    
    num_triggers
-   num_commands
    enc_displays: [(enc, led)]
    triggers: [(sw, led, bt)]
    params: [(t, tn, bits, off, fc, nc, [cmd])]
@@ -11,9 +10,9 @@
    geom_ptypes: [(m, b, c, start, limit, bits, dp)]
    constant_ptypes: [(value, bits)]
    choices_ptypes: [(t, bits, null, limit, num_leds, [led])]
+   commands: [(tr, fl, code)]
 
 #}
-
 byte EEPROM_update_offset;
 
 byte setup_update(byte EEPROM_offset) {
@@ -49,7 +48,7 @@ void param_changed(byte param_num, byte new_raw_value) {
       Params[param_num].next_changed_param = First_changed_param;
       First_changed_param = param_num;
     }
-  }
+  } // end if (already linked)
 }
 
 lin_ptype_t Lin_ptypes[NUM_LIN_PTYPES] = {
@@ -80,8 +79,8 @@ choices_ptype_t Choices_ptypes[NUM_CHOICES_PTYPES] = {
 byte First_changed_command;
 
 command_t Commands[NUM_COMMANDS] = {
-  {% for _ in range(num_commands) %}
-  {0, 0xff},
+  {% for code, tr, fl, code in commands %}
+  { {{ code }}, 0, {{ tr }}, {{ fl }}, 0xff},
   {% endfor %}
 };
 
@@ -98,11 +97,12 @@ void command_changed(byte command_num, unsigned short or_value, unsigned short a
 
 trigger_t Triggers[NUM_TRIGGERS] = {
   {% for sw, led, bt in triggers %}
-  { {{ sw }}, {{ led }}, {{ bt }}, TRIGGER_STATE_MANUAL_IDLE },
+  { {{ sw }}, {{ led }}, {{ bt }}, 0},
   {% endfor %}
 };
 
 void update(void) {
+  // pots have been read just prior to this call.
   byte i;
 
   for (i = 0; i < NUM_TRIGGERS; i++) {

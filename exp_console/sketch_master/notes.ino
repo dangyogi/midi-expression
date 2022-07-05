@@ -111,6 +111,16 @@ void control_change(byte channel, byte control, byte value) {
   MidiUSB.sendMIDI(controlChange);
 }
 
+void system_common3(byte code, byte b1, byte b2) {
+  midiEventPacket_t systemCommon = {0x03, code, b1, b2};
+  MidiUSB.sendMIDI(systemCommon);
+}
+
+void system_common2(byte code, byte b1) {
+  midiEventPacket_t systemCommon = {0x02, code, b1};
+  MidiUSB.sendMIDI(systemCommon);
+}
+
 void flush(void) {
   MidiUSB.flush();
 }

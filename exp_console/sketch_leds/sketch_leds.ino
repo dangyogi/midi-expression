@@ -46,6 +46,14 @@ void setup() {
   digitalWrite(ERR_LED2, LOW);
 } // end setup()
 
+#define NUM_TIMEOUT_FUNS        3
+#define ADVANCE_STRINGS         0
+#define TEST_LED_ORDER          1
+#define TEST_ALPHA_DECODER      2
+
+// 0 means "off"
+unsigned long Timeout_fun_runtime[NUM_TIMEOUT_FUNS];
+
 #define STEP_RECEIVE_REQUEST    0
 #define STEP_SEND_REPORT        1
 #define NUM_STEP_FUNS           2
@@ -60,7 +68,9 @@ void setup() {
 // 0xFF = report nothing (no data returned)
 byte Report = 0xFF;
 byte Report_addr = 0;
-unsigned long Cycle_time;  // uSec
+unsigned long Timeout_cycle_time;  // uSec between timeout() calls
+unsigned long Timeout_runtime;     // uSec consumed by timeout()
+unsigned long Num_timeout_calls;
 
 byte check_eq(byte b, byte n, byte errno) {
   if (b != n) {
@@ -284,8 +294,8 @@ void step_sendReport(void) {
       Wire.write(Numeric_display_offset[i]);
     }
     break;
-  case 4:  // Cycle_time (uSec, 4 bytes total)
-    Wire.write(Cycle_time);
+  case 4:  // Timeout_cycle_time (uSec, 4 bytes total)
+    Wire.write(Timeout_cycle_time);
     break;
   case 5:  // alpha_num_chars, alpha_index (2*Num_alpha_strings bytes)
     for (i = 0; i < Num_alpha_strings; i++) {
@@ -313,11 +323,11 @@ void help(void) {
   Serial.println("A - show Alpha_string settings");
   Serial.println("Sn - set Num_alpha_strings to n");
   Serial.println("C<str>,chars,index - set Alpha_num_chars, Alpha_index for <str>");
-  Serial.println("D - show Num_numeric_displays");
+  Serial.println("D - show Numeric_display settings");
   Serial.println("Nn - set Num_numeric_displays to n");
   Serial.println(
     "U<disp>,size,offset - set Numeric_display_size, Numeric_display_offset for <disp>");
-  Serial.println("T - show Cycle_time");
+  Serial.println("T - show Timeout_cycle_time stats");
   Serial.println("X<errno> - set Errno");
   Serial.println("E - show Errno, Err_data");
   Serial.println("L<bit> - led oN");
@@ -335,14 +345,6 @@ void help(void) {
   Serial.println("Z - test alpha decoder");
 }
 
-#define NUM_TIMEOUT_FUNS        3
-#define ADVANCE_STRINGS         0
-#define TEST_LED_ORDER          1
-#define TEST_ALPHA_DECODER      2
-
-// 0 means "off"
-unsigned long Timeout_fun_runtime[NUM_TIMEOUT_FUNS];
-
 byte from_hex(byte ch) {
   if (ch >= '0' && ch <= '9') return ch - '0';
   ch = toupper(ch);
@@ -350,13 +352,19 @@ byte from_hex(byte ch) {
   return 0xFF;  // invalid hex digit
 }
 
+unsigned long Timeout_start_time;   // micros
+
 void timeout(void) {
-  // This is the slow loop.  It is run roughly every 1.6 mSec.
+  // This is the slow loop.  It is run roughly every 1.7 mSec (with 13 rows), and takes 30 uSec to run (on avg).
 
   // Timeout funs are unsigned short foo(void), returning how many mSec to wait from the
   // start of this call, until the next call.  Returning 0xFFFF will disable the fun
   // (until somebody else sets its Timeout_fun_runtime).
 
+  unsigned long now_micros = micros();
+  Timeout_cycle_time += now_micros - Timeout_start_time;
+  Timeout_start_time = now_micros;
+  Num_timeout_calls += 1;
   unsigned long now = millis();
 
   byte i;
@@ -373,10 +381,11 @@ void timeout(void) {
       } else {
         Timeout_fun_runtime[i] = now + delay;
       }
+      Timeout_runtime += micros() - now_micros;
       return;
     } // end if (Timeout_fun_scheduled[i])
   } // end for (i)
-
+  
   if (Serial.available()) {
     char c = toupper(Serial.read());
     byte b0, b1, b2, b3;
@@ -405,6 +414,11 @@ void timeout(void) {
     case 'A':
       Serial.print("Num_alpha_strings: ");
       Serial.println(Num_alpha_strings);
+      for (b0 = 0; b0 < Num_alpha_strings; b0++) {
+        Serial.print("Alpha display "); Serial.print(b0);
+        Serial.print(": num_chars "); Serial.print(Alpha_num_chars[b0]);
+        Serial.print(", word index "); Serial.println(Alpha_index[b0]);
+      }
       break;
     case 'S':
       b0 = Serial.parseInt(SKIP_WHITESPACE);
@@ -420,19 +434,19 @@ void timeout(void) {
       break;
     case 'C':
       b0 = Serial.parseInt(SKIP_WHITESPACE);
-      if (b0 >= NUM_ROWS) {
-        Serial.print("Invalid num_rows ");  
+      if (b0 >= Num_alpha_strings) {
+        Serial.print("Invalid alpha string number ");  
         Serial.print(b0);
         Serial.print(" must be < ");
-        Serial.println(NUM_ROWS);    
+        Serial.println(Num_alpha_strings);    
       } else if (Serial.read() != ',') {
         Serial.println("Missing ',' in 'C' command -- aborted");
       } else {
         b1 = Serial.parseInt(SKIP_WHITESPACE);
-        if (b1 >= MAX_STRING_LEN) {
+        if (b1 > MAX_STRING_LEN) {
           Serial.print("Invalid Alpha_num_chars ");  
           Serial.print(b1);
-          Serial.print(" must be < ");
+          Serial.print(" must be <= ");
           Serial.println(MAX_STRING_LEN);    
         } else if (Serial.read() != ',') {
           Serial.println("Missing ',' in 'C' command -- aborted");
@@ -456,6 +470,11 @@ void timeout(void) {
     case 'D':
       Serial.print("Num_numeric_displays: ");
       Serial.println(Num_numeric_displays);
+      for (b0 = 0; b0 < Num_numeric_displays; b0++) {
+        Serial.print("Numeric display "); Serial.print(b0);
+        Serial.print(": #digits "); Serial.print(Numeric_display_size[b0]);
+        Serial.print(", byte offset "); Serial.println(Numeric_display_offset[b0]);
+      }
       break;
     case 'N':
       b0 = Serial.parseInt(SKIP_WHITESPACE);
@@ -505,8 +524,10 @@ void timeout(void) {
       break;
 
     case 'T':
-      Serial.print("Cycle_time is ");
-      Serial.print(Cycle_time);
+      Serial.print("Num_timeout_calls "); Serial.print(Num_timeout_calls);
+      Serial.print(", avg Timeout_cycle_time is "); Serial.print(Timeout_cycle_time / Num_timeout_calls); Serial.print(" uSec");
+      Serial.print(", avg Timeout_runtime is "); Serial.print(Timeout_runtime / Num_timeout_calls); Serial.print(" uSec");
+      Serial.print(", avg Step_runtime/row is "); Serial.print((Timeout_cycle_time - Timeout_runtime) / (Num_timeout_calls * Num_rows) - 100);
       Serial.println(" uSec");
       break;
     case 'X':
@@ -762,6 +783,7 @@ void timeout(void) {
   } // end if (Serial.available())
 
   errno();
+  Timeout_runtime += micros() - now_micros;
 }
 
 byte Next_step_fun = 0xFF;

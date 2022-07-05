@@ -2,32 +2,7 @@
 
 byte EEPROM_encoder_offset;
 
-/**
-typedef struct {
-  byte min, max;
-  byte flags;           // bit 0: enabled, bit 1: cycle
-  byte bt_mul[2];       // up, down
-  byte value;
-  byte changed;         // set to 1 each time value changes.
-  byte var_num;         // not directly used here
-} encoder_var_t;
-
-typedef struct {
-  byte state;           // bit 0: last A, bit 1: last B
-  byte A_sw;
-  byte tag;
-  encoder_var_t *var;   // disabled if NULL
-} encoder_t;
-
-#define NUM_ENCODERS    6
-**/
-
 encoder_t Encoders[NUM_ENCODERS];
-
-/**
-#define FUNCTION_ENCODER   0
-#define FILENAME_ENCODER   5
-**/
 
 encoder_var_t Filename_var = {0, 1, 0b11, 1, 10};
 encoder_var_t Function_var[2] = {  // Synth, Program
@@ -44,12 +19,16 @@ byte setup_encoders(byte EEPROM_offset) {
 
   // Function Params
   Encoders[1].A_sw = SWITCH_NUM(2, 3);
+  Encoders[1].display_num = 0;
   Encoders[1].var = NULL;
   Encoders[2].A_sw = SWITCH_NUM(2, 6);
+  Encoders[1].display_num = 1;
   Encoders[2].var = NULL;
   Encoders[3].A_sw = SWITCH_NUM(3, 0);
+  Encoders[1].display_num = 2;
   Encoders[3].var = NULL;
   Encoders[4].A_sw = SWITCH_NUM(3, 3);
+  Encoders[1].display_num = 3;
   Encoders[4].var = NULL;
 
   // Filename

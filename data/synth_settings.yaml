@@ -7,6 +7,11 @@ Synth:
                          # 0x0E, 0x0F,   # What are these???
                          0x26, 0x40, 0x60, 0x61, 0x62, 0x63, 0x64, 0x65, 0x79, 0x7B]
 
+  # Synth settings are sent as system common messages so that the synth doesn't need it's
+  # own MIDI channel.  This is done by using 0xF4 for 14 bits, and a second 0xF5 message
+  # for an additional 14 bits, where needed.  All of these messages include a 3 bit code in
+  # the data that identifies the setting to change.
+
   Subordinates:
     Instrument:
       Identified_by: channel
@@ -15,8 +20,8 @@ Synth:
           parameters:
             - sys_common_type:
                 bits: 3
-                value: 6
-            - offset:       # targeting +/- 45 by 2
+                value: 0
+            - offset:       # targeting +/- 45 by 2,   7 bits
                 units: dB
                 signed: true
                 bits: 7
@@ -24,15 +29,18 @@ Synth:
                   as_percent_of: 45
           control_change: 0x07
           system_common:
-            code: 0xF5
+            code: 0xF4
             key_on: sys_common_type
         key_signature:
           choices:
             Key_signature:
               parameters:
-                - minor:
+                - sys_common_type:
+                    bits: 3
+                    value: 1
+                - minor:                # 1 bit
                     choices: [major, minor]  # major=False, minor=True
-                - flats_sharps:
+                - flats_sharps:         # 4 bits
                     range: [-7, 7]
                     labels:
                       flats:
@@ -42,7 +50,9 @@ Synth:
                       '': 0
                     python_arg_name: sf
               control_change: 0x14
-              system_common: 0xF4
+              system_common:
+                code: 0xF4
+                key_on: sys_common_type
 
         tuning_system:
           choices:
@@ -50,8 +60,8 @@ Synth:
               parameters:
                 - sys_common_type:
                     bits: 3
-                    value: 1
-                - Cents/Semitone:
+                    value: 2
+                - Cents/Semitone:   # 5 bits
                     units: cents
                     default: 100
                     # target range: [98.583, 100.279]
@@ -66,17 +76,17 @@ Synth:
                 code: 0x0000
                 add: sys_common_type
               system_common:
-                code: 0xF5
+                code: 0xF4
                 key_on: sys_common_type
             Well_temperament:
               parameters:
                 - sys_common_type:
                     bits: 3
-                    value: 2
-                - tonic:
+                    value: 3
+                - tonic:                # 4 bits
                     default: C
                     choices: [C, "C#", D, Eb, E, F, "F#", G, Ab, A, Bb, B]
-                - tonic_offset:
+                - tonic_offset:         # 4 bits
                     choices: [C, "C#", D, Eb, E, F, "F#", G, Ab, A, Bb, B, null]
                     default: null
                     null_value: 0xF
@@ -84,14 +94,14 @@ Synth:
                 code: 0x0000
                 add: sys_common_type
               system_common:
-                code: 0xF5
+                code: 0xF4
                 key_on: sys_common_type
             Just_intonation:
               parameters:
                 - sys_common_type:
                     bits: 3
-                    value: 3
-                - tuning:
+                    value: 4
+                - tuning:               # 4 bits
                     choices:
                       - Symmetric 5-limit 1-A
                       - Symmetric 5-limit 1-B
@@ -107,10 +117,10 @@ Synth:
                       - 17-limit B
                       - 17-limit C
                       - 17-limit D
-                - tonic:
+                - tonic:                # 4 bits
                     default: C
                     choices: [C, "C#", D, Eb, E, F, "F#", G, Ab, A, Bb, B]
-                - tonic_offset:
+                - tonic_offset:         # 4 bits
                     choices: [C, "C#", D, Eb, E, F, "F#", G, Ab, A, Bb, B, null]
                     default: null
                     null_value: 0xF
@@ -118,25 +128,26 @@ Synth:
                 code: 0x0000
                 add: sys_common_type
               system_common:
-                code: 0xF5
+                code: 0xF4
                 key_on: sys_common_type
+                code2: 0xF5
             Meantone:
               parameters:
                 - sys_common_type:
                     bits: 3
-                    value: 4
-                - tonic:
+                    value: 5
+                - tonic:                # 4 bits
                     default: C
                     choices: [C, "C#", D, Eb, E, F, "F#", G, Ab, A, Bb, B]
-                - tonic_offset:
+                - tonic_offset:         # 2 bits
                     choices: [Eb, Ab, null]
                     default: null
                     null_value: 3
                     to_python:
                       as_index_in: [C, "C#", D, Eb, E, F, "F#", G, Ab, A, Bb, B]
-                - pct_comma_fudge:
+                - pct_comma_fudge:      # 1 bit
                     choices: [0.20, 0.25]
-                - max_octave_fudge:
+                - max_octave_fudge:     # 7 bits
                     units: cents
                     default: 0
                     steps_per_unit: 3
@@ -145,17 +156,18 @@ Synth:
                 code: 0x0000
                 add: sys_common_type
               system_common:
-                code: 0xF5
+                code: 0xF4
                 key_on: sys_common_type
+                code2: 0xF5
             Pythagorean_tuning:
               parameters:
                 - sys_common_type:
                     bits: 3
-                    value: 5
-                - tonic:
+                    value: 6
+                - tonic:                # 4 bits
                     default: C
                     choices: [C, "C#", D, Eb, E, F, "F#", G, Ab, A, Bb, B]
-                - max_octave_fudge:
+                - max_octave_fudge:     # 7 bits
                     units: cents
                     default: 0
                     steps_per_unit: 3
@@ -164,7 +176,7 @@ Synth:
                 code: 0x0000
                 add: sys_common_type
               system_common:
-                code: 0xF5
+                code: 0xF4
                 key_on: sys_common_type
 
         tuning:
@@ -173,14 +185,14 @@ Synth:
               parameters:
                 - sys_common_type:
                     bits: 3
-                    value: 6
-                - note_to_tune:
+                    value: 7
+                - note_to_tune:         # 4 bits
                     default: A
                     choices: [C, "C#", D, Eb, E, F, "F#", G, Ab, A, Bb, B]
-                - octave:
+                - octave:               # 3 bits
                     range: [0, 7]
                     default: 4
-                - freq_Hz:
+                - freq_Hz:              # 7 bits
                     bits: 7
                     units: Hz
                     steps_per_unit: 2
@@ -190,15 +202,16 @@ Synth:
                 code: 0x0000
                 add: sys_common_type
               system_common:
-                code: 0xF5
+                code: 0xF4
                 key_on: sys_common_type
+                code2: 0xF5
 
             tune_match:
               parameters:
-                - note_to_tune:
+                - note_to_tune:                   # 4 bits
                     default: A
                     choices: [C, "C#", D, Eb, E, F, "F#", G, Ab, A, Bb, B]
-                - channel_#_of_other_instrument:
+                - channel_#_of_other_instrument:  # 4 bits
                     range: [1, 16]
                     bits: 4
                     to_python: sub1
@@ -213,7 +226,7 @@ Synth:
                 - harmonic:  # 1-10
                     range: [1, 10]
                     to_python: sub1
-                - offset:   # targeting 1/12 to 12 by 0.001
+                - offset:   # targeting 1/12 to 12 by 0.001, 14 bits
                     bits: 14
                     start: 0.080
                     steps_per_unit: 1000
@@ -231,7 +244,7 @@ Synth:
                 - harmonic:       # 1-10
                     range: [1, 10]
                     to_python: sub1
-                - offset:         # targeting 0 - 100 by 2
+                - offset:         # targeting 0 - 100 by 2,          7 bits
                     kills_value: 0  # disables the instrument if H1
                     units: dB
                     range: [0, 90]
@@ -250,22 +263,22 @@ Synth:
                       - harmonic:   # 1-10
                           range: [1, 10]
                           to_python: sub1
-                      - scale_3:    # targeting 0-5 over 3 octaves
+                      - scale_3:    # targeting 0-5 over 3 octaves, 3 bits
                           bits: 3
-                      - start:      # -400 - 350
+                      - start:      # -400 - 350,                   4 bits
                           signed: true
                           units: cents
                           step_size: 50
                           bits: 4
                       # stop is base_freq
-                      - duration:   # targeting 0-5 seconds
+                      - duration:   # targeting 0-5 seconds,        4 bits
                           kills_value: 0
                           units: sec
                           limit: 5
                           progression: geom
                           b: -1.5
                           bits: 4     # first value is 72 mSec
-                      - bend:
+                      - bend:                                     # 3 bits
                           units: percent
                           signed: true
                           limit: 100
@@ -280,13 +293,13 @@ Synth:
                       - harmonic:   # 1-10
                           range: [1, 10]
                           to_python: sub1
-                      - scale_3:    # targeting 0-5 over 3 octaves
+                      - scale_3:    # targeting 0-5 over 3 octaves,   3 bits
                           bits: 3
-                      - cycle_time: # targeting 0.05 to 1 sec
+                      - cycle_time: # targeting 0.05 to 1 sec,        4 bits
                           start: 0.05
                           step_size: 0.05
                           bits: 4
-                      - ampl_swing: # targeting 0 - 400
+                      - ampl_swing: # targeting 0 - 400,              7 bits
                                     # added to base_freq
                           kills_value: 0
                           units: cents
@@ -303,22 +316,22 @@ Synth:
                     - harmonic:   # 1-10
                         range: [1, 10]
                         to_python: sub1
-                    - scale_3:    # targeting 0-5 over 3 octaves
+                    - scale_3:    # targeting 0-5 over 3 octaves,   3 bits
                         bits: 3
-                    - start:      # targeting -40 to 10, step 5
+                    - start:      # targeting -40 to 10, step 5,    4 bits
                         units: dB
                         range: [-40, 10]
                         bits: 4
                         to_python:
                           as_percent_of: 90
-                    - duration:   # targeting 0-5 seconds
+                    - duration:   # targeting 0-5 seconds,          4 bits
                         kills_value: 0
                         units: sec
                         limit: 5
                         progression: geom
                         b: -1.5
                         bits: 4     # first value is 72 mSec
-                    - bend:
+                    - bend:                                       # 3 bits
                         units: percent
                         signed: true
                         limit: 100
@@ -332,16 +345,16 @@ Synth:
                     - harmonic:   # 1-10
                         range: [1, 10]
                         to_python: sub1
-                    - scale_3:    # targeting 0-5 over 3 octaves
+                    - scale_3:    # targeting 0-5 over 3 octaves, 3 bits
                         bits: 3
-                    - duration:   # targeting 0-20 seconds
+                    - duration:   # targeting 0-20 seconds,       5 bits
                         kills_value: 0
                         units: sec
                         limit: 20
                         progression: geom
                         b: -1
                         bits: 5     # first value is 51 mSec
-                    - bend:
+                    - bend:                                     # 3 bits
                         units: percent
                         signed: true
                         limit: 100
@@ -355,21 +368,21 @@ Synth:
                     - harmonic:    # 1-10
                         range: [1, 10]
                         to_python: sub1
-                    - scale_3:        # targeting 0-5 over 3 octaves
+                    - scale_3:        # targeting 0-5 over 3 octaves,     3 bits
                         bits: 3
                     - center_ampl:    # targeting 0-20 dB
                                       # how far off the peak ampl_offset
-                                      # and sustain ampl are.
+                                      # and sustain ampl are.             4 bits
                         units: dB
                         limit: 20
                         bits: 4
                         to_python:
                           as_percent_of: 90
-                    - cycle_time:     # targeting 0.05 to 1 sec
+                    - cycle_time:     # targeting 0.05 to 1 sec,          4 bits
                         start: 0.05
                         step_size: 0.05
                         bits: 4
-                    - ampl_swing:     # targeting 0-10 dB, step 2 dB
+                    - ampl_swing:     # targeting 0-10 dB, step 2 dB,     3 bits
                         kills_value: 0  # only uses center_ampl
                         units: dB
                         range: [0, 10]
@@ -386,16 +399,16 @@ Synth:
                     - harmonic:       # 1-10
                         range: [1, 10]
                         to_python: sub1
-                    - scale_3:        # targeting 0-5 over 3 octaves
+                    - scale_3:        # targeting 0-5 over 3 octaves,           3 bits
                         bits: 3
-                    - duration:       # targeting 0-5 seconds
+                    - duration:       # targeting 0-5 seconds,                  4 bits
                         kills_value: 0  # WARNING: produces clicking sounds...
                         units: sec
                         limit: 5
                         progression: geom
                         b: -1.5
                         bits: 4         # first value is 72 mSec
-                    - bend:
+                    - bend:                                                   # 3 bits
                         units: percent
                         signed: true
                         limit: 100

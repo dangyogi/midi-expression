@@ -27,6 +27,8 @@ extern void note_off(byte note);
 extern void notes_on(byte note);
 extern void notes_off(byte note);
 extern void control_change(byte channel, byte control, byte value);
+extern void system_common3(byte code, byte b1, byte b2);
+extern void system_common2(byte code, byte b1);
 extern void flush(void);
 
 extern byte setup_notes(byte EEPROM_offset);

@@ -1,18 +1,23 @@
 // encoders.h
 
+#define ENCODER_FLAGS_ENABLED       1
+#define ENCODER_FLAGS_CYCLE         2
+#define ENCODER_FLAGS_CHOICE_LEDS   4
+
 typedef struct {
   byte min, max;
-  byte flags;           // bit 0: enabled, bit 1: cycle
+  byte flags;           // See ENCODER_FLAGS_<X> #defines
   byte bt_mul[2];       // up, down
   byte value;
   byte changed;         // set to 1 each time value changes.
   byte var_num;         // not directly used here
+  byte param_num;       // not directly used here
 } encoder_var_t;
 
 typedef struct {
   byte state;           // bit 0: last A, bit 1: last B
   byte A_sw;
-  byte tag;             // for use elsewhere...
+  byte display_num;     // first led_num if ENCODER_FLAGS_CHOICE_LEDS, else numeric disp#
   encoder_var_t *var;   // disabled if NULL
 } encoder_t;
 
