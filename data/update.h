@@ -14,11 +14,10 @@
     num_choice_leds_ptypes
     max_choice_leds
 
-    num_commands
+    num_single_commands
+    num_channel_commands
+    num_harmonic_commands
 #}
-
-#define NUM_COMMANDS                ( {{ num_commands }} )
-
 
 // param is dependent on function, but independent of channel and harmonic
 
@@ -31,6 +30,7 @@
 #define NUM_GEOM_PTYPES             ( {{ num_geom_ptypes }} )
 #define NUM_CHOICE_NOTES_PTYPES     ( {{ num_choice_notes_ptypes }} )
 #define NUM_CHOICE_LEDS_PTYPES      ( {{ num_choice_leds_ptypes }} )
+#define MAX_CHOICE_LEDS             ( {{ max_choice_leds }} )
 
 #define PTYPE_CONSTANT          0
 #define PTYPE_CHANNEL           1
@@ -66,8 +66,17 @@ struct display_param_s: panel_param_s {
 
 extern display_param_s Display_params[NUM_DISPLAY_PARAMS];
 
+#define PARAM_TYPE_MASK         0xC0
+#define PARAM_TYPE_SHIFT        6
+#define INTERNAL_PARAM_TYPE     0
+#define POT_PARAM_TYPE          1
+#define DISPLAY_PARAM_TYPE      2
 
-extern void param_changed(byte param_num, byte new_raw_value, byte display_num);
+extern internal_param_s *get_internal_param(byte param_num);
+extern pot_param_s *get_pot_param(byte param_num);
+extern display_param_s *get_display_param(byte param_num);
+
+extern void param_changed(byte param_num, byte new_value, byte display_num=0xff);
 
 
 // ptypes are independent of function, channel and harmonic
@@ -111,6 +120,10 @@ extern choice_leds_s Choice_leds_ptypes[NUM_CHOICE_LEDS_PTYPES];
 
 // command is dependent on function, but independent of channel and harmonic
 
+#define NUM_SINGLE_COMMANDS     ( {{ num_single_commands }} )
+#define NUM_CHANNEL_COMMANDS    ( {{ num_channel_commands }} )
+#define NUM_HARMONIC_COMMANDS   ( {{ num_harmonic_commands }} )
+
 extern byte First_changed_command;     // NULL if none changed.
 
 #define COMMAND_BIT_NR_PARAM           0x01
@@ -127,16 +140,30 @@ struct single_command_s {
   byte next_changed_command;           // 0xff == not changed
 };
 
+extern single_command_s Single_commands[NUM_SINGLE_COMMANDS];
+
 struct channel_command_s: single_command_s {
   byte trigger_num;
   byte channel_param;
 };
 
+extern channel_command_s Channel_commands[NUM_CHANNEL_COMMANDS];
+
 struct harmonic_command_s: channel_command_s {
   byte harmonic_param;
 };
 
-extern command_t Commands[NUM_COMMANDS];
+extern harmonic_command_s Harmonic_commands[NUM_HARMONIC_COMMANDS];
+
+#define COMMAND_TYPE_MASK         0xC0
+#define COMMAND_TYPE_SHIFT        6
+#define SINGLE_COMMAND_TYPE       0
+#define CHANNEL_COMMAND_TYPE      1
+#define HARMONIC_COMMAND_TYPE     2
+
+extern single_command_s *get_single_command(byte command_num);
+extern channel_command_s *get_channel_command(byte command_num);
+extern harmonic_command_s *get_harmonic_command(byte command_num);
 
 extern void command_changed(byte command_num, unsigned short and_value,
                             unsigned short or_value);
