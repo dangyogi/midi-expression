@@ -40,10 +40,14 @@
 #define PTYPE_CHOICE_NOTES      5
 #define PTYPE_CHOICE_LEDS       6
 
-struct internal_param_s { // internal params: PTYPE_CONSTANT, PTYPE_CHANNEL, PTYPE_HARMONIC
+struct base_param_s {
   byte type;              // see PTYPE_<X> #defines
   byte value_bit_offset;  // value for PTYPE_CONSTANT (value_bit_offset always 0)
   byte bits;
+};
+
+// internal params: PTYPE_CONSTANT, PTYPE_CHANNEL, PTYPE_HARMONIC
+struct internal_param_s: base_param_s { 
   byte first_command;     // index into Param_commands
   byte num_commands;      // index into Param_commands
 };
@@ -52,25 +56,30 @@ extern internal_param_s Internal_params[NUM_INTERNAL_PARAMS];
 
 byte Param_commands[NUM_PARAM_COMMANDS];
 
-struct pot_param_s: internal_param_s {  // value not displayed or saved
+struct pot_param_s: base_param_s {  // value not displayed or saved
   byte new_value;
   byte current_setting_value;
 };
 
 extern pot_param_s Pot_params[NUM_POT_PARAMS];
+extern byte Pot_commands[NUM_POT_PARAMS];
 
-struct display_param_s: panel_param_s {
+struct display_param_s: pot_param_s {
   byte ptype_num;           // not used for PTYPE_CONSTANT, PTYPE_CHANNEL or PTYPE_HARMONIC
   byte current_display_value;
 };
 
 extern display_param_s Display_params[NUM_DISPLAY_PARAMS];
+extern byte Function_commands[NUM_FUNCTIONS];
 
 #define PARAM_TYPE_MASK         0xC0
 #define PARAM_TYPE_SHIFT        6
 #define INTERNAL_PARAM_TYPE     0
 #define POT_PARAM_TYPE          1
 #define DISPLAY_PARAM_TYPE      2
+
+#define PARAM_TYPE(param_num)   ((param_num & PARAM_TYPE_MASK) >> PARAM_TYPE_SHIFT)
+#define PARAM_NUM(param_num)    (param_num & ~PARAM_TYPE_MASK)
 
 extern internal_param_s *get_internal_param(byte param_num);
 extern pot_param_s *get_pot_param(byte param_num);
@@ -93,11 +102,13 @@ extern lin_ptype_t Lin_ptypes[NUM_LIN_PTYPES];
 
 typedef struct {
   // value = e**(m*param + b) + c
-  unsigned short m;
-  unsigned short b;
-  unsigned short c;
-  unsigned short start;
-  unsigned short limit;
+  // value = pow(base, param + b2) + c, where base = e**m, and base**b2 == e**b
+  //                                 so b2 == log(base, e**b) == log(e**m, e**b) == b/m
+  float base;
+  float b2;
+  float c;
+  float start;
+  float limit;
   byte decimal_pt;
 } geom_ptype_t;
 

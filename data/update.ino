@@ -6,9 +6,11 @@
    internal_params: [(t, off, bits, fc, nc)]
    param_commands: [cmd]
    pot_params: [(t, off, bits, fc, nc)]
+   pot_commands: [cmd_num]
    display_params: [(t, off, bits, fc, nc, pt)]
+   fun_commands: [cmd_num]
    lin_ptypes: [(start, step, limit, dp)]
-   geom_ptypes: [(m, b, c, start, limit, dp)]
+   geom_ptypes: [(base, b2, c, start, limit, dp)]
    choice_notes_ptypes: [(null, limit)]
    choice_led_ptypes: [(null, limit, [led])]
    single_commands: [(code, fl)]
@@ -54,32 +56,44 @@ pot_param_s Pot_params[NUM_POT_PARAMS] = {
   {% endfor %}
 };
 
+byte Pot_commands[NUM_POT_PARAMS] = {
+  {% for cmd_num in pot_commands %}
+  { {{ cmd_num }} },
+  {% endfor %}
+};
+
 display_param_s Display_params[NUM_DISPLAY_PARAMS] = {
   {% for t, off, bits, fc, nc, pt in display_params %}
   { {{ t }}, {{ off }}, {{ bits }}, {{ fc }}, {{ nc }}, 0, 0, {{ pt }} },
   {% endfor %}
 };
 
+byte Function_commands[NUM_FUNCTIONS] = {
+  {% for cmd_num in fun_commands %}
+  { {{ cmd_num }} },
+  {% endfor %}
+};
+
 internal_param_s *get_internal_param(byte param_num) {
-  switch ((param_num & PARAM_TYPE_MASK) >> PARAM_TYPE_SHIFT) {
-  case 0: return &Internal_params[param_num & ~PARAM_TYPE_MASK];
-  case 1: return &Pot_params[param_num & ~PARAM_TYPE_MASK];
-  case 2: return &Display_params[param_num & ~PARAM_TYPE_MASK];
+  switch (PARAM_TYPE(param_num)) {
+  case INTERNAL_PARAM_TYPE: return &Internal_params[PARAM_NUM(param_num)];
+  case POT_PARAM_TYPE: return &Pot_params[PARAM_NUM(param_num)];
+  case DISPLAY_PARAM_TYPE: return &Display_params[PARAM_NUM(param_num)];
   default: Errno = 51; Err_data = param_num; return &Internal_params[0];
   }
 }
 
 pot_param_s *get_pot_param(byte param_num) {
-  switch ((param_num & PARAM_TYPE_MASK) >> PARAM_TYPE_SHIFT) {
-  case 1: return &Pot_params[param_num & ~PARAM_TYPE_MASK];
-  case 2: return &Display_params[param_num & ~PARAM_TYPE_MASK];
+  switch (PARAM_TYPE(param_num)) {
+  case POT_PARAM_TYPE: return &Pot_params[PARAM_NUM(param_num)];
+  case DISPLAY_PARAM_TYPE: return &Display_params[PARAM_NUM(param_num)];
   default: Errno = 52; Err_data = param_num; return &Pot_params[0];
   }
 }
 
 display_param_s *get_display_param(byte param_num) {
-  switch ((param_num & PARAM_TYPE_MASK) >> PARAM_TYPE_SHIFT) {
-  case 2: return &Display_params[param_num & ~PARAM_TYPE_MASK];
+  switch (PARAM_TYPE(param_num)) {
+  case DISPLAY_PARAM_TYPE: return &Display_params[PARAM_NUM(param_num)];
   default: Errno = 53; Err_data = param_num; return &Display_params[0];
   }
 }
@@ -100,10 +114,61 @@ void param_changed(byte param_num, byte new_value, byte display_num) {
     for (i = 0; i < param->num_commands; i++) {
       command_changed(Param_commands[param->first_command + i], and_value, or_value);
     }
-    if (display_num != 0xff) {
-      // FIX
-    }
-  }
+
+    // update display
+    if (display_num != 0xff && PARAM_TYPE(param_num) == DISPLAY_PARAM_TYPE) {
+      display_params_s *disp_param = (display_params_s *)param;
+      byte value = disp_param->new_value;
+      if (value != disp_param->current_display_value) {
+        unsigned short disp_value, disp_current_value;
+        lin_ptype_t *lin_type;
+        geom_ptype_t *geom_type;
+        choice_notes_s *choice_notes;
+        choice_leds_s *choice_leds;
+        switch (param->type) {
+        case PTYPE_LIN:
+          lin_type = &Lin_ptypes[disp_param->ptype_num];
+          disp_value = lin_type->step_size * value + lin_type->start;
+          disp_value = min(lin_type->limit, disp_value);
+          display_number(display_num, disp_value, lin_type->decimal_pt);
+          break;
+        case PTYPE_GEOM:
+          geom_type = &Geom_ptypes[disp_param->ptype_num];
+          float disp_value_float;
+          disp_value_float = pow(geom_type->base, value + geom_type->b2) + geom_type->c;
+          disp_value_float = max(geom_type->start, disp_value_float);
+          disp_value_float = min(geom_type->limit, disp_value_float);
+          for (byte i = 3; i > geom_type->decimal_pt; i--) disp_value_float *= 10.0;
+          display_number(display_num, (unsigned short)disp_value_float,
+                         geom_type->decimal_pt);
+          break;
+        case PTYPE_CHOICE_NOTES:
+          choice_notes = &Choice_notes_ptypes[disp_param->ptype_num];
+          disp_value = min(choice_notes->limit, value);
+          if (disp_value == choice_notes->null_value) {
+            // blank display
+            blank_note(display_num);
+          } else {
+            // display note
+            display_note(display_num, disp_value);
+          }
+          break;
+        case PTYPE_CHOICE_LEDS:
+          choice_leds = &Choice_leds_ptypes[disp_param->ptype_num];
+          disp_value = min(choice_leds->limit, value);
+          disp_current_value = min(choice_leds->limit, disp_param->current_display_value);
+          if (disp_current_value != choice_leds->null_value) {
+            turn_off_led(choice_leds->led[disp_current_value]);
+          }
+          if (disp_value != choice_leds->null_value) {
+            turn_on_led(choice_leds->led[disp_value]);
+          }
+          break;
+        } // end switch
+        disp_param->current_display_value = value;
+      } // end if display value changed
+    } // end if DISPLAY_PARAM_TYPE
+  } // end if value changed
 }
 
 lin_ptype_t Lin_ptypes[NUM_LIN_PTYPES] = {
@@ -113,8 +178,8 @@ lin_ptype_t Lin_ptypes[NUM_LIN_PTYPES] = {
 };
 
 geom_ptype_t Geom_ptypes[NUM_GEOM_PTYPES] = {
-  {% for m, b, c, start, limit, dp in geom_ptypes %}
-  { {{ m }}, {{ b }}, {{ c }}, {{ start }}, {{ limit }}, {{ dp }} },
+  {% for base, b2, c, start, limit, dp in geom_ptypes %}
+  { {{ base }}, {{ b2 }}, {{ c }}, {{ start }}, {{ limit }}, {{ dp }} },
   {% endfor %}
 };
 
@@ -215,10 +280,6 @@ void update(void) {
 }
 
 void send_MIDI_commands(byte trigger_num, byte send) {
-  // FIX
-}
-
-void update_displays(void) {
   // FIX
 }
 
