@@ -3,9 +3,9 @@
 {#  Template expects:
     
     num_triggers
-    num_param_commands
     num_internal_params
     num_pot_params
+    num_pot_commands
     num_display_params
 
     num_lin_ptypes
@@ -21,9 +21,9 @@
 
 // param is dependent on function, but independent of channel and harmonic
 
-#define NUM_PARAM_COMMANDS          ( {{ num_param_commands }} )
 #define NUM_INTERNAL_PARAMS         ( {{ num_internal_params }} )
 #define NUM_POT_PARAMS              ( {{ num_pot_params }} )
+#define NUM_POT_COMMANDS            ( {{ num_pot_commands }} )
 #define NUM_DISPLAY_PARAMS          ( {{ num_display_params }} )
 
 #define NUM_LIN_PTYPES              ( {{ num_lin_ptypes }} )
@@ -40,32 +40,33 @@
 #define PTYPE_CHOICE_NOTES      5
 #define PTYPE_CHOICE_LEDS       6
 
-struct base_param_s {
+// internal params: PTYPE_CONSTANT, PTYPE_CHANNEL, PTYPE_HARMONIC
+struct internal_param_s {
   byte type;              // see PTYPE_<X> #defines
-  byte value_bit_offset;  // value for PTYPE_CONSTANT (value_bit_offset always 0)
+  byte value_bit_offset;  // has value for PTYPE_CONSTANT (offset always 0 in that case)
+                          // value for PTYPE_CHANNEL and PTYPE_HARMONIC not stored on param.
   byte bits;
 };
 
-// internal params: PTYPE_CONSTANT, PTYPE_CHANNEL, PTYPE_HARMONIC
-struct internal_param_s: base_param_s { 
-  byte first_command;     // index into Param_commands
-  byte num_commands;      // index into Param_commands
-};
+extern void update_cmd_value(byte value, internal_param_s *param, single_command_s *cmd);
 
 extern internal_param_s Internal_params[NUM_INTERNAL_PARAMS];
 
-byte Param_commands[NUM_PARAM_COMMANDS];
-
-struct pot_param_s: base_param_s {  // value not displayed or saved
+struct param_s: internal_param_s {
   byte new_value;
   byte current_setting_value;
 };
 
-extern pot_param_s Pot_params[NUM_POT_PARAMS];
-extern byte Pot_commands[NUM_POT_PARAMS];
+struct pot_param_s: param_s {  // value not displayed or saved
+  byte first_command;     // index into Pot_commands
+  byte num_commands;      // in Pot_commands
+};
 
-struct display_param_s: pot_param_s {
-  byte ptype_num;           // not used for PTYPE_CONSTANT, PTYPE_CHANNEL or PTYPE_HARMONIC
+extern pot_param_s Pot_params[NUM_POT_PARAMS];
+extern byte Pot_commands[NUM_POT_COMMANDS];
+
+struct display_param_s: param_s {
+  byte ptype_num;
   byte current_display_value;
 };
 
@@ -81,8 +82,8 @@ extern byte Function_commands[NUM_FUNCTIONS];
 #define PARAM_TYPE(param_num)   ((param_num & PARAM_TYPE_MASK) >> PARAM_TYPE_SHIFT)
 #define PARAM_NUM(param_num)    (param_num & ~PARAM_TYPE_MASK)
 
-extern internal_param_s *get_internal_param(byte param_num);
-extern pot_param_s *get_pot_param(byte param_num);
+extern internal_param_s *get_internal_param(byte param_num);  // works for all PARAM_TYPEs
+extern pot_param_s *get_pot_param(byte param_num); // does not work for DISPLAY_PARAM_TYPE
 extern display_param_s *get_display_param(byte param_num);
 
 extern void param_changed(byte param_num, byte new_value, byte display_num=0xff);
@@ -145,8 +146,8 @@ extern byte First_changed_command;     // NULL if none changed.
 #define COMMAND_BIT_PLAYER_CHANNEL     0x20
 
 struct single_command_s {
+  unsigned long MIDI_value;
   unsigned short MIDI_code;
-  unsigned short MIDI_value;
   byte flags;                          // bits: see COMMAND_BIT_<X> #defines
   byte next_changed_command;           // 0xff == not changed
 };
@@ -160,6 +161,7 @@ struct channel_command_s: single_command_s {
 
 extern channel_command_s Channel_commands[NUM_CHANNEL_COMMANDS];
 
+// none of these are synth
 struct harmonic_command_s: channel_command_s {
   byte harmonic_param;
 };
@@ -172,12 +174,14 @@ extern harmonic_command_s Harmonic_commands[NUM_HARMONIC_COMMANDS];
 #define CHANNEL_COMMAND_TYPE      1
 #define HARMONIC_COMMAND_TYPE     2
 
+#define COMMAND_TYPE(command_num)   ((command_num & COMMAND_TYPE_MASK) >> COMMAND_TYPE_SHIFT)
+#define COMMAND_NUM(command_num)    (command_num & ~COMMAND_TYPE_MASK)
+
 extern single_command_s *get_single_command(byte command_num);
 extern channel_command_s *get_channel_command(byte command_num);
 extern harmonic_command_s *get_harmonic_command(byte command_num);
 
-extern void command_changed(byte command_num, unsigned short and_value,
-                            unsigned short or_value);
+extern void command_changed(byte command_num, byte value, internal_param_s *param);
 
 // trigger is independent of function, channel and harmonic
 

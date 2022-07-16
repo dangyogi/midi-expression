@@ -3,14 +3,12 @@
 ---
 
 Synth:
+  cable: 0
+  channel: 16    # Synth settings are sent sent to channel 16 (15 on the wire)
+
   Ignore_control_codes: [0x01, 0x06, 0x0A, 0x0B,
                          # 0x0E, 0x0F,   # What are these???
                          0x26, 0x40, 0x60, 0x61, 0x62, 0x63, 0x64, 0x65, 0x79, 0x7B]
-
-  # Synth settings are sent as system common messages so that the synth doesn't need it's
-  # own MIDI channel.  This is done by using 0xF4 for 14 bits, and a second 0xF5 message
-  # for an additional 14 bits, where needed.  All of these messages include a 3 bit code in
-  # the data that identifies the setting to change.
 
   Subordinates:
     Instrument:
@@ -18,9 +16,6 @@ Synth:
       Settings:
         volume:
           parameters:
-            - sys_common_type:
-                bits: 3
-                value: 0
             - offset:       # targeting +/- 45 by 2,   7 bits
                 units: dB
                 signed: true
@@ -28,16 +23,11 @@ Synth:
                 to_python:
                   as_percent_of: 45
           control_change: 0x07
-          system_common:
-            code: 0xF4
-            key_on: sys_common_type
+          Synth: true
         key_signature:
           choices:
             Key_signature:
               parameters:
-                - sys_common_type:
-                    bits: 3
-                    value: 1
                 - minor:                # 1 bit
                     choices: [major, minor]  # major=False, minor=True
                 - flats_sharps:         # 4 bits
@@ -50,17 +40,12 @@ Synth:
                       '': 0
                     python_arg_name: sf
               control_change: 0x14
-              system_common:
-                code: 0xF4
-                key_on: sys_common_type
+              Synth: true
 
         tuning_system:
           choices:
             Equal_temperament:
               parameters:
-                - sys_common_type:
-                    bits: 3
-                    value: 2
                 - Cents/Semitone:   # 5 bits
                     units: cents
                     default: 100
@@ -72,17 +57,10 @@ Synth:
                     max_steps: 21
                     python_arg_name: cents_per_semitone
               is_object: true
-              non_registered_parameter:
-                code: 0x0000
-                add: sys_common_type
-              system_common:
-                code: 0xF4
-                key_on: sys_common_type
+              non_registered_parameter: 0x0002
+              Synth: true
             Well_temperament:
               parameters:
-                - sys_common_type:
-                    bits: 3
-                    value: 3
                 - tonic:                # 4 bits
                     default: C
                     choices: [C, "C#", D, Eb, E, F, "F#", G, Ab, A, Bb, B]
@@ -90,17 +68,10 @@ Synth:
                     choices: [C, "C#", D, Eb, E, F, "F#", G, Ab, A, Bb, B, null]
                     default: null
                     null_value: 0xF
-              non_registered_parameter:
-                code: 0x0000
-                add: sys_common_type
-              system_common:
-                code: 0xF4
-                key_on: sys_common_type
+              non_registered_parameter: code: 0x0003
+              Synth: true
             Just_intonation:
               parameters:
-                - sys_common_type:
-                    bits: 3
-                    value: 4
                 - tuning:               # 4 bits
                     choices:
                       - Symmetric 5-limit 1-A
@@ -124,18 +95,10 @@ Synth:
                     choices: [C, "C#", D, Eb, E, F, "F#", G, Ab, A, Bb, B, null]
                     default: null
                     null_value: 0xF
-              non_registered_parameter:
-                code: 0x0000
-                add: sys_common_type
-              system_common:
-                code: 0xF4
-                key_on: sys_common_type
-                code2: 0xF5
+              non_registered_parameter: 0x0004
+              Synth: true
             Meantone:
               parameters:
-                - sys_common_type:
-                    bits: 3
-                    value: 5
                 - tonic:                # 4 bits
                     default: C
                     choices: [C, "C#", D, Eb, E, F, "F#", G, Ab, A, Bb, B]
@@ -152,18 +115,10 @@ Synth:
                     default: 0
                     steps_per_unit: 3
                     bits: 7
-              non_registered_parameter:
-                code: 0x0000
-                add: sys_common_type
-              system_common:
-                code: 0xF4
-                key_on: sys_common_type
-                code2: 0xF5
+              non_registered_parameter: 0x0005
+              Synth: true
             Pythagorean_tuning:
               parameters:
-                - sys_common_type:
-                    bits: 3
-                    value: 6
                 - tonic:                # 4 bits
                     default: C
                     choices: [C, "C#", D, Eb, E, F, "F#", G, Ab, A, Bb, B]
@@ -172,20 +127,13 @@ Synth:
                     default: 0
                     steps_per_unit: 3
                     bits: 7
-              non_registered_parameter:
-                code: 0x0000
-                add: sys_common_type
-              system_common:
-                code: 0xF4
-                key_on: sys_common_type
+              non_registered_parameter: 0x0006
+              Synth: true
 
         tuning:
           choices:
             tune_absolute:
               parameters:
-                - sys_common_type:
-                    bits: 3
-                    value: 7
                 - note_to_tune:         # 4 bits
                     default: A
                     choices: [C, "C#", D, Eb, E, F, "F#", G, Ab, A, Bb, B]
@@ -198,13 +146,8 @@ Synth:
                     steps_per_unit: 2
                     signed: true
                     to_python: Hz_to_freq
-              non_registered_parameter:
-                code: 0x0000
-                add: sys_common_type
-              system_common:
-                code: 0xF4
-                key_on: sys_common_type
-                code2: 0xF5
+              non_registered_parameter: 0x0007
+              Synth: true
 
             tune_match:
               parameters:

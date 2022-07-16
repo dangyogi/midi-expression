@@ -1,6 +1,5 @@
 // sketch_master.ino
 
-#include <MIDIUSB.h>
 #include <Wire.h>
 #include "flash_errno.h"
 #include "switches.h"
@@ -10,16 +9,21 @@
 #include "functions.h"
 #include "variable.h"
 
-#define ERR_LED    13   // built-in LED
+#define ERR_LED      13   // built-in LED
+#define ERR_LED_2     1
 
 #define I2C_POT_CONTROLLER    0x31
 #define I2C_LED_CONTROLLER    0x32
 
 byte EEPROM_used;
 
-unsigned long get_EEPROM(byte EEPROM_addr, byte len) {
-  unsigned long ans;
-  return 0xFFFFFFFFul;
+void set_EEPROM(byte EEPROM_addr, byte value) {
+  // FIX: Implement (only used by switches.ino)
+}
+
+byte get_EEPROM(byte EEPROM_addr) {
+  // FIX: Implement (only used by switches.ino)
+  return 0xFF;
 }
 
 #define NUM_PERIODICS           6
@@ -38,9 +42,10 @@ unsigned short Period_offset[NUM_PERIODICS];
 
 void setup() {
   // put your setup code here, to run once:
-  err_led(ERR_LED);
+  err_led(ERR_LED, ERR_LED_2);
 
   digitalWrite(ERR_LED, HIGH);
+  digitalWrite(ERR_LED_2, HIGH);
 
   Serial.begin(230400);
 
@@ -56,6 +61,7 @@ void setup() {
   Periodic_period[SWITCH_REPORT] = HUMAN_PERIOD;
 
   digitalWrite(ERR_LED, LOW);
+  digitalWrite(ERR_LED_2, LOW);
 } // end setup()
 
 byte Debug = 0;
@@ -63,13 +69,15 @@ byte Debug = 0;
 void running_help(void) {
   Serial.println();
   Serial.println("running:");
-  Serial.println("?: help");
-  Serial.println("D: go into Debug mode");
+  Serial.println("? - help");
+  Serial.println("D - go into Debug mode");
   Serial.println("L - show Longest_scan");
   Serial.println("X<errno> - set Errno");
   Serial.println("E - show Errno, Err_data");
+  Serial.println("S - show settings");
+  Serial.println("P<debounce_period> - set debounce_period in EEPROM");
   Serial.println("T - toggle Trace_events");
-  Serial.println("S<row> - dump switches on row");
+  Serial.println("R<row> - dump switches on row");
   Serial.println("C - dump encoders");
   Serial.println();
 }
@@ -77,17 +85,17 @@ void running_help(void) {
 void debug_help(void) {
   Serial.println();
   Serial.println("debug:");
-  Serial.println("?: help");
-  Serial.println("D: leave Debug mode");
+  Serial.println("? - help");
+  Serial.println("D - leave Debug mode");
   Serial.println("E - show Errno, Err_data");
-  Serial.println("S: scan for shorts");
-  Serial.println("On: turn on output n");
-  Serial.println("In: turn on input n");
-  Serial.println("F: turn off test pin");
-  Serial.println("P<data>: send I2C command to pot_controller");
-  Serial.println("Q<len_expected>: receive I2C report from pot_controller");
-  Serial.println("L<data>: send I2C command to led_controller");
-  Serial.println("M<len_expected>: receive I2C report from led_controller");
+  Serial.println("S - scan for shorts");
+  Serial.println("On - turn on output n");
+  Serial.println("In - turn on input n");
+  Serial.println("F - turn off test pin");
+  Serial.println("P<data> - send I2C command to pot_controller");
+  Serial.println("Q<len_expected> - receive I2C report from pot_controller");
+  Serial.println("L<data> - send I2C command to led_controller");
+  Serial.println("M<len_expected> - receive I2C report from led_controller");
   Serial.println();
 }
 
@@ -143,9 +151,15 @@ void getResponse(byte i2c_addr, byte data_len) {
   } // end if (bytes_received > 32)
 }
 
+void skip_ws(void) {
+  // skips whitespace on Serial.
+  while (isspace(Serial.peek())) Serial.read();
+}
+
 void loop() {
   // put your main code here, to run repeatedly:
   byte b0, b1, b2, b3;
+  unsigned short us;
   byte buffer[32];
 
   if (!Debug) {
@@ -216,7 +230,8 @@ void loop() {
         Longest_scan = 0;
         break;
       case 'X': // set Errno
-        Errno = Serial.parseInt(SKIP_WHITESPACE);
+        skip_ws();
+        Errno = Serial.parseInt();
         Serial.print("Errno set to ");
         Serial.println(Errno);
         break;
@@ -228,13 +243,25 @@ void loop() {
         Errno = 0;
         Err_data = 0;
         break;
+      case 'S':  // show settings
+        Serial.print("Debounce_period is "); Serial.print(Debounce_period);
+        Serial.println(" uSec");
+        break;
+      case 'P':  // <debounce_period> - set debounce_period in EEPROM
+        skip_ws();
+        us = Serial.parseInt();
+        set_debounce_period(us);
+        Serial.print("Debounce_period set to "); Serial.print(us);
+        Serial.println(" uSec in EEPROM");
+        break;
       case 'T': // toggle Trace_events
         Trace_events = 1 - Trace_events;
         Serial.print("Trace_events set to ");
         Serial.println(Trace_events);
         break;
-      case 'S':  // dump switches on row
-        b1 = Serial.parseInt(SKIP_WHITESPACE);
+      case 'R':  // dump switches on row
+        skip_ws();
+        b1 = Serial.parseInt();
         if (b1 >= NUM_ROWS) {
           Serial.print("Invalid row, must be < ");
           Serial.println(NUM_ROWS);
@@ -359,7 +386,8 @@ void loop() {
         break;
       case 'O': // turn on output n
         turn_off_test_pin();     
-        b1 = Serial.parseInt(SKIP_WHITESPACE);
+        skip_ws();
+        b1 = Serial.parseInt();
         if (b1 >= NUM_ROWS) {
           Serial.print("Invalid output pin, must be < ");
           Serial.println(NUM_ROWS);
@@ -374,7 +402,8 @@ void loop() {
         break;
       case 'I': // turn on input n
         turn_off_test_pin();     
-        b1 = Serial.parseInt(SKIP_WHITESPACE);
+        skip_ws();
+        b1 = Serial.parseInt();
         if (b1 >= NUM_COLS) {
           Serial.print("Invalid input pin, must be < ");
           Serial.println(NUM_COLS);
@@ -392,7 +421,8 @@ void loop() {
         Serial.println("test pin off");
         break;
       case 'P': // send I2C command to pot_controller
-        buffer[0] = Serial.parseInt(SKIP_WHITESPACE);
+        skip_ws();
+        buffer[0] = Serial.parseInt();
         for (b1 = 1; b1 < 32; b1++) {
           b2 = Serial.read();
           if (b2 == '\n') {
@@ -405,11 +435,13 @@ void loop() {
             Serial.println("comma expected between bytes");
             break;
           }
-          buffer[b1] = Serial.parseInt(SKIP_WHITESPACE);
+          skip_ws();
+          buffer[b1] = Serial.parseInt();
         } // end for (b1)
         break;
       case 'Q': // receive I2C report from pot_controller
-        b1 = Serial.parseInt(SKIP_WHITESPACE);
+        skip_ws();
+        b1 = Serial.parseInt();
         if (b1 > 32) {
           Serial.println("ERROR: len_expected > 32");
         } else {
@@ -423,7 +455,8 @@ void loop() {
         }
         break;
       case 'L': // send I2C command to led_controller
-        buffer[0] = Serial.parseInt(SKIP_WHITESPACE);
+        skip_ws();
+        buffer[0] = Serial.parseInt();
         for (b1 = 1; b1 < 32; b1++) {
           b2 = Serial.read();
           if (b2 == '\n') {
@@ -436,11 +469,13 @@ void loop() {
             Serial.println("comma expected between bytes");
             break;
           }
-          buffer[b1] = Serial.parseInt(SKIP_WHITESPACE);
+          skip_ws();
+          buffer[b1] = Serial.parseInt();
         } // end for (b1)
         break;
       case 'M': // receive I2C report from led_controller
-        b1 = Serial.parseInt(SKIP_WHITESPACE);
+        skip_ws();
+        b1 = Serial.parseInt();
         if (b1 > 32) {
           Serial.println("ERROR: len_expected > 32");
         } else {
@@ -458,6 +493,10 @@ void loop() {
       } // end switch
     } // end if (Serial.available())
   }
+
+  // MIDI Controllers should discard incoming MIDI messages.
+  while (usbMIDI.read()) ;  // read & ignore incoming messages
+
   errno();
 }
 

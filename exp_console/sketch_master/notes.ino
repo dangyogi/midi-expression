@@ -35,7 +35,6 @@ void note_on_by_sw(byte sw) {
 }
 
 void note_off_by_sw(byte sw) {
-  byte i;
   byte note = SW_TO_NOTE_NUM(sw);
   if (!Switches[NOTE_BUTTON(note)].current && (CONTINUOUS_ON || Notes_currently_on)) {
     note_off(note);
@@ -73,13 +72,11 @@ void check_pulse_off(void) {
 }
 
 void note_on(byte note) {
-  midiEventPacket_t noteOn = {0x09, 0x90, MIDI_note[note], 50};
-  MidiUSB.sendMIDI(noteOn);
+  usbMIDI.send(usbMIDI.NoteOn, MIDI_note[note], 50, 1, 0);
 }
 
 void note_off(byte note) {
-  midiEventPacket_t noteOff = {0x08, 0x80, MIDI_note[note], 0};
-  MidiUSB.sendMIDI(noteOff);
+  usbMIDI.send(usbMIDI.NoteOff, MIDI_note[note], 0, 1, 0);
 }
 
 void notes_on(void) {
@@ -106,23 +103,20 @@ void notes_off(void) {
   }
 }
 
-void control_change(byte channel, byte control, byte value) {
-  midiEventPacket_t controlChange = {0x0B, 0xB0 | channel, control, value};
-  MidiUSB.sendMIDI(controlChange);
+void control_change(byte channel, byte control, byte value, byte cable) {
+  usbMIDI.send(usbMIDI.ControlChange, control, value, channel, cable);
 }
 
-void system_common3(byte code, byte b1, byte b2) {
-  midiEventPacket_t systemCommon = {0x03, code, b1, b2};
-  MidiUSB.sendMIDI(systemCommon);
+/***** Not needed any more, now that we have multiple virtual MIDI cables!
+void system_common(byte code, byte b1, byte b2, byte cable) {
+  // FIX: looks like this needs to be a call to usb_midi_write_packed.
+  // see: ~/arduino-1,8.19/hardware/teensy/avr/cores/teensy[34]/usb_midi.h, search for 'void send('
+  usbMIDI.send(usbMIDI.SystemCommon, code, b1, b2, cable);
 }
+******/
 
-void system_common2(byte code, byte b1) {
-  midiEventPacket_t systemCommon = {0x02, code, b1};
-  MidiUSB.sendMIDI(systemCommon);
-}
-
-void flush(void) {
-  MidiUSB.flush();
+void flush_midi(void) {
+  usbMIDI.send_now();
 }
 
 byte setup_notes(byte EEPROM_offset) {

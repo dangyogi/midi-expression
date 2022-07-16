@@ -2,7 +2,7 @@
 
 #define MAX_DELAYS   50
 
-int Delays[MAX_DELAYS];
+unsigned short Delays[MAX_DELAYS];
 byte Num_delays;
 
 byte Current_delay = 0;

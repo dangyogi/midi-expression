@@ -24,11 +24,9 @@ extern void check_pulse_on(void);
 extern void check_pulse_off(void);
 extern void note_on(byte note);
 extern void note_off(byte note);
-extern void notes_on(byte note);
-extern void notes_off(byte note);
-extern void control_change(byte channel, byte control, byte value);
-extern void system_common3(byte code, byte b1, byte b2);
-extern void system_common2(byte code, byte b1);
-extern void flush(void);
+extern void notes_on(void);
+extern void notes_off(void);
+extern void control_change(byte channel, byte control, byte value, byte cable);
+extern void flush_midi(void);
 
 extern byte setup_notes(byte EEPROM_offset);

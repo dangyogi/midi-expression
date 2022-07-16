@@ -1,26 +1,26 @@
 // switches.ino
 
 // High (rows) -- outputs, LOW is on, HIGH is off
-#define ROW_0           11  /* PA16 */
-#define ROW_1            8  /* PA18 */
-#define ROW_2           12  /* PA19 */
-#define ROW_3            9  /* PA20 */
-#define ROW_4           10  /* PA21 */
-#define ROW_5           A1  /* PB02 */
-#define ROW_6           A7  /* PB03 */
-#define ROW_7            2  /* PB10 */
-#define ROW_8            3  /* PB11 */
+#define ROW_0            0
+#define ROW_1           22
+#define ROW_2           11
+#define ROW_3           23
+#define ROW_4           15
+#define ROW_5            3
+#define ROW_6            9
+#define ROW_7           16
+#define ROW_8           17
 
 // Low (cols) -- inputs w/ pull-downs, LOW is open, HIGH is closed
-#define COL_0           A0  /* PA02 */
-#define COL_1            0  /* PB23 RX */
-#define COL_2            6  /* PA04 */
-#define COL_3            5  /* PA05 */
-#define COL_4            7  /* PA06 */
-#define COL_5            4  /* PA07 */
-#define COL_6           A6  /* PA09 */
-#define COL_7           A3  /* PA10 */
-#define COL_8           A2  /* PA11 */
+#define COL_0            2
+#define COL_1           14
+#define COL_2           20
+#define COL_3            7
+#define COL_4           21
+#define COL_5            6
+#define COL_6            8
+#define COL_7            5
+#define COL_8            4
 
 
 byte Rows[] = {ROW_0, ROW_1, ROW_2, ROW_3, ROW_4, ROW_5, ROW_6, ROW_7, ROW_8};
@@ -30,7 +30,7 @@ switch_t Switches[NUM_SWITCHES];
 
 byte EEPROM_switches_offset;
 
-unsigned short Debounce_period = 5000;   /* uSec */
+unsigned short Debounce_period;   /* uSec */
 
 byte setup_switches(byte EEPROM_offset) {
   EEPROM_switches_offset = EEPROM_offset;
@@ -42,14 +42,24 @@ byte setup_switches(byte EEPROM_offset) {
     pinMode(Cols[i], INPUT_PULLDOWN);
   }
 
-  unsigned short us = get_EEPROM(EEPROM_switches_offset, 2);
+  unsigned short us =   (get_EEPROM(EEPROM_switches_offset) << 8)
+                      | get_EEPROM(EEPROM_switches_offset + 1);
   if (us == 0xFFFF) {
     if (Serial) {
       Serial.println("debounce period not set in EEPROM");
     }
+    Debounce_period = 5000;
+  } else {
+    Debounce_period = us;
   }
 
   return 2;
+}
+
+void set_debounce_period(unsigned short dp) {
+  set_EEPROM(EEPROM_switches_offset, dp >> 8);
+  set_EEPROM(EEPROM_switches_offset + 1, dp & 0xFF);
+  Debounce_period = dp;
 }
 
 unsigned long Longest_scan;  // uSec
@@ -59,7 +69,6 @@ byte Close_counts[NUM_SWITCHES];
 void scan_switches(byte trace) {
   // Takes 210 uSec to run with no activity.
   byte row, col;
-  unsigned short cols;
   unsigned long start_scan_time = micros();
   for (row = 0; row < 9; row++) {
     digitalWrite(Rows[row], HIGH);     // turn on row

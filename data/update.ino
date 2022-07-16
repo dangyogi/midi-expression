@@ -3,7 +3,7 @@
 {# Template expects:
    
    enc_displays: [(enc, led)]
-   internal_params: [(t, off, bits, fc, nc)]
+   internal_params: [(t, off, bits)]
    param_commands: [cmd]
    pot_params: [(t, off, bits, fc, nc)]
    pot_commands: [cmd_num]
@@ -38,21 +38,29 @@ byte setup_update(byte EEPROM_offset) {
   return 0;
 }
 
-internal_param_s Internal_params[NUM_INTERNAL_PARAMS] = {
-  {% for t, off, bits, fc, nc in internal_params %}
-  { {{ t }}, {{ off }}, {{ bits }}, {{ fc }}, {{ nc }} },
-  {% endfor %}
-};
+void update_cmd_value(byte value, internal_param_s *param, single_command_s *cmd) {
+  // and_value is applied first.  It can be all 1 to clear all bits before or_value is
+  // applied.
 
-byte Param_commands[NUM_PARAM_COMMANDS] = {
-  {% for c in param_commands %}
-  {{ c }},
+  // clear bits that are set to 1 here
+  unsigned long and_value = ((1ul << param->bits) - 1) << param->value_bit_offset;
+
+  // set bits that are set to 1 here
+  unsigned long or_value =
+      ((unsigned long)(value & ((1 << param->bits) - 1))) << param->value_bit_offset;
+  cmd->MIDI_value &= ~and_value;
+  cmd->MIDI_value |= or_value;
+}
+
+internal_param_s Internal_params[NUM_INTERNAL_PARAMS] = {
+  {% for t, off, bits in internal_params %}
+  { {{ t }}, {{ off }}, {{ bits }} },
   {% endfor %}
 };
 
 pot_param_s Pot_params[NUM_POT_PARAMS] = {
   {% for t, off, bits, fc, nc in pot_params %}
-  { {{ t }}, {{ off }}, {{ bits }}, {{ fc }}, {{ nc }} },
+  { {{ t }}, {{ off }}, {{ bits }}, 0, 0, {{ fc }}, {{ nc }} },
   {% endfor %}
 };
 
@@ -64,7 +72,7 @@ byte Pot_commands[NUM_POT_PARAMS] = {
 
 display_param_s Display_params[NUM_DISPLAY_PARAMS] = {
   {% for t, off, bits, fc, nc, pt in display_params %}
-  { {{ t }}, {{ off }}, {{ bits }}, {{ fc }}, {{ nc }}, 0, 0, {{ pt }} },
+  { {{ t }}, {{ off }}, {{ bits }}, 0, 0, {{ fc }}, {{ nc }}, {{ pt }} },
   {% endfor %}
 };
 
@@ -86,7 +94,7 @@ internal_param_s *get_internal_param(byte param_num) {
 pot_param_s *get_pot_param(byte param_num) {
   switch (PARAM_TYPE(param_num)) {
   case POT_PARAM_TYPE: return &Pot_params[PARAM_NUM(param_num)];
-  case DISPLAY_PARAM_TYPE: return &Display_params[PARAM_NUM(param_num)];
+  //case DISPLAY_PARAM_TYPE: return &Display_params[PARAM_NUM(param_num)];
   default: Errno = 52; Err_data = param_num; return &Pot_params[0];
   }
 }
@@ -99,76 +107,79 @@ display_param_s *get_display_param(byte param_num) {
 }
 
 void param_changed(byte param_num, byte new_value, byte display_num) {
-  pot_params_s *param = pot_param(param_num);
-  param->new_value = new_value;
-  if (new_value != param->current_setting_value) {
-    byte i;
-    unsigned short and_value, or_value;
+  switch (PARAM_TYPE(param_num)) {
+  case INTERNAL_PARAM_TYPE:
+    break;
+  case POT_PARAM_TYPE:
+    pot_param_s *pot_param = get_pot_param(param_num);
+    pot_param->new_value = new_value;
+    if (new_value != pot_param->current_setting_value) {
+      byte i;
+      for (i = 0; i < param->num_commands; i++) {
+        command_changed(Pot_commands[pot_param->first_command + i], new_value, pot_param);
+      }
+    } // end if value changed
+    break;
+  case DISPLAY_PARAM_TYPE:
+    display_param_s *disp_param = get_display_param(param_num);
+    disp_param->new_value = new_value;
+    if (new_value != disp_param->current_setting_value) {
+      command_changed(Function_commands[FUNCTION], new_value, disp_param);
 
-    // clear bits that are set to 1 here
-    and_value = ((1 << param->bits) - 1) << param->value_bit_offset;
-
-    // set bits that are set to 1 here
-    or_value = (new_value & ((1 << param->bits) - 1)) << param->value_bit_offset;
-
-    for (i = 0; i < param->num_commands; i++) {
-      command_changed(Param_commands[param->first_command + i], and_value, or_value);
-    }
-
-    // update display
-    if (display_num != 0xff && PARAM_TYPE(param_num) == DISPLAY_PARAM_TYPE) {
-      display_params_s *disp_param = (display_params_s *)param;
-      byte value = disp_param->new_value;
-      if (value != disp_param->current_display_value) {
-        unsigned short disp_value, disp_current_value;
-        lin_ptype_t *lin_type;
-        geom_ptype_t *geom_type;
-        choice_notes_s *choice_notes;
-        choice_leds_s *choice_leds;
-        switch (param->type) {
-        case PTYPE_LIN:
-          lin_type = &Lin_ptypes[disp_param->ptype_num];
-          disp_value = lin_type->step_size * value + lin_type->start;
-          disp_value = min(lin_type->limit, disp_value);
-          display_number(display_num, disp_value, lin_type->decimal_pt);
-          break;
-        case PTYPE_GEOM:
-          geom_type = &Geom_ptypes[disp_param->ptype_num];
-          float disp_value_float;
-          disp_value_float = pow(geom_type->base, value + geom_type->b2) + geom_type->c;
-          disp_value_float = max(geom_type->start, disp_value_float);
-          disp_value_float = min(geom_type->limit, disp_value_float);
-          for (byte i = 3; i > geom_type->decimal_pt; i--) disp_value_float *= 10.0;
-          display_number(display_num, (unsigned short)disp_value_float,
-                         geom_type->decimal_pt);
-          break;
-        case PTYPE_CHOICE_NOTES:
-          choice_notes = &Choice_notes_ptypes[disp_param->ptype_num];
-          disp_value = min(choice_notes->limit, value);
-          if (disp_value == choice_notes->null_value) {
-            // blank display
-            blank_note(display_num);
-          } else {
-            // display note
-            display_note(display_num, disp_value);
-          }
-          break;
-        case PTYPE_CHOICE_LEDS:
-          choice_leds = &Choice_leds_ptypes[disp_param->ptype_num];
-          disp_value = min(choice_leds->limit, value);
-          disp_current_value = min(choice_leds->limit, disp_param->current_display_value);
-          if (disp_current_value != choice_leds->null_value) {
-            turn_off_led(choice_leds->led[disp_current_value]);
-          }
-          if (disp_value != choice_leds->null_value) {
-            turn_on_led(choice_leds->led[disp_value]);
-          }
-          break;
-        } // end switch
-        disp_param->current_display_value = value;
-      } // end if display value changed
-    } // end if DISPLAY_PARAM_TYPE
-  } // end if value changed
+      // update display
+      if (display_num != 0xff) {
+        byte value = disp_param->new_value;
+        if (value != disp_param->current_display_value) {
+          unsigned short disp_value, disp_current_value;
+          lin_ptype_t *lin_type;
+          geom_ptype_t *geom_type;
+          choice_notes_s *choice_notes;
+          choice_leds_s *choice_leds;
+          switch (param->type) {
+          case PTYPE_LIN:
+            lin_type = &Lin_ptypes[disp_param->ptype_num];
+            disp_value = lin_type->step_size * value + lin_type->start;
+            disp_value = min(lin_type->limit, disp_value);
+            display_number(display_num, disp_value, lin_type->decimal_pt);
+            break;
+          case PTYPE_GEOM:
+            geom_type = &Geom_ptypes[disp_param->ptype_num];
+            float disp_value_float;
+            disp_value_float = pow(geom_type->base, value + geom_type->b2) + geom_type->c;
+            disp_value_float = max(geom_type->start, disp_value_float);
+            disp_value_float = min(geom_type->limit, disp_value_float);
+            for (byte i = 3; i > geom_type->decimal_pt; i--) disp_value_float *= 10.0;
+            display_number(display_num, (unsigned short)disp_value_float,
+                           geom_type->decimal_pt);
+            break;
+          case PTYPE_CHOICE_NOTES:
+            choice_notes = &Choice_notes_ptypes[disp_param->ptype_num];
+            disp_value = min(choice_notes->limit, value);
+            if (disp_value == choice_notes->null_value) {
+              // blank display
+              blank_note(display_num);
+            } else {
+              // display note
+              display_note(display_num, disp_value);
+            }
+            break;
+          case PTYPE_CHOICE_LEDS:
+            choice_leds = &Choice_leds_ptypes[disp_param->ptype_num];
+            disp_value = min(choice_leds->limit, value);
+            disp_current_value = min(choice_leds->limit, disp_param->current_display_value);
+            if (disp_current_value != choice_leds->null_value) {
+              turn_off_led(choice_leds->led[disp_current_value]);
+            }
+            if (disp_value != choice_leds->null_value) {
+              turn_on_led(choice_leds->led[disp_value]);
+            }
+            break;
+          } // end switch
+          disp_param->current_display_value = value;
+        } // end if display value changed
+      } // end if display_num != 0xff
+    } // end if value changed
+  } // end switch
 }
 
 lin_ptype_t Lin_ptypes[NUM_LIN_PTYPES] = {
@@ -203,56 +214,53 @@ byte First_changed_command;
 
 single_command_s Single_commands[NUM_SINGLE_COMMANDS] = {
   {% for code, fl in single_commands %}
-  { {{ code }}, 0, {{ fl }}, 0xff},
+  {0, {{ code }}, {{ fl }}, 0xff},
   {% endfor %}
 };
 
 channel_command_s Channel_commands[NUM_CHANNEL_COMMANDS] = {
   {% for code, fl, tr, chp in channel_commands %}
-  { {{ code }}, 0, {{ fl }}, 0xff, {{ tr }}, {{ chp }} },
+  {0, {{ code }}, {{ fl }}, 0xff, {{ tr }}, {{ chp }} },
   {% endfor %}
 };
 
 harmonic_command_s Harmonic_commands[NUM_HARMONIC_COMMANDS] = {
   {% for code, fl, tr, chp, hmp in harmonic_commands %}
-  { {{ code }}, 0, {{ fl }}, 0xff, {{ tr }}, {{ chp }}, {{ hmp }} },
+  {0, {{ code }}, {{ fl }}, 0xff, {{ tr }}, {{ chp }}, {{ hmp }} },
   {% endfor %}
 };
 
 single_command_s *get_single_command(byte command_num) {
-  switch ((command_num & COMMAND_TYPE_MASK) >> COMMAND_TYPE_SHIFT) {
-  case 0: return &Single_commands[command_num & ~COMMAND_TYPE_MASK];
-  case 1: return &Channel_commands[command_num & ~COMMAND_TYPE_MASK];
-  case 2: return &Harmonic_commands[command_num & ~COMMAND_TYPE_MASK];
+  switch (COMMAND_TYPE(command_num)) {
+  case SINGLE_COMMAND_TYPE: return &Single_commands[COMMAND_NUM(command_num)];
+  case CHANNEL_COMMAND_TYPE: return &Channel_commands[COMMAND_NUM(command_num)];
+  case HARMONIC_COMMAND_TYPE: return &Harmonic_commands[COMMAND_NUM(command_num)];
   default: Errno = 54; Err_data = command_num; return &Single_commands[0];
   }
 }
 
 channel_command_s *get_channel_command(byte command_num) {
-  switch ((command_num & COMMAND_TYPE_MASK) >> COMMAND_TYPE_SHIFT) {
-  case 1: return &Channel_commands[command_num & ~COMMAND_TYPE_MASK];
-  case 2: return &Harmonic_commands[command_num & ~COMMAND_TYPE_MASK];
+  switch (COMMAND_TYPE(command_num)) {
+  case CHANNEL_COMMAND_TYPE: return &Channel_commands[COMMAND_NUM(command_num)];
+  case HARMONIC_COMMAND_TYPE: return &Harmonic_commands[COMMAND_NUM(command_num)];
   default: Errno = 55; Err_data = command_num; return &Channel_commands[0];
   }
 }
 
 harmonic_command_s *get_harmonic_command(byte command_num) {
-  switch ((command_num & COMMAND_TYPE_MASK) >> COMMAND_TYPE_SHIFT) {
-  case 2: return &Harmonic_commands[command_num & ~COMMAND_TYPE_MASK];
+  switch (COMMAND_TYPE(command_num)) {
+  case HARMONIC_COMMAND_TYPE: return &Harmonic_commands[COMMAND_NUM(command_num)];
   default: Errno = 56; Err_data = command_num; return &Harmonic_commands[0];
   }
 }
 
-void command_changed(byte command_num, unsigned short and_value, unsigned short or_value) {
-  // and_value is applied first.  It can be all 1 to clear all bits before or_value is
-  // applied.
+void command_changed(byte command_num, byte value, internal_param_s *param) {
   single_command_s *command = get_single_command(command_num);
+  update_cmd_value(value, param, command);
   if (command->next_changed_command == 0xff) {
     command->next_changed_command = First_changed_command;
     First_changed_command = command_num;
   }
-  command->MIDI_value &= ~and_value;
-  command->MIDI_value |= or_value;
 }
 
 trigger_t Triggers[NUM_TRIGGERS] = {
@@ -263,23 +271,73 @@ trigger_t Triggers[NUM_TRIGGERS] = {
 
 void update(void) {
   // pots have been read just prior to this call.
-  byte i;
+  byte *prior;
+  byte *next;
 
-  // FIX: review, this is out of date...
+  for (prior = &First_changed_command; *prior != NULL;) {
+    single_command_s *cmd = get_single_command(*prior);
 
-  for (i = 0; i < NUM_TRIGGERS; i++) {
-    byte send = 0;
-    if (Triggers[i].state == TRIGGER_STATE_MANUAL_TRIGGERED) {
-      send = 1;
-      Triggers[i].state = TRIGGER_STATE_MANUAL_IDLE;
-    } else if (Triggers[i].state == TRIGGER_STATE_STREAM) {
-      send = 1;
-    }
-    send_MIDI_commands(i, send);
-  } // end for (i)
+    // local vars for switch code:
+    channel_command_s *ch_cmd;
+    harmonic_command_s *hm_cmd;
+    byte trigger_num;
+    byte channel_param;
+    byte harmonic_param;
+    byte ch, hm;
+
+    switch (COMMAND_TYPE(*prior)) {
+    case SINGLE_COMMAND_TYPE:
+      // single commands are always triggered.
+      send_MIDI_command(cmd);
+      *prior = cmd->next;  // delink
+      break;
+    case CHANNEL_COMMAND_TYPE:
+      ch_cmd = (channel_command_s *)cmd;
+      if (triggered(ch_cmd->trigger_num)) {
+        for (ch = 0; ch < NUM_CHANNELS; ch++) {
+          if (Switches[FIRST_CHANNEL_SWITCH + ch].current) {
+            if (ch != 0) {
+              update_cmd_value(ch, get_internal_param(ch_cmd->channel_param), ch_cmd);
+            }
+            send_MIDI_command(ch_cmd, i == 0);
+            // FIX: update values
+          }
+        } // end for (ch)
+        *prior = ch_cmd->next;  // delink
+      } // end if triggered
+      break;
+    case HARMONIC_COMMAND_TYPE:
+      hm_cmd = (harmonic_command_s *)cmd;
+      if (triggered(hm_cmd)->trigger_num)) {
+        for (ch = 1; ch < NUM_CHANNELS; ch++) {
+          if (Switches[FIRST_CHANNEL_SWITCH + ch].current) {
+            update_cmd_value(ch, get_internal_param(hm_cmd->channel_param), hm_cmd);
+            for (hm = 0; hm < NUM_HARMONICS; hm++) {
+              if (Switches[FIRST_HARMONIC_SWITCH + hm].current) {
+                update_cmd_value(hm, get_internal_param(hm_cmd->harmonic_param), hm_cmd);
+                send_MIDI_command(hm_cmd);
+                // FIX: update values
+              } // end if hm switch on
+            } // end for (hm)
+          } // end if ch switch on
+        } // end for (ch)
+        *prior = hm_cmd->next;  // delink
+      } // end if triggered
+      break;
+    } // end switch
+  } // end for (prior)
 }
 
-void send_MIDI_commands(byte trigger_num, byte send) {
+byte triggered(trigger_num) {
+  if (!(Triggers[trigger_num].flags & TRIGGER_FLAGS_TRIGGERED)) return 0;
+  if (!(Triggers[trigger_num].flags & TRIGGER_FLAGS_STREAM_MANUAL)) {
+    // triggered by button, turn off triggered flag
+    Triggers[trigger_num].flags &= ~TRIGGER_FLAGS_TRIGGERED;
+  }
+  return 1;
+}
+
+void send_MIDI_command(single_command_s *cmd, byte synth=0) {
   // FIX
 }
 
