@@ -29,8 +29,8 @@ I2C interface:
     2: numeric_display_size for each numeric_display (Num_numeric_displays bytes total)
     3: numeric_display_offset for each numeric_display (Num_numeric_displays bytes total)
     4: Cycle_time (uSec, 4 bytes total)
-    5. alpha_num_chars, alpha_index for each string (2 * Num_alpha_strings bytes total)
-    6. next stored EEPROM byte (1 byte, EEPROM addr auto increments)
+    5: alpha_num_chars, alpha_index for each string (2 * Num_alpha_strings bytes total)
+    6: next stored EEPROM byte (1 byte, EEPROM addr auto increments)
 
 
 Error Codes:

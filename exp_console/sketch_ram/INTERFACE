@@ -1,0 +1,56 @@
+I2C interface:
+  I2C Addr: 0x33
+
+  <synth_prog> is 0 for synth, 1 for prog
+
+  Requests from on high:
+    0<num_ch><num_ch_funs><num_enc><num_hm><num_hm_funs>: init, MUST BE CALLED BEFORE
+                                                                ANYTHING ELSE IS DONE
+    1<synth_prog><ch><ch_fun>: get_ch_values (report 1)
+    2<synth_prog><ch><hm><hm_fun>: get_hm_values (report 2)
+    3<synth_prog><ch-bitmap><ch_fun><values>: set_ch_values, ch-bitmap is 2 bytes, MSB first,
+                                             //              values is Num_encoders bytes.
+    4<synth_prog><ch-bitmap><hm-bitmap><hm_fun><values>: set_hm_values, bitmaps are 2 bytes,
+                                                        // MSB first, values is Num_encoders
+                                                        // bytes.
+    5: copy synth values to prog
+
+  Reports to on high:
+    0: Errno, Err_data (resets Errno to 0)
+    1: fun enc_value * Num_encoders, sets Report to 0
+    2: hm enc_value * Num_encoders, sets Report to 0
+
+
+Error codes (displayed on Master Controller LED adding 200 to them):
+
+  Errno, Err_data
+   1     how_many       request 0: (init) has incorrect len (should be 6).
+   2     Fun_size/10    request 0: Fun_bytes size too big, max size FUN_BYTES.
+   3     Hm_size/200    request 0: Hm_bytes size too big, max size HM_BYTES.
+  10        -           request 1: (get_fun_values) uninitialized (req 0 not received).
+  11     how_many       request 1: (get_fun_values) has incorrect len (should be 4).
+  12     synth_prog     request 1: (get_fun_values) synth_prog too big, must be < 2.
+  13      channel       request 1: (get_fun_values) channel too big, must be < Num_channels.
+  14       fun          request 1: (get_fun_values) fun too big, must be < Num_ch_functions.
+  20        -           request 2: (get_hm_values) uninitialized (req 0 not received).
+  21     how_many       request 2: (get_hm_values) has incorrect len (should be 5).
+  22     synth_prog     request 2: (get_hm_values) synth_prog too big, must be < 2.
+  23      channel       request 2: (get_hm_values) channel too big, must be < Num_channels.
+  24      harmonic      request 2: (get_hm_values) harmonic too big, must be < Num_harmonics.
+  25       fun          request 2: (get_hm_values) fun too big, must be < Num_hm_functions.
+  30        -           request 3: (set_fun_values) uninitialized (req 0 not received).
+  31     how_many       request 3: (set_fun_values) has inc len (should be 5 + Num_encoders).
+  32     synth_prog     request 3: (set_fun_values) synth_prog too big, must be < 2.
+  33       fun          request 3: (set_fun_values) fun too big, must be < Num_ch_functions.
+  40        -           request 4: (set_hm_values) uninitialized (req 0 not received).
+  41     how_many       request 4: (set_hm_values) has inc len (should be 7 + Num_encoders).
+  42     synth_prog     request 4: (set_hm_values) synth_prog too big, must be < 2.
+  43       fun          request 4: (set_hm_values) fun too big, must be < Num_hm_functions.
+  50        -           request 5: (copy_synth_to_prog) uninitialized (req 0 not received).
+  51     how_many       request 5: (copy_synth_to_prog) has incorrect len (should be 1).
+  53      request       Invalid request
+  54      report        Invalid report
+  55        -           Uninitialized, set in setup, reset with I2C request 0.
+
+
+// vim: sw=2

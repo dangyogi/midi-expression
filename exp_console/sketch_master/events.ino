@@ -124,9 +124,9 @@ byte Trace_events = 0;
 
 void switch_closed(byte sw) {
   if (Trace_events) {
-    Serial.print("switch ");
+    Serial.print(F("switch "));
     Serial.print(sw);
-    Serial.print(" closed, event ");
+    Serial.print(F(" closed, event "));
     Serial.println(Switch_closed_event[sw]);
   }
   run_event(Switch_closed_event[sw], sw);
@@ -134,9 +134,9 @@ void switch_closed(byte sw) {
 
 void switch_opened(byte sw) {
   if (Trace_events) {
-    Serial.print("switch ");
+    Serial.print(F("switch "));
     Serial.print(sw);
-    Serial.print(" opened, event ");
+    Serial.print(F(" opened, event "));
     Serial.println(Switch_opened_event[sw]);
   }
   run_event(Switch_opened_event[sw], sw);
@@ -146,9 +146,9 @@ byte Encoder_event[NUM_ENCODERS]; // 0xFF is None
 
 void encoder_changed(byte enc) {
   if (Trace_events) {
-    Serial.print("encoder ");
+    Serial.print(F("encoder "));
     Serial.print(enc);
-    Serial.print(" changed, event ");
+    Serial.print(F(" changed, event "));
     Serial.println(Encoder_event[enc]);
   }
   run_event(Encoder_event[enc], enc);

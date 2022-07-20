@@ -46,7 +46,7 @@ byte setup_switches(byte EEPROM_offset) {
                       | get_EEPROM(EEPROM_switches_offset + 1);
   if (us == 0xFFFF) {
     if (Serial) {
-      Serial.println("debounce period not set in EEPROM");
+      Serial.println(F("debounce period not set in EEPROM"));
     }
     Debounce_period = 5000;
   } else {
@@ -67,7 +67,7 @@ unsigned long Longest_scan;  // uSec
 byte Close_counts[NUM_SWITCHES];
 
 void scan_switches(byte trace) {
-  // Takes 210 uSec to run with no activity.
+  // Takes 210 uSec to run with no activity on Nano 33 IoT.
   byte row, col;
   unsigned long start_scan_time = micros();
   for (row = 0; row < 9; row++) {
@@ -84,11 +84,11 @@ void scan_switches(byte trace) {
           switch_closed(sw_num);
           Close_counts[sw_num]++;
           if (trace) {
-            Serial.print("Switch at row ");
+            Serial.print(F("Switch at row "));
             Serial.print(row);
-            Serial.print(", col ");
+            Serial.print(F(", col "));
             Serial.print(col);
-            Serial.println(" has closed");
+            Serial.println(F(" has closed"));
           } // end if (trace)
         } // end if (!sw->current)
       } else {
@@ -105,11 +105,11 @@ void scan_switches(byte trace) {
               sw->current = 0;
               switch_opened(sw_num);
               if (trace) {
-                Serial.print("Switch at row ");
+                Serial.print(F("Switch at row "));
                 Serial.print(row);
-                Serial.print(", col ");
+                Serial.print(F(", col "));
                 Serial.print(col);
-                Serial.println(" is now open");
+                Serial.println(F(" is now open"));
               } // end if (trace)
             } // end if (timer expired)
           } else if (start_scan_time > sw->open_time + Debounce_period &&
@@ -118,11 +118,11 @@ void scan_switches(byte trace) {
             sw->current = 0;
             switch_opened(sw_num);
             if (trace) {
-              Serial.print("Switch at row ");
+              Serial.print(F("Switch at row "));
               Serial.print(row);
-              Serial.print(", col ");
+              Serial.print(F(", col "));
               Serial.print(col);
-              Serial.println(" is now open");
+              Serial.println(F(" is now open"));
             } // end if (trace)
           }
         } // end if (sw->current)

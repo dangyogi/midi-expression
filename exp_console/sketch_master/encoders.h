@@ -10,7 +10,6 @@ typedef struct {
   byte bt_mul[2];       // up, down
   byte value;
   byte changed;         // set to 1 each time value changes.
-  byte var_num;         // not directly used here
   byte param_num;       // not directly used here
 } encoder_var_t;
 

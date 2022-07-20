@@ -1,0 +1,11 @@
+Error codes:
+
+  Errno, Err_data
+   10    data_len       getResponse: data_len > 32
+   11    bytes_received getResponse: bytes_received > data_len
+   12    i2c_addr       getResponse: bytes_received == 0, slave controller offline
+
+  200-255               Errors from RAM controller with 200 added to RAM controller Errno.
+
+
+// vim: sw=2

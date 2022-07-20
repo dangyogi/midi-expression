@@ -68,13 +68,6 @@ void setup() {
   Wire.setClock(400000);
   Serial.begin(230400);
 
-  while (!Serial) {
-    digitalWrite(ERR_LED, HIGH);
-    digitalWrite(ERR_LED2, HIGH);
-  }
-  digitalWrite(ERR_LED, LOW);
-  digitalWrite(ERR_LED2, LOW);
-  
   byte a_pin, pot_addr;
   byte num_pots_msg_seen = 0;
   byte cal_msg_seen = 0;
@@ -169,9 +162,6 @@ void setup() {
 
   Wire.onReceive(receiveRequest);  // callback for requests from on high
   Wire.onRequest(sendReport);      // callback for reports to on high
-  
-  Serial.print("sizeof(struct pot_info_s) is ");
-  Serial.println(sizeof(struct pot_info_s));
 } // end setup()
 
 // 0 = errno, err_data, all pot values
@@ -573,15 +563,7 @@ void loop() {
         read(a_pin, pot_addr, ++pot_num);
       } // end for (pot_addr)
     } // end for (a_pin)
-  
-    if (!Serial) {
-        digitalWrite(ERR_LED, HIGH);
-        digitalWrite(ERR_LED2, HIGH);
-    } else {
-        digitalWrite(ERR_LED, LOW);
-        digitalWrite(ERR_LED2, LOW);
-    }
-  
+
     if (Num_reads >= Read_threshold) Num_reads = 0;
   } // end if (!Disable)
   

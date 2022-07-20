@@ -1,6 +1,6 @@
 // flash_errno.ino
 
-#define MAX_DELAYS   50
+#define MAX_DELAYS   42
 
 unsigned short Delays[MAX_DELAYS];
 byte Num_delays;
