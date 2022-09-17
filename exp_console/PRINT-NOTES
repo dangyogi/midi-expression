@@ -1,0 +1,16 @@
+- Inkscape:
+
+  - Rectangle size (width, height) is to center of line.
+
+  - Print settings:
+    - Page Setup -> Scale: 100.0%  <--- default
+    - Advanced -> Print Scaling: None <--- default is Automatic!!
+    - Gives accurate height (on 8.5" dimension of paper), is 1/4% too large on width
+
+  - Original prints printed at Scale: 104%, Print Scaling: Automatic
+
+- KiCad original scale factor: 1.0476 -- NOT USED ANYMORE!
+
+  - Print settings:
+    - Page Setup -> Scale: 100.0%  <--- default
+    - Advanced -> Print Scaling: None <--- default is Automatic!!

@@ -30,6 +30,12 @@ exp_console/sketch_leds/flash_errno.ino
 exp_console/sketch_master/flash_errno.h
 exp_console/sketch_master/flash_errno.ino
 
+# kicad files
+OUTPUT/
+*-backups/
+*.kicad_???-bak
+fp-info-cache
+
 # Distribution / packaging
 .Python
 build/
