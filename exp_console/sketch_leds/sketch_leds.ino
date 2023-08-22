@@ -1,5 +1,9 @@
 // sketch_leds.ino
 
+// Arduino IDE Tools Settings:
+//   Board: Nano Every
+//   Registers Emulation: None
+
 #include <EEPROM.h>
 #include <Wire.h>
 #include "flash_errno.h"
@@ -7,6 +11,8 @@
 #include "step.h"
 #include "numeric_displays.h"
 #include "alpha_displays.h"
+
+#define PROGRAM_ID          "LEDs V2"
 
 #define NUM_EEPROM_USED     EEPROM_needed
 #define EEPROM_SIZE         (EEPROM.length())
@@ -44,6 +50,8 @@ void setup() {
   
   digitalWrite(ERR_LED, LOW);
   digitalWrite(ERR_LED2, LOW);
+
+  Serial.println(PROGRAM_ID);
 } // end setup()
 
 #define NUM_TIMEOUT_FUNS        3
@@ -123,6 +131,7 @@ void step_receiveRequest(void) {
       }
     }
   } else {
+    Report = 0;
     switch (b0) {
     case 8:  // set num rows
       if (check_eq(How_many, 2, 5)) break;
@@ -245,8 +254,13 @@ void step_receiveRequest(void) {
     case 25:  // test alpha decoder
       Timeout_fun_runtime[TEST_ALPHA_DECODER] = 1;
       break;
+    case 26:  // set Errno, Err_data
+      if (check_eq(How_many, 3, 31)) break;
+      Errno = Wire.read();
+      Err_data = Wire.read();
+      break;
     default:
-      Errno = 31;
+      Errno = 34;
       Err_data = b0;
       break;
     } // end switch (b0)
@@ -256,10 +270,10 @@ void step_receiveRequest(void) {
 
 byte SendReport_running;
 
-void sendReport(void) {  // Errnos 41-49
+void sendReport(void) {  // Errnos 41-59
   // callback for reports requested from on high
   if (SendReport_running) {
-    Errno = 49;
+    Errno = 59;
   } else {
     SendReport_running = 1;
     schedule_step_fun(STEP_SEND_REPORT);
@@ -267,55 +281,145 @@ void sendReport(void) {  // Errnos 41-49
 }
 
 void step_sendReport(void) {
-  byte i;
+  byte i, len_written;
   switch (Report) {
   case 0:  // Errno, Err_data
-    Wire.write(Errno);
-    Wire.write(Err_data);
+    len_written = Wire.write(Errno);
+    if (len_written != 1) {
+      Errno = 43;
+      Err_data = len_written;
+      Report = 0;
+      break;
+    }
+    len_written = Wire.write(Err_data);
+    if (len_written != 1) {
+      Errno = 44;
+      Err_data = len_written;
+      Report = 0;
+      break;
+    }
     Errno = 0;
     Err_data = 0;
     break;
   case 1:  // Num_rows, NUM_COLS, Num_numeric_displays, Num_alpha_displays, EEPROM_AVAIL,
            // EEPROM USED (6 bytes total)
-    Wire.write(Num_rows);
-    Wire.write(byte(NUM_COLS));
-    Wire.write(Num_numeric_displays);
-    Wire.write(Num_alpha_strings);
-    Wire.write(byte(EEPROM_AVAIL));
-    Wire.write(EEPROM[NUM_EEPROM_USED]);
-    break;
-  case 2:  // numeric_display_size (Num_numeric_displays bytes)
-    for (i = 0; i < Num_numeric_displays; i++) {
-      Wire.write(Numeric_display_size[i]);
+    len_written = Wire.write(Num_rows);
+    if (len_written != 1) {
+      Errno = 45;
+      Err_data = len_written;
+      Report = 0;
+      break;
+    }
+    len_written = Wire.write(byte(NUM_COLS));
+    if (len_written != 1) {
+      Errno = 46;
+      Err_data = len_written;
+      Report = 0;
+      break;
+    }
+    len_written = Wire.write(Num_numeric_displays);
+    if (len_written != 1) {
+      Errno = 47;
+      Err_data = len_written;
+      Report = 0;
+      break;
+    }
+    len_written = Wire.write(Num_alpha_strings);
+    if (len_written != 1) {
+      Errno = 48;
+      Err_data = len_written;
+      Report = 0;
+      break;
+    }
+    len_written = Wire.write(byte(EEPROM_AVAIL));
+    if (len_written != 1) {
+      Errno = 49;
+      Err_data = len_written;
+      Report = 0;
+      break;
+    }
+    len_written = Wire.write(EEPROM[NUM_EEPROM_USED]);
+    if (len_written != 1) {
+      Errno = 50;
+      Err_data = len_written;
+      Report = 0;
+      break;
     }
     break;
-  case 3:  // numeric_display_offset (Num_numeric_displays bytes)
+  case 2:  // numeric_display_sizes (Num_numeric_displays bytes)
     for (i = 0; i < Num_numeric_displays; i++) {
-      Wire.write(Numeric_display_offset[i]);
+      len_written = Wire.write(Numeric_display_size[i]);
+      if (len_written != 1) {
+        Errno = 51;
+        Err_data = len_written;
+        Report = 0;
+        break;
+      }
+    }
+    break;
+  case 3:  // numeric_display_offsets (Num_numeric_displays bytes)
+    for (i = 0; i < Num_numeric_displays; i++) {
+      len_written = Wire.write(Numeric_display_offset[i]);
+      if (len_written != 1) {
+        Errno = 52;
+        Err_data = len_written;
+        Report = 0;
+        break;
+      }
     }
     break;
   case 4:  // Timeout_cycle_time (uSec, 4 bytes total)
-    Wire.write(Timeout_cycle_time);
+    len_written = Wire.write(Timeout_cycle_time);
+    if (len_written != 4) {
+      Errno = 53;
+      Err_data = len_written;
+      Report = 0;
+      break;
+    }
     break;
   case 5:  // alpha_num_chars, alpha_index (2*Num_alpha_strings bytes)
     for (i = 0; i < Num_alpha_strings; i++) {
-      Wire.write(Alpha_num_chars[i]);
-      Wire.write(Alpha_index[i]);
+      len_written = Wire.write(Alpha_num_chars[i]);
+      if (len_written != 1) {
+        Errno = 54;
+        Err_data = len_written;
+        Report = 0;
+        break;
+      }
+      len_written = Wire.write(Alpha_index[i]);
+      if (len_written != 1) {
+        Errno = 55;
+        Err_data = len_written;
+        Report = 0;
+        break;
+      }
     }
     break;
   case 6:  // next stored EEPROM byte (1 byte, EEPROM_addr auto-incremented)
     if (Report_addr < EEPROM[NUM_EEPROM_USED]) {
-      Wire.write(EEPROM[EEPROM_storage_addr(Report_addr)]);
+      len_written = Wire.write(EEPROM[EEPROM_storage_addr(Report_addr)]);
+      if (len_written != 1) {
+        Errno = 56;
+        Err_data = len_written;
+        Report = 0;
+        break;
+      }
       Report_addr++;
     } else {
       Errno = 42;
       Err_data = Report_addr;
     }
     break;
+  default:
+    Errno = 58;
+    Err_data = Report;
+    break;
   } // end switch (Report)
 }
 
 void help(void) {
+  Serial.println();
+  Serial.println(PROGRAM_ID);
   Serial.println();
   Serial.println("? - help");
   Serial.println("P - show Num_rows");
@@ -791,7 +895,7 @@ byte Step_fun_scheduled[NUM_STEP_FUNS];
 
 void schedule_step_fun(byte step_fun) {
   if (step_fun >= NUM_STEP_FUNS) {
-    Errno = 51;
+    Errno = 61;
     Err_data = step_fun;
   } else {
     Step_fun_scheduled[step_fun] = 1;
@@ -820,10 +924,10 @@ void loop() {
           break;
         }
       } // end for (i)
-      step(52);
+      step(62);
     } // end if (Next_step_fun > next_step_fun)
   } else {  // Nothing else to run...
-    step(53);
+    step(63);
   } // end if (Next_step_fun != 0xFF)
 }
 

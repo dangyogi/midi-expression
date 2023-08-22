@@ -1,5 +1,9 @@
 // sketch_master.ino
 
+// Arduino IDE Tools settings:
+//   Board: Teensy LC
+//   USB Type: Serial + MIDI*4
+
 #include <EEPROM.h>
 #include <Wire.h>
 #include "flash_errno.h"
@@ -8,6 +12,8 @@
 #include "events.h"
 #include "notes.h"
 #include "functions.h"
+
+#define PROGRAM_ID    "Master V2"
 
 #define ERR_LED      13   // built-in LED
 #define ERR_LED_2     1
@@ -60,6 +66,8 @@ void setup() {
 
   delay(1500);   // give RAM controller time to get started
 
+  Serial.println(PROGRAM_ID);
+
   // initialize RAM controller
   byte req[6];
   req[0] = 0;   // init
@@ -86,6 +94,8 @@ void setup() {
 byte Debug = 0;
 
 void running_help(void) {
+  Serial.println();
+  Serial.println(PROGRAM_ID);
   Serial.println();
   Serial.println(F("running:"));
   Serial.println(F("? - help"));
@@ -134,10 +144,19 @@ void turn_off_test_pin(void) {
 unsigned long I2C_send_time;    // uSec
 
 void sendRequest(byte i2c_addr, byte *data, byte data_len) {
+  byte b0, status;
   unsigned long start_time = micros();
   Wire.beginTransmission(i2c_addr);
-  Wire.write(data, data_len);
-  Wire.endTransmission();
+  b0 = Wire.write(data, data_len);
+  if (b0 != data_len) {
+    Errno = 20;
+    Err_data = b0;
+  }
+  status = Wire.endTransmission();
+  if (status) {
+    Errno = 20 + status;        // 21 to 25
+    Err_data = i2c_addr;
+  }
   unsigned long elapsed_time = micros() - start_time;
   if (elapsed_time > I2C_send_time) I2C_send_time = elapsed_time;
 }
@@ -170,17 +189,22 @@ byte getResponse(byte i2c_addr, byte data_len, byte check_errno) {
     Err_data = bytes_received;
     return 0;
   }
+  if (bytes_received != Wire.available()) {
+    if (Serial) {
+      Serial.print(F("I2C.requestFrom: bytes_received, ")); Serial.print(bytes_received);
+      Serial.print(F(", != available(), ")); Serial.println(Wire.available());
+    }
+    Errno = 12;
+    Err_data = Wire.available();
+    return 0;
+  }
   for (i = 0; i < bytes_received; i++) {
     ResponseData[i] = Wire.read();
   }
   unsigned long read_time = micros() - mid_time;
   if (read_time > I2C_read_time) I2C_read_time = read_time;
-  if (bytes_received != Wire.available() && Serial) {
-    Serial.print(F("I2C.requestFrom: bytes_received, ")); Serial.print(bytes_received);
-    Serial.print(F(", != available(), ")); Serial.println(Wire.available());
-  }
   if (bytes_received == 0) {
-    Errno = 12;
+    Errno = 13;
     Err_data = i2c_addr;
     return bytes_received;
   }

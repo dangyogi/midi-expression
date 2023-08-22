@@ -1,5 +1,7 @@
+RAM Controller
+
 I2C interface:
-  I2C Addr: 0x33
+  I2C Addr: 0x33 (51)
 
   <synth_prog> is 0 for synth, 1 for prog
 
@@ -9,11 +11,13 @@ I2C interface:
     1<synth_prog><ch><ch_fun>: get_ch_values (report 1)
     2<synth_prog><ch><hm><hm_fun>: get_hm_values (report 2)
     3<synth_prog><ch-bitmap><ch_fun><values>: set_ch_values, ch-bitmap is 2 bytes, MSB first,
-                                             //              values is Num_encoders bytes.
+                                                             values is Num_encoders bytes.
     4<synth_prog><ch-bitmap><hm-bitmap><hm_fun><values>: set_hm_values, bitmaps are 2 bytes,
-                                                        // MSB first, values is Num_encoders
-                                                        // bytes.
+                                                           MSB first, values is Num_encoders
+                                                           bytes.
     5: copy synth values to prog
+    6: set Errno, Err_data
+    7: report Errno, Err_data
 
   Reports to on high:
     0: Errno, Err_data (resets Errno to 0)
@@ -46,9 +50,15 @@ Error codes (displayed on Master Controller LED adding 200 to them):
   41     how_many       request 4: (set_hm_values) has inc len (should be 7 + Num_encoders).
   42     synth_prog     request 4: (set_hm_values) synth_prog too big, must be < 2.
   43       fun          request 4: (set_hm_values) fun too big, must be < Num_hm_functions.
-  50        -           request 5: (copy_synth_to_prog) uninitialized (req 0 not received).
-  51     how_many       request 5: (copy_synth_to_prog) has incorrect len (should be 1).
-  53      request       Invalid request
+  45        -           request 5: (copy_synth_to_prog) Num_channels == 0 (unitialized)
+  46     how_many       request 5: (copy_synth_to_prog) has incorrect len (should be 1).
+  47     how_many       request 6: (set Errno, Err_data) has incorrect len (should be 3).
+  48     how_many       request 7: (report Errno, Err_data) has incorrect len (should be 1).
+  49      request       Invalid request
+  50    len_written     Send_report 0 (report Errno/Err_data): bad len on Errno write, expected 1
+  51    len_written     Send_report 0 (report Errno/Err_data): bad len on Err_data write, expected 1
+  52    len_written     Send_report 1 (return Fun_value): bad len on Fun_value write, expected 1
+  53    len_written     Send_report 2 (return Hm_value): bad len on Hm_value write, expected 1
   54      report        Invalid report
   55        -           Uninitialized, set in setup, reset with I2C request 0.
 

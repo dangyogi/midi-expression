@@ -24,7 +24,7 @@ byte setup_numeric_displays(byte my_EEPROM_offset) {
   if (b == 0xFF) {
     Serial.println("Num_numeric_displays not set in EEPROM");
   } else if (b > MAX_NUMERIC_DISPLAYS) {
-    Errno = 81;
+    Errno = 91;
     Err_data = b;
   } else Num_numeric_displays = b;
 
@@ -35,7 +35,7 @@ byte setup_numeric_displays(byte my_EEPROM_offset) {
       Serial.print("Numeric_display_size not set in EEPROM for ");
       Serial.println(i);
     } else if (b > MAX_NUMERIC_DISPLAY_SIZE) {
-      Errno = 82;
+      Errno = 92;
       Err_data = b;
     } else Numeric_display_size[i] = b;
 
@@ -44,7 +44,7 @@ byte setup_numeric_displays(byte my_EEPROM_offset) {
       Serial.print("Numeric_display_offset not set in EEPROM for ");
       Serial.println(i);
     } else if (b > Num_rows * NUM_COLS) {
-      Errno = 83;
+      Errno = 93;
       Err_data = b;
     } else Numeric_display_offset[i] = b;
   } // end for (i)
@@ -83,13 +83,13 @@ const byte Numeric_7_segment_decode[] = {
 void load_digit(byte display_num, byte digit_num, byte value, byte dp) {
   // value of 10 produces a '-', 11 turns all segments off
   if (display_num >= Num_numeric_displays) {
-    Errno = 84;
+    Errno = 94;
     Err_data = display_num;
   } else if (digit_num >= Numeric_display_size[display_num]) {
-    Errno = 85;
+    Errno = 95;
     Err_data = digit_num;
   } else if (value > 11) {
-    Errno = 86;
+    Errno = 96;
     Err_data = value;
   } else {
     byte bits = Numeric_7_segment_decode[value];
@@ -111,14 +111,14 @@ void load_numeric(byte display_num, short value, byte decimal_place) {
   // value must fit in the number of digits (reduced by 1 for '-' sign if value < 0).
   // decimal_place of 0, means no DP.  Otherwise it displayed on Nth digit from the right.
   if (display_num >= Num_numeric_displays) {
-    Errno = 87;
+    Errno = 97;
     Err_data = display_num;
   } else if (decimal_place > Numeric_display_size[display_num]) {
-    Errno = 88;
+    Errno = 98;
     Err_data = decimal_place;
   } else if (value >= Powers_of_ten[Numeric_display_size[display_num]] || 
              -value >= Powers_of_ten[Numeric_display_size[display_num] - 1]) {
-    Errno = 89;
+    Errno = 99;
     Err_data = value/10;
   } else {
     byte addr = Numeric_display_offset[display_num];
@@ -150,10 +150,10 @@ void load_numeric(byte display_num, short value, byte decimal_place) {
 
 void load_sharp_flat(byte display_num, byte sharp_flat) {
   if (display_num >= Num_numeric_displays) {
-    Errno = 90;
+    Errno = 100;
     Err_data = display_num;
   } else if (sharp_flat > 2) {
-    Errno = 91;
+    Errno = 101;
     Err_data = sharp_flat;
   } else {
     switch (sharp_flat) {
@@ -178,13 +178,13 @@ void load_note(byte display_num, byte note, byte sharp_flat) {
   // note must be 0-6 for A-G
   // sharp_flat is 0 for natural, 1 for sharp, 2 for flat
   if (display_num >= Num_numeric_displays) {
-    Errno = 92;
+    Errno = 102;
     Err_data = display_num;
   } else if (note > 6) {
-    Errno = 93;
+    Errno = 103;
     Err_data = note;
   } else if (sharp_flat > 2) {
-    Errno = 94;
+    Errno = 104;
     Err_data = sharp_flat;
   } else {
     byte addr = Numeric_display_offset[display_num];

@@ -1,11 +1,20 @@
+Master Controller
+
 Error codes:
 
   Errno, Err_data
-   10    data_len       getResponse: data_len > 32
-   11    bytes_received getResponse: bytes_received > data_len
-   12    i2c_addr       getResponse: bytes_received == 0, slave controller offline
+   10    data_len           getResponse: data_len > 32
+   11    bytes_received     getResponse: Wire.requestFrom bytes_received > data_len
+   12    Wire.available()   getResponse: bytes_received != Wire.available()
+   13    i2c_addr           getResponse: bytes_received == 0
+   20    len_written        Wire.write returned wrong length
+   21    i2c_addr           Wire.endTransmission status 1: data too long to fit in transmit buffer
+   22    i2c_addr           Wire.endTransmission status 2: received NACK on transmit of i2c_addr
+   23    i2c_addr           Wire.endTransmission status 3: received NACK on transmit of data
+   24    i2c_addr           Wire.endTransmission status 4: other error
+   25    i2c_addr           Wire.endTransmission status 5: timeout
 
-  200-255               Errors from RAM controller with 200 added to RAM controller Errno.
+  200-255                   Errors from RAM controller with 200 added to RAM controller Errno.
 
 
 // vim: sw=2

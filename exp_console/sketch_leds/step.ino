@@ -66,7 +66,7 @@ byte setup_step(void) {
     Serial.println("Num_rows not set in EEPROM");
     Num_rows = NUM_ROWS;
   } else if (b > NUM_ROWS) {
-    Errno = 61;
+    Errno = 71;
     Err_data = b; 
   } else Num_rows = b;
 
@@ -75,13 +75,13 @@ byte setup_step(void) {
 
 void led_on(byte bit_num) {
   if (bit_num >= Num_rows * NUM_COLS) {
-    Errno = 62;
+    Errno = 72;
     Err_data = bit_num;
     return;
   }
   byte row = bit_num >> 4;
   byte col = bit_num & 0x0F;
-  switch (col) {                  // 76543210
+  switch (col) {                   // 76543210
   case 0:  Col_ports[row].port_e |= 0b00000010; break;
   case 1:  Col_ports[row].port_c |= 0b01000000; break;
   case 2:  Col_ports[row].port_c |= 0b00100000; break;
@@ -103,7 +103,7 @@ void led_on(byte bit_num) {
 
 void led_off(byte bit_num) {
   if (bit_num >= Num_rows * NUM_COLS) {
-    Errno = 63;
+    Errno = 73;
     Err_data = bit_num;
     return;
   }

@@ -1,5 +1,8 @@
 // sketch_ram.ino
 
+// Arduino IDE Tools settings:
+//   Board -> SAMD -> Nano 33 IoT
+
 #include <Wire.h>
 #include "flash_errno.h"
 
@@ -235,12 +238,12 @@ void receiveRequest(int how_many) {
   case 5:   // Copy synth values to prog
     Report = 0;
     if (Num_channels == 0) {
-      Errno = 50;
+      Errno = 45;
       Err_data = 0;
       break;
     }
     if (how_many != 1) {
-      Errno = 51;
+      Errno = 46;
       Err_data = how_many;
       break;
     }
@@ -261,8 +264,24 @@ void receiveRequest(int how_many) {
       }
     } // end for (enc)
     break;
+  case 6:       // Set Errno, Err_data
+    Report = 0;
+    if (how_many != 3) {
+      Errno = 47;
+      Err_data = how_many;
+      break;
+    }
+    break;
+  case 7:       // Report Errno, Err_data
+    Report = 0;
+    if (how_many != 1) {
+      Errno = 48;
+      Err_data = how_many;
+      break;
+    }
+    break;
   default:
-    Errno = 53;
+    Errno = 49;
     Err_data = req;
     Report = 0;
     break;
@@ -270,29 +289,46 @@ void receiveRequest(int how_many) {
 }
 
 void sendReport(void) {
-  byte enc;
+  byte len_written, enc;
   switch (Report) {
   case 0:    // Errno, Err_data
-    Wire.write(Errno);
-    Wire.write(Err_data);
+    len_written = Wire.write(Errno);
+    if (len_written != 1) {
+      Errno = 50;
+      Err_data = len_written;
+    }
+    len_written = Wire.write(Err_data);
+    if (len_written != 1) {
+      Errno = 51;
+      Err_data = len_written;
+    }
     Errno = 0;
     Err_data = 0;
     break;
   case 1:    // fun enc_value * Num_encoders
     for (enc = 0; enc < Num_encoders; enc++) {
-      Wire.write(Fun_value(Synth_prog, Channel, Fun, enc));
+      len_written = Wire.write(Fun_value(Synth_prog, Channel, Fun, enc));
+      if (len_written != 1) {
+        Errno = 52;
+        Err_data = len_written;
+      }
     }
     Report = 0;
     break;
   case 2:    // hm enc_value * Num_encoders
     for (enc = 0; enc < Num_encoders; enc++) {
-      Wire.write(Hm_value(Synth_prog, Channel, Harmonic, Fun, enc));
+      len_written = Wire.write(Hm_value(Synth_prog, Channel, Harmonic, Fun, enc));
+      if (len_written != 1) {
+        Errno = 53;
+        Err_data = len_written;
+      }
     }
     Report = 0;
     break;
   default:
     Errno = 54;
     Err_data = Report;
+    Report = 0;
     break;
   } // end switch
 }

@@ -1,5 +1,7 @@
+LED Controller
+
 I2C interface:
-  I2C Addr: 0x32
+  I2C Addr: 0x32 (50)
 
   Requests from on high:
     0-6: Set Report to send.  6 has EEPROM addr (1 byte), the rest have no data.
@@ -21,6 +23,7 @@ I2C interface:
     23: test led order
     24: test numeric decoder
     25: test alpha decoder
+    26<Errno><Err_data>: set Errno, Err_data
 
   Reports to on high:
     0: Errno, Err_data (2 bytes total)
@@ -37,11 +40,11 @@ Error Codes:
 
   Range  Function
   1-39   receiveRequest
-  41-49  sendReport
-  51-59  other sketch_led.ino
-  61-69  step.ino
-  71-79  alpha_displays.ino
-  81-99  numeric_displays.ino
+  41-59  sendReport
+  61-69  other sketch_led.ino
+  71-79  step.ino
+  81-89  alpha_displays.ino
+  91-109  numeric_displays.ino
 
   Errno, Err_data
      1      N/A     step_receiveRequest took too long after last step call
@@ -74,34 +77,49 @@ Error Codes:
     28   How_many   I2C request 21, invalid command length, must be 3
     29   How_many   I2C request 22 (load string), request not long enough, must be at least 2
     30   How_many   I2C request 22 (load string), string too long, must be <= MAX_STRING_LEN
-    31    req#      Invalid I2C request
+    31   How_many   I2C request 26 (set Errno, Err_data), invalid command length, must be 3
+    34    req#      Invalid I2C request
     35     N/A      ReceiveRequest running when another receiveRequest comes in
     41     N/A      step_sendReport took too long after last step call
     42 EEPROM_addr  EEPROM_addr >= NUM_EEPROM_USED
-    49     N/A      sendReport running when another sendReport comes in
-    51   step_fun   schedule_step_fun: invalid step_fun, >= NUM_STEP_FUNS
-    52     N/A      loop took too long to figure out Next_step_fun
-    53     N/A      loop took too long with no Next_Step_fun!! (how could this happen??)
-    61 EEPROM_#rows setup_step, invalid Num_rows in EEPROM
-    62   bit_num    led_on: invalid bit_num, must be < Num_rows * NUM_COLS
-    63   bit_num    led_off: invalid bit_num, must be < Num_rows * NUM_COLS
-    71 EEPROM_#strs setup_alpha_displays: invalid Num_alpha_strings in EEPROM
-    72 EEPROM_size  setup_alpha_displays: invalid Alpha_num_chars in EEPROM
-    73 EEPROM_index setup_alpha_displays: invalid Alpha_index in EEPROM
-    74   str_num    load_string: invalid string_num, must be < MAX_NUM_STRINGS
-    75   strlen     load_string: invalid strlen, must be <= MAX_STRING_LEN
-    81 EEPROM_#disp setup_numeric_displays: invalid Num_numeric_displays in EEPROM
-    82 EEPROM_size  setup_numeric_displays: invalid Numeric_display_size in EEPROM
-    83 EEPROM_offst setup_numeric_displays: invalid Numeric_display_offset in EEPROM
-    84    disp      load_digit: invalid display_num, must be < Num_numeric_displays
-    85    digit     load_digit: invalid digit_num, must be < Numeric_display_size
-    86    value     load_digit: invalid value, must be < 11
-    87    disp      load_numeric: invalid display_num, must be Num_numeric_displays
-    88   dec_pl     load_numeric: invalid decimal_place, must be <= Numeric_display_size
-    89  value/10    load_numeric: invalid value, too big to fit
-    90    disp      load_sharp_flat: invalid display_num, must be < Num_numeric_displays
-    91 sharp_flat   load_sharp_flat: invalid sharp_flat, must be <= 2
-    92    disp      load_note: invalid display_num, must be < Num_numeric_displays
-    93    note      load_note: invalid note, must be <= 6 (A-G)
-    94 sharp_flat   load_note: invalid sharp_flat, must be <= 2
+    43 len_written  sendReport 0 (Errno, Err_data): Wire.write(Errno) returned wrong length, expected 1
+    44 len_written  sendReport 0 (Errno, Err_data): Wire.write(Err_data) returned wrong length, expected 1
+    45 len_written  sendReport 1 (settings): Wire.write(Num_rows) returned wrong length, expected 1
+    46 len_written  sendReport 1 (settings): Wire.write(NUM_COLS) returned wrong length, expected 1
+    47 len_written  sendReport 1 (settings): Wire.write(Num_numeric_displays) returned wrong length, expected 1
+    48 len_written  sendReport 1 (settings): Wire.write(Num_alpha_strings) returned wrong length, expected 1
+    49 len_written  sendReport 1 (settings): Wire.write(EEPROM_AVAIL) returned wrong length, expected 1
+    50 len_written  sendReport 1 (settings): Wire.write(EEPROM_USED) returned wrong length, expected 1
+    51 len_written  sendReport 2 (numeric_display_sizes): Wire.write(Numeric_display_size) returned wrong length, expected 1
+    52 len_written  sendReport 3 (numeric_display_offsets): Wire.write(Numeric_display_offset) returned wrong length, expected 1
+    53 len_written  sendReport 4 (Timeout_cycle_time): Wire.write(EEPROM_USED) returned wrong length, expected 4
+    54 len_written  sendReport 5 (alpha_num_chars, alpha_index): Wire.write(Alpha_num_chars) returned wrong length, expected 1
+    55 len_written  sendReport 5 (alpha_num_chars, alpha_index): Wire.write(Alpha_index) returned wrong length, expected 1
+    56 len_written  sendReport 6 (next stored EEPROM byte): Wire.write(EEPROM) returned wrong length, expected 1
+    58   Report     sendReport: invalid Report number
+    61   step_fun   schedule_step_fun: invalid step_fun, >= NUM_STEP_FUNS
+    62     N/A      loop took too long to figure out Next_step_fun
+    63     N/A      loop took too long with no Next_Step_fun!! (how could this happen??)
+    71 EEPROM_#rows setup_step, invalid Num_rows in EEPROM
+    72   bit_num    led_on: invalid bit_num, must be < Num_rows * NUM_COLS
+    73   bit_num    led_off: invalid bit_num, must be < Num_rows * NUM_COLS
+    81 EEPROM_#strs setup_alpha_displays: invalid Num_alpha_strings in EEPROM
+    82 EEPROM_size  setup_alpha_displays: invalid Alpha_num_chars in EEPROM
+    83 EEPROM_index setup_alpha_displays: invalid Alpha_index in EEPROM
+    84   str_num    load_string: invalid string_num, must be < MAX_NUM_STRINGS
+    85   strlen     load_string: invalid strlen, must be <= MAX_STRING_LEN
+    91 EEPROM_#disp setup_numeric_displays: invalid Num_numeric_displays in EEPROM
+    92 EEPROM_size  setup_numeric_displays: invalid Numeric_display_size in EEPROM
+    93 EEPROM_offst setup_numeric_displays: invalid Numeric_display_offset in EEPROM
+    94    disp      load_digit: invalid display_num, must be < Num_numeric_displays
+    95    digit     load_digit: invalid digit_num, must be < Numeric_display_size
+    96    value     load_digit: invalid value, must be < 11
+    97    disp      load_numeric: invalid display_num, must be Num_numeric_displays
+    98   dec_pl     load_numeric: invalid decimal_place, must be <= Numeric_display_size
+    99  value/10    load_numeric: invalid value, too big to fit
+    100   disp      load_sharp_flat: invalid display_num, must be < Num_numeric_displays
+    101 sharp_flat  load_sharp_flat: invalid sharp_flat, must be <= 2
+    102   disp      load_note: invalid display_num, must be < Num_numeric_displays
+    103   note      load_note: invalid note, must be <= 6 (A-G)
+    104 sharp_flat  load_note: invalid sharp_flat, must be <= 2
 

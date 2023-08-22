@@ -1,5 +1,7 @@
+Pot Controller
+
 I2C interface:
-  I2C Addr: 0x31
+  I2C Addr: 0x31 (49)
 
   Requests from on high:
     0-6: Set Report to send.  5 has a_pin (1 byte), 6 has EEPROM addr (1 byte),
@@ -10,6 +12,7 @@ I2C interface:
     11: Calibate center
     12: Calibate high
     13: Write_calibations
+    14: Set Errno, Err_data
 
   Reports to on high:
     0: Errno, Err_data, pot.value (1 byte each) for each pot (2 + num_pots bytes total)
@@ -17,7 +20,7 @@ I2C interface:
     2: Errno, Err_data (2 bytes total)
     3: Num_pots for each a_pin (NUM_A_PINS bytes total)
     4: Cycle_time (uSec, 4 bytes total)
-    5. cal_low, cal_center, cal_high for each pot in a_pin (6 * num_pots for a_pin)
+    5. cal_low, cal_center, cal_high for each pot in a_pin (6 * num_pots for a_pin, a_pin auto increments)
     6. next stored EEPROM byte (1 byte, EEPROM addr auto increments)
 
 
@@ -41,6 +44,23 @@ Error Codes:
    50,   request length: invalid request length for command 12, expected 1
    51,   calibrate_high value: calibrate_high value failed to be within 40 of 1023
    60,   request length: invalid request length for command 13, expected 1
+   65,   request length: invalid request length for command 14, expected 3
+   70,   len_written: send_report 0 (Errno, Err_data + pot.values) - Wire.write(Errno) returned wrong length, expected 1
+   71,   len_written: send_report 0 (Errno, Err_data + pot.values) - Wire.write(Err_data) returned wrong length, expected 1
+   72,   len_written: send_report 0 (Errno, Err_data + pot.values) - Wire.write(Pot_info) returned wrong length, expected 1
+   73,   len_written: send_report 1 (num_pots, NUM_A_PINS, EEPROM_AVAIL, EEPROM USED) - Wire.write(num_pots) returned wrong length, expected 1
+   74,   len_written: send_report 1 (num_pots, NUM_A_PINS, EEPROM_AVAIL, EEPROM USED) - Wire.write(NUM_A_PINS) returned wrong length, expected 1
+   75,   len_written: send_report 1 (num_pots, NUM_A_PINS, EEPROM_AVAIL, EEPROM USED) - Wire.write(EEPROM_AVAIL) returned wrong length, expected 1
+   76,   len_written: send_report 1 (num_pots, NUM_A_PINS, EEPROM_AVAIL, EEPROM USED) - Wire.write(EEPROM_USED) returned wrong length, expected 1
+   77,   len_written: send_report 2 (Errno, Err_data) - Wire.write(Errno) returned wrong length, expected 1
+   78,   len_written: send_report 2 (Errno, Err_data) - Wire.write(Err_data) returned wrong length, expected 1
+   79,   len_written: send_report 3 (Num_pots for each a_pin) - Wire.write(Num_pots[a_pin]) returned wrong length, expected 1
+   80,   len_written: send_report 4 (Cycle_time) - Wire.write(Cycle_time) returned wrong length, expected 4
+   81,   len_written: send_report 5 (cal_low, cal_center, cal_high for each pot in a_pins) - Wire.write(cal_low) returned wrong length, expected 2
+   82,   len_written: send_report 5 (cal_low, cal_center, cal_high for each pot in a_pins) - Wire.write(cal_center) returned wrong length, expected 2
+   83,   len_written: send_report 5 (cal_low, cal_center, cal_high for each pot in a_pins) - Wire.write(cal_high) returned wrong length, expected 2
+   84,   len_written: send_report 6 (next stored EEPROM byte) - Wire.write(EEPROM byte) returned wrong length, expected 1
+   89,   Report: send_report - Invalid Report number
   100,   a_pin: Num_pots read from EEPROM for a_pin > 8
   101,   10*a_pin + pot_addr: cal_low read from EEPROM for a_pin, pot_addr > 20
   102,   10*a_pin + pot_addr: cal_center read from EEPROM for a_pin, pot_addr > 50 from 511

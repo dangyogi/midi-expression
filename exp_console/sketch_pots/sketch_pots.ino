@@ -1,8 +1,14 @@
 // sketch_pots.ino
 
+// Arduino IDE Tools settings:
+//   Board: Nano Every
+//   Registers Emulation: None
+
 #include <EEPROM.h>
 #include <Wire.h>
 #include "flash_errno.h"
+
+#define PROGRAM_ID          "Pots V2"
 
 #define MUX_A      9
 #define MUX_B     10
@@ -39,7 +45,7 @@ byte Num_pots[NUM_A_PINS];    // number of pots on each A_pin
 #define MAX_CALIBRATION_ERROR_CENTER   60
 #define MAX_CALIBRATION_ERROR_ENDS     30
 
-struct pot_info_s {   // size 14 bytes
+struct pot_info_s {   // size 14 bytes (ints are 2 bytes)
   int a_low;
   int a_high;
   int last_reported;
@@ -67,6 +73,9 @@ void setup() {
   Wire.begin(0x31);
   Wire.setClock(400000);
   Serial.begin(230400);
+
+  Serial.println(PROGRAM_ID);
+  Serial.println();
 
   byte a_pin, pot_addr;
   byte num_pots_msg_seen = 0;
@@ -340,6 +349,7 @@ void receiveRequest(int how_many) {
     Report_addr = b1;
     return;
   }
+  Report = 0;
   switch (b0) {
   case 8:  // set num pots, a_pin, number
     if (check_eq(how_many, 3, 8)) break;
@@ -374,6 +384,11 @@ void receiveRequest(int how_many) {
     if (check_eq(how_many, 1, 60)) break;
     write_calibrations();
     break;
+  case 14:  // set Errno, Err_data
+    if (check_eq(how_many, 3, 65)) break;
+    Errno = Wire.read();
+    Err_data = Wire.read();
+    break;
   default:
     Errno = 110;
     Err_data = b0;
@@ -383,14 +398,29 @@ void receiveRequest(int how_many) {
 
 void sendReport(void) {
   // callback for reports from on high
-  byte a_pin, pot_addr;
+  byte len_written, a_pin, pot_addr;
   switch (Report) {
   case 0:  // Errno, Err_data + pot.value * num_pots (2 + num_pots total)
-    Wire.write(Errno);
-    Wire.write(Err_data);
+    len_written = Wire.write(Errno);
+    if (len_written != 1) {
+      Errno = 70;
+      Err_data = len_written;
+      break;
+    }
+    len_written = Wire.write(Err_data);
+    if (len_written != 1) {
+      Errno = 71;
+      Err_data = len_written;
+      break;
+    }
     for (a_pin = 0; a_pin < NUM_A_PINS; a_pin++) {
       for (pot_addr = 0; pot_addr < Num_pots[a_pin]; pot_addr++) {
-        Wire.write(Pot_info[a_pin][pot_addr].value);
+        len_written = Wire.write(Pot_info[a_pin][pot_addr].value);
+        if (len_written != 1) {
+          Errno = 72;
+          Err_data = len_written;
+          break;
+        }
       }
     }
     Errno = 0;
@@ -401,43 +431,111 @@ void sendReport(void) {
     for (a_pin = 0; a_pin < NUM_A_PINS; a_pin++) {
       num_pots += Num_pots[a_pin];
     }
-    Wire.write(num_pots);
-    Wire.write(byte(NUM_A_PINS));
-    Wire.write(byte(EEPROM_AVAIL));
-    Wire.write(EEPROM[NUM_EEPROM_USED]);
+    len_written = Wire.write(num_pots);
+    if (len_written != 1) {
+      Errno = 73;
+      Err_data = len_written;
+      break;
+    }
+    len_written = Wire.write(byte(NUM_A_PINS));
+    if (len_written != 1) {
+      Errno = 74;
+      Err_data = len_written;
+      break;
+    }
+    len_written = Wire.write(byte(EEPROM_AVAIL));
+    if (len_written != 1) {
+      Errno = 75;
+      Err_data = len_written;
+      break;
+    }
+    len_written = Wire.write(EEPROM[NUM_EEPROM_USED]);
+    if (len_written != 1) {
+      Errno = 76;
+      Err_data = len_written;
+      break;
+    }
     break;
   case 2:  // Errno, Err_data (2 bytes total)
-    Wire.write(Errno);
-    Wire.write(Err_data);
+    len_written = Wire.write(Errno);
+    if (len_written != 1) {
+      Errno = 77;
+      Err_data = len_written;
+      break;
+    }
+    len_written = Wire.write(Err_data);
+    if (len_written != 1) {
+      Errno = 78;
+      Err_data = len_written;
+      break;
+    }
     Errno = 0;
     Err_data = 0;
     break;
   case 3:  // Num_pots for each a_pin (NUM_A_PINS bytes total)
     for (a_pin = 0; a_pin < NUM_A_PINS; a_pin++) {
-      Wire.write(Num_pots[a_pin]);
+      len_written = Wire.write(Num_pots[a_pin]);
+      if (len_written != 1) {
+        Errno = 79;
+        Err_data = len_written;
+        break;
+      }
     }
     break;
   case 4:  // Cycle_time (uSec, 4 bytes total)
-    Wire.write(Cycle_time);
+    len_written = Wire.write(Cycle_time);  // unsigned long
+    if (len_written != 4) {
+      Errno = 80;
+      Err_data = len_written;
+      break;
+    }
     break;
   case 5:  // cal_low, cal_center, cal_high for each pot in a_pins (6 * num_pots for a_pin)
     if (Report_addr < NUM_A_PINS) {
-      a_pin = Report_addr++;
+      a_pin = Report_addr;
       for (pot_addr = 0; pot_addr < Num_pots[a_pin]; pot_addr++) {
-        Wire.write(Pot_info[a_pin][pot_addr].cal_low);
-        Wire.write(Pot_info[a_pin][pot_addr].cal_center);
-        Wire.write(Pot_info[a_pin][pot_addr].cal_high);
+        len_written = Wire.write(Pot_info[a_pin][pot_addr].cal_low);
+        if (len_written != 2) {
+          Errno = 81;
+          Err_data = len_written;
+          break;
+        }
+        len_written = Wire.write(Pot_info[a_pin][pot_addr].cal_center);
+        if (len_written != 2) {
+          Errno = 82;
+          Err_data = len_written;
+          break;
+        }
+        len_written = Wire.write(Pot_info[a_pin][pot_addr].cal_high);
+        if (len_written != 2) {
+          Errno = 83;
+          Err_data = len_written;
+          break;
+        }
       }
+      Report_addr++;
+    } else {
+      Errno = 3;
+      Err_data = Report_addr;
     }
     break;
   case 6:  // next stored EEPROM byte (1 byte, EEPROM_addr auto-incremented)
     if (Report_addr < EEPROM[NUM_EEPROM_USED]) {
-      Wire.write(EEPROM[EEPROM_storage_addr(Report_addr)]);
+      len_written = Wire.write(EEPROM[EEPROM_storage_addr(Report_addr)]);
+      if (len_written != 1) {
+        Errno = 84;
+        Err_data = len_written;
+        break;
+      }
       Report_addr++;
     } else {
       Errno = 4;
       Err_data = Report_addr;
     }
+    break;
+  default:
+    Errno = 89;
+    Err_data = Report;
     break;
   } // end switch (Report)
 }
@@ -489,6 +587,8 @@ void read(byte a_pin, byte pot_addr, byte pot_num) {
 }
 
 void help(void) {
+  Serial.println();
+  Serial.println(PROGRAM_ID);
   Serial.println();
   Serial.println("? - help");
   Serial.println("P - show Num_pots");
