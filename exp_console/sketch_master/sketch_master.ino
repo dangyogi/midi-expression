@@ -13,7 +13,7 @@
 #include "notes.h"
 #include "functions.h"
 
-#define PROGRAM_ID    "Master V2"
+#define PROGRAM_ID    "Master V3"
 
 #define ERR_LED      13   // built-in LED
 #define ERR_LED_2     1
@@ -517,6 +517,16 @@ void loop() {
           b2 = Serial.read();
           if (b2 == '\n') {
             sendRequest(I2C_POT_CONTROLLER, buffer, b1);
+            Serial.print(b1);
+            Serial.println(" bytes sent to Pot Controller");
+            for (b2 = 0; b2 < b1; b2++) {
+              Serial.print(buffer[b2]);
+              if (b2 + 1 < b1) {
+                Serial.print(", ");
+              }
+            }
+            Serial.println();
+            Serial.println();
             Serial.print(F("I2C_send_time ")); Serial.print(I2C_send_time);
             Serial.println(F(" uSec"));
             I2C_send_time = 0;
@@ -561,6 +571,16 @@ void loop() {
           b2 = Serial.read();
           if (b2 == '\n') {
             sendRequest(I2C_LED_CONTROLLER, buffer, b1);
+            Serial.print(b1);
+            Serial.println(" bytes sent to LED Controller");
+            for (b2 = 0; b2 < b1; b2++) {
+              Serial.print(buffer[b2]);
+              if (b2 + 1 < b1) {
+                Serial.print(", ");
+              }
+            }
+            Serial.println();
+            Serial.println();
             Serial.print(F("I2C_send_time ")); Serial.print(I2C_send_time);
             Serial.println(F(" uSec"));
             I2C_send_time = 0;
@@ -605,6 +625,16 @@ void loop() {
           b2 = Serial.read();
           if (b2 == '\n') {
             sendRequest(I2C_RAM_CONTROLLER, buffer, b1);
+            Serial.print(b1);
+            Serial.println(" bytes sent to RAM Controller");
+            for (b2 = 0; b2 < b1; b2++) {
+              Serial.print(buffer[b2]);
+              if (b2 + 1 < b1) {
+                Serial.print(", ");
+              }
+            }
+            Serial.println();
+            Serial.println();
             Serial.print(F("I2C_send_time ")); Serial.print(I2C_send_time);
             Serial.println(F(" uSec"));
             I2C_send_time = 0;

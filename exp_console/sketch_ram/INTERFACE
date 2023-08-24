@@ -10,13 +10,12 @@ I2C interface:
                                                                 ANYTHING ELSE IS DONE
     1<synth_prog><ch><ch_fun>: get_ch_values (report 1)
     2<synth_prog><ch><hm><hm_fun>: get_hm_values (report 2)
-    3<synth_prog><ch-bitmap><ch_fun><values>: set_ch_values, ch-bitmap is 2 bytes, MSB first,
-                                                             values is Num_encoders bytes.
-    4<synth_prog><ch-bitmap><hm-bitmap><hm_fun><values>: set_hm_values, bitmaps are 2 bytes,
-                                                           MSB first, values is Num_encoders
-                                                           bytes.
+    3<synth_prog><ch-bitmap><ch_fun><values>:
+       set_ch_values, ch-bitmap is 2 bytes MSB first, values is Num_encoders bytes.
+    4<synth_prog><ch-bitmap><hm-bitmap><hm_fun><values>:
+       set_hm_values, bitmaps are 2 bytes MSB first, values is Num_encoders bytes.
     5: copy synth values to prog
-    6: set Errno, Err_data
+    6<Errno>,<Err_data>: set Errno, Err_data
     7: report Errno, Err_data
 
   Reports to on high:
@@ -25,7 +24,8 @@ I2C interface:
     2: hm enc_value * Num_encoders, sets Report to 0
 
 
-Error codes (displayed on Master Controller LED adding 200 to them):
+Error Codes:
+  Displayed on Master Controller LED adding 200 to them.
 
   Errno, Err_data
    1     how_many       request 0: (init) has incorrect len (should be 6).

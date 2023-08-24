@@ -12,7 +12,7 @@
 #include "numeric_displays.h"
 #include "alpha_displays.h"
 
-#define PROGRAM_ID          "LEDs V2"
+#define PROGRAM_ID          "LEDs V3"
 
 #define NUM_EEPROM_USED     EEPROM_needed
 #define EEPROM_SIZE         (EEPROM.length())
@@ -63,8 +63,7 @@ void setup() {
 unsigned long Timeout_fun_runtime[NUM_TIMEOUT_FUNS];
 
 #define STEP_RECEIVE_REQUEST    0
-#define STEP_SEND_REPORT        1
-#define NUM_STEP_FUNS           2
+#define NUM_STEP_FUNS           1
 
 // 0 = ??
 // 1 = num_rows, num_a_pins, num_EEPROMS_avail, num_EEPROMS_used
@@ -268,19 +267,8 @@ void step_receiveRequest(void) {
   ReceiveRequest_running = 0;
 }
 
-byte SendReport_running;
-
 void sendReport(void) {  // Errnos 41-59
   // callback for reports requested from on high
-  if (SendReport_running) {
-    Errno = 59;
-  } else {
-    SendReport_running = 1;
-    schedule_step_fun(STEP_SEND_REPORT);
-  }
-}
-
-void step_sendReport(void) {
   byte i, len_written;
   switch (Report) {
   case 0:  // Errno, Err_data
@@ -913,7 +901,6 @@ void loop() {
     Next_step_fun = 0xFF;
     switch (next_step_fun) {
     case STEP_RECEIVE_REQUEST: step_receiveRequest(); break;
-    case STEP_SEND_REPORT: step_sendReport(); break; 
     } // end switch (next_step_fun)
     step(40*next_step_fun + 1);
     if (Next_step_fun > next_step_fun) {

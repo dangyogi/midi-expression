@@ -271,6 +271,8 @@ void receiveRequest(int how_many) {
       Err_data = how_many;
       break;
     }
+    Errno = Wire.read();
+    Err_data = Wire.read();
     break;
   case 7:       // Report Errno, Err_data
     Report = 0;

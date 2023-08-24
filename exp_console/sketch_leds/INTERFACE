@@ -123,3 +123,5 @@ Error Codes:
     103   note      load_note: invalid note, must be <= 6 (A-G)
     104 sharp_flat  load_note: invalid sharp_flat, must be <= 2
 
+
+// vim: sw=2

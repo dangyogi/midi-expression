@@ -1,6 +1,6 @@
 Master Controller
 
-Error codes:
+Error Codes:
 
   Errno, Err_data
    10    data_len           getResponse: data_len > 32
