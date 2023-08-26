@@ -9,7 +9,8 @@ Controllers = ("Master", "Pot", "LED")
 
 
 def read_interfaces():
-    return {attr.name: attr for attr in map(read_interface, Controllers)}
+    utils.Controllers = {attr.name: attr for attr in map(read_interface, Controllers)}
+    utils.Controllers1 = {attr.name[0]: attr for attr in utils.Controllers.values()}
 
 def read_interface(name):
     r'''The Attrs returned has: name, i2c_addr, requests, reports, and errnos.
@@ -116,7 +117,12 @@ def indent_level(line):
 
 
 if __name__ == "__main__":
-    for controller in read_interfaces().values():
+    read_interfaces()
+    print("names", tuple(utils.Controllers.keys()))
+    print("names1", tuple(utils.Controllers1.keys()))
+    print()
+
+    for controller in utils.Controllers.values():
         #print(mk_path(controller.name))
         print(controller.name)
         if hasattr(controller, 'i2c_addr'):

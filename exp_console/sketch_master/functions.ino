@@ -66,47 +66,68 @@ byte Lowest_harmonic = 0xFF;  // 0-9, 0xFF when all switches off
 unsigned short Harmonic_bitmap;
 byte Lowest_channel = 0xFF;   // 0-15, 0xFF when all switches off
 unsigned short Channel_bitmap;
+byte Buffer[NUM_FUNCTION_ENCODERS];
 
 void load_function_encoder_values(void) {
   if (Lowest_channel != 0xFF) {
     byte fun = FUNCTION;
-    byte req[5];
-    byte bytes_received;
+    byte req[6];
+    byte bytes_sent, bytes_received;
 
     if (fun < NUM_CH_FUNCTIONS) {
       // load channel values
-      req[0] = 1;  // get_ch_values
-      req[1] = SAVE_OR_SYNTH;
-      req[2] = Lowest_channel;
-      req[3] = fun;
-      sendRequest(I2C_RAM_CONTROLLER, req, 4);
+      req[0] = '$';
+      req[1] = 'c';  // get_ch_values
+      req[2] = SAVE_OR_SYNTH;
+      req[3] = Lowest_channel;
+      req[4] = fun;
+      bytes_sent = Serial.write(req, 5);
+      if (bytes_sent != 5) {
+        Errno = 1;
+        Err_data = bytes_sent;
+        return;
+      }
 
-      bytes_received = getResponse(I2C_RAM_CONTROLLER, NUM_FUNCTION_ENCODERS, 0);
-      if (bytes_received == NUM_FUNCTION_ENCODERS) {
+      bytes_received = Serial.readBytes((char *)Buffer, NUM_FUNCTION_ENCODERS);
+      if (bytes_received != NUM_FUNCTION_ENCODERS) {
+        Errno = 2;
+        Err_data = bytes_received;
+        return;
+      } else {
         byte i;
         for (i = 0; i < NUM_FUNCTION_ENCODERS; i++) {
           encoder_var_t *var = Encoders[Function_encoders[i]].var;
           if (var != NULL && (var->flags & 1)) {
-            var->value = ResponseData[i];
+            var->value = Buffer[i];
           } // end if (encoder enabled)
         } // end for (i)
       } // end if received whole response
     } else if (Lowest_harmonic != 0xFF) {
       // load harmonic values
-      req[0] = 2;  // get_hm_values
-      req[1] = SAVE_OR_SYNTH;
-      req[2] = Lowest_channel;
-      req[3] = Lowest_harmonic;
-      req[4] = fun;
-      sendRequest(I2C_RAM_CONTROLLER, req, 5);
+      req[0] = '$';
+      req[1] = 'h';  // get_hm_values
+      req[2] = SAVE_OR_SYNTH;
+      req[3] = Lowest_channel;
+      req[4] = Lowest_harmonic;
+      req[5] = fun;
+      bytes_sent = Serial.write(req, 6);
+      if (bytes_sent != 6) {
+        Errno = 3;
+        Err_data = bytes_sent;
+        return;
+      }
 
-      bytes_received = getResponse(I2C_RAM_CONTROLLER, NUM_FUNCTION_ENCODERS, 0);
-      if (bytes_received == NUM_FUNCTION_ENCODERS) {
+      bytes_received = Serial.readBytes((char *)Buffer, NUM_FUNCTION_ENCODERS);
+      if (bytes_received != NUM_FUNCTION_ENCODERS) {
+        Errno = 4;
+        Err_data = bytes_received;
+        return;
+      } else {
         byte i;
         for (i = 0; i < NUM_FUNCTION_ENCODERS; i++) {
           encoder_var_t *var = Encoders[Function_encoders[i]].var;
           if (var != NULL && (var->flags & 1)) {
-            var->value = ResponseData[i];
+            var->value = Buffer[i];
           } // end if (encoder enabled)
         } // end for (i)
       } // end if received whole response
@@ -117,38 +138,49 @@ void load_function_encoder_values(void) {
 void save_function_encoder_values(void) {
   byte fun = FUNCTION;
   byte i;
-  byte req[7 + NUM_FUNCTION_ENCODERS];
+  byte req[8 + NUM_FUNCTION_ENCODERS];
+  byte bytes_sent;
 
   if (fun < NUM_CH_FUNCTIONS) {
     // save channel values
-    req[0] = 3;  // set_ch_values
-    req[1] = SAVE_OR_SYNTH;
-    req[2] = (byte)(Channel_bitmap >> 8);
-    req[3] = (byte)Channel_bitmap;
-    req[4] = fun;
+    req[0] = '$';
+    req[1] = 'C';  // set_ch_values
+    req[2] = SAVE_OR_SYNTH;
+    req[3] = (byte)(Channel_bitmap >> 8);
+    req[4] = (byte)Channel_bitmap;
+    req[5] = fun;
     for (i = 0; i < NUM_FUNCTION_ENCODERS; i++) {
       encoder_var_t *var = Encoders[Function_encoders[i]].var;
-      if (var != NULL && (var->flags & 1)) req[5 + i] = var->value;
-      else req[5 + i] = 0;
+      if (var != NULL && (var->flags & 1)) req[6 + i] = var->value;
+      else req[6 + i] = 0;
     }
-    sendRequest(I2C_RAM_CONTROLLER, req, 5 + NUM_FUNCTION_ENCODERS);
-    getResponse(I2C_RAM_CONTROLLER, 2, 1);
+    bytes_sent = Serial.write(req, 6 + NUM_FUNCTION_ENCODERS);
+    if (bytes_sent != 6 + NUM_FUNCTION_ENCODERS) {
+      Errno = 5;
+      Err_data = bytes_sent;
+      return;
+    }
   } else {
     // save harmonic values
-    req[0] = 4;  // set_hm_values
-    req[1] = SAVE_OR_SYNTH;
-    req[2] = (byte)(Channel_bitmap >> 8);
-    req[3] = (byte)Channel_bitmap;
-    req[4] = (byte)(Harmonic_bitmap >> 8);
-    req[5] = (byte)Harmonic_bitmap;
-    req[6] = fun;
+    req[0] = '$';
+    req[1] = 'H';  // set_hm_values
+    req[2] = SAVE_OR_SYNTH;
+    req[3] = (byte)(Channel_bitmap >> 8);
+    req[4] = (byte)Channel_bitmap;
+    req[5] = (byte)(Harmonic_bitmap >> 8);
+    req[6] = (byte)Harmonic_bitmap;
+    req[7] = fun;
     for (i = 0; i < NUM_FUNCTION_ENCODERS; i++) {
       encoder_var_t *var = Encoders[Function_encoders[i]].var;
-      if (var != NULL && (var->flags & 1)) req[7 + i] = var->value;
-      else req[7 + i] = 0;
+      if (var != NULL && (var->flags & 1)) req[8 + i] = var->value;
+      else req[8 + i] = 0;
     }
-    sendRequest(I2C_RAM_CONTROLLER, req, 7 + NUM_FUNCTION_ENCODERS);
-    getResponse(I2C_RAM_CONTROLLER, 2, 1);
+    bytes_sent = Serial.write(req, 7 + NUM_FUNCTION_ENCODERS);
+    if (bytes_sent != 7 + NUM_FUNCTION_ENCODERS) {
+      Errno = 6;
+      Err_data = bytes_sent;
+      return;
+    }
   } // end if fun or hm
 }
 

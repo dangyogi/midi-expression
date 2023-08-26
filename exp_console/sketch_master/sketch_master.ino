@@ -13,20 +13,20 @@
 #include "notes.h"
 #include "functions.h"
 
-#define PROGRAM_ID    "Master V3"
+#define PROGRAM_ID    "Master V5"
 
 #define ERR_LED      13   // built-in LED
 #define ERR_LED_2     1
 
 // Indexed by I2C_addr - I2C_BASE
-#define NUM_REMOTES   3
+#define NUM_REMOTES   2
 byte Remote_Errno[NUM_REMOTES];
 byte Remote_Err_data[NUM_REMOTES];
+byte Remote_char[NUM_REMOTES] = {'P', 'L'};
 
 #define I2C_BASE              0x31
 #define I2C_POT_CONTROLLER    0x31
 #define I2C_LED_CONTROLLER    0x32
-#define I2C_RAM_CONTROLLER    0x33
 
 byte EEPROM_used;
 
@@ -52,6 +52,8 @@ unsigned short Period_offset[NUM_PERIODICS];
 
 #define HUMAN_PERIOD     300
 
+byte Driver_up;
+
 void setup() {
   // put your setup code here, to run once:
   err_led(ERR_LED, ERR_LED_2);
@@ -64,20 +66,7 @@ void setup() {
   Wire.begin();
   Wire.setClock(400000);
 
-  delay(1500);   // give RAM controller time to get started
-
   Serial.println(PROGRAM_ID);
-
-  // initialize RAM controller
-  byte req[6];
-  req[0] = 0;   // init
-  req[1] = NUM_CHANNELS;
-  req[2] = NUM_CH_FUNCTIONS;
-  req[3] = NUM_FUNCTION_ENCODERS;
-  req[4] = NUM_HARMONICS;
-  req[5] = NUM_HM_FUNCTIONS;
-  sendRequest(I2C_RAM_CONTROLLER, req, 6);
-  getResponse(I2C_RAM_CONTROLLER, 2, 1);
 
   byte EEPROM_used = setup_switches(0);
   EEPROM_used += setup_events(EEPROM_used);
@@ -99,6 +88,7 @@ void running_help(void) {
   Serial.println();
   Serial.println(F("running:"));
   Serial.println(F("? - help"));
+  Serial.println(F("I - initialize driver"));
   Serial.println(F("D - go into Debug mode"));
   Serial.println(F("L - show Longest_scan"));
   Serial.println(F("X<errno> - set Errno"));
@@ -108,6 +98,9 @@ void running_help(void) {
   Serial.println(F("T - toggle Trace_events"));
   Serial.println(F("R<row> - dump switches on row"));
   Serial.println(F("C - dump encoders"));
+  Serial.println(F("M<controller>,<len_expected>,<comma_sep_bytes> - send I2C message to <controller>"));
+  Serial.println(F("G<first>,<last> - generate raw bytes in the range first-last (inclusive)"));
+  Serial.println(F("V<first>,<last>\\n<raw_bytes> - verify that raw_bytes are in the range first-last"));
   Serial.println();
   Serial.print(F("sizeof(encoder_var_t) is ")); Serial.println(sizeof(encoder_var_t));
   Serial.println();
@@ -127,8 +120,6 @@ void debug_help(void) {
   Serial.println(F("Q<len_expected> - receive I2C report from pot_controller"));
   Serial.println(F("L<data> - send I2C command to led_controller"));
   Serial.println(F("M<len_expected> - receive I2C report from led_controller"));
-  Serial.println(F("T<data> - send I2C command to ram_controller"));
-  Serial.println(F("U<len_expected> - receive I2C report from ram_controller"));
   Serial.println();
 }
 
@@ -212,13 +203,12 @@ byte getResponse(byte i2c_addr, byte data_len, byte check_errno) {
     if ((check_errno || (bytes_received < data_len && bytes_received == 2))
         && ResponseData[0] != 0
     ) {
-      Remote_Errno[i2c_addr - I2C_BASE] = ResponseData[0];
-      Remote_Err_data[i2c_addr - I2C_BASE] = ResponseData[1];
-      if (i2c_addr == I2C_RAM_CONTROLLER && Errno == 0) {
-        // RAM controller has no error LED on the front panel, so I claim these and report
-        // them on my error LED.
-        Errno = ResponseData[0] + 200;
-        Err_data = ResponseData[1];
+      if (Driver_up) {
+        report_remote_error(Remote_char[i2c_addr - I2C_BASE],
+                            ResponseData[0], ResponseData[1]);
+      } else {
+        Remote_Errno[i2c_addr - I2C_BASE] = ResponseData[0];
+        Remote_Err_data[i2c_addr - I2C_BASE] = ResponseData[1];
       }
     } // end error check
   } // end if received at least 2 bytes
@@ -230,9 +220,24 @@ void skip_ws(void) {
   while (isspace(Serial.peek())) Serial.read();
 }
 
+void report_error() {
+  Serial.print("$E");
+  Serial.write('M');
+  Serial.write(Errno);
+  Serial.write(Err_data);
+  Errno = Err_data = 0;
+}
+
+void report_remote_error(byte remote_index, byte errno, byte err_data) {
+  Serial.print("$E");
+  Serial.write(Remote_char[remote_index]);
+  Serial.write(errno);
+  Serial.write(err_data);
+}
+
 void loop() {
   // put your main code here, to run repeatedly:
-  byte b0, b1, b2, b3, i;
+  byte b0, b1, b2, b3, b4, i;
   unsigned short us;
   byte buffer[32];
 
@@ -292,6 +297,27 @@ void loop() {
       b0 = toupper(Serial.read());
       switch (b0) {
       case '?': running_help(); break;
+      case 'I':
+        // initialize driver
+        Serial.print("$I");   // init
+        Serial.write(NUM_CHANNELS);
+        Serial.write(NUM_CH_FUNCTIONS);
+        Serial.write(NUM_FUNCTION_ENCODERS);
+        Serial.write(NUM_HARMONICS);
+        Serial.write(NUM_HM_FUNCTIONS);
+        Driver_up = 1;
+        if (Errno) {
+          report_error();
+          Errno = Err_data = 0;
+        }
+        for (i = 0; i < NUM_REMOTES; i++) {
+          if (Remote_Errno[i]) {
+            report_remote_error(i, Remote_Errno[i], Remote_Err_data[i]);
+            Remote_Errno[i] = 0;
+            Remote_Err_data[i] = 0;
+          }
+        }
+        break;
       case 'D':
         Debug = 1;
         for (b1 = 0; b1 < NUM_ROWS; b1++) {
@@ -381,6 +407,140 @@ void loop() {
             else Serial.println(F(", not changed"));
           }
         } // end for (b1)
+        break;
+      case 'M':  //send I2C message to controller
+        // M<controller>,<len_expected>,<comma_seperated_bytes> - send I2C message to <controller>
+        skip_ws();
+        b1 = Serial.read();     // controller
+        switch (b1) {
+        case 'p':
+        case 'P':
+          b1 = I2C_POT_CONTROLLER;
+          break;
+        case 'l':
+        case 'L':
+          b1 = I2C_LED_CONTROLLER;
+          break;
+        default:
+          Serial.print("M: unrecognized controller ");
+          Serial.println(b1);
+          goto error;
+        }
+        b3 = Serial.read();     // comma delimiter
+        if (b3 != ',') {
+          Serial.print("M: expected ',' after controller, got ");
+          Serial.println(b3);
+          goto error;
+        }
+        skip_ws();
+        b2 = Serial.parseInt(); // len_expected
+        if (b2 > 32) {
+          Serial.print("M: len_expected > 32, got ");
+          Serial.println(b2);
+          goto error;
+        }
+        b3 = Serial.read();     // comma delimiter
+        if (b3 != ',') {
+          Serial.print("M: expected ',' after len_expected, got ");
+          Serial.println(b3);
+          goto error;
+        }
+        skip_ws();
+        buffer[0] = Serial.parseInt();
+        for (i = 1; i < 32; i++) {
+          b3 = Serial.read();  // delimiter char
+          if (b3 == '\n') {
+            sendRequest(b1, buffer, i);
+            I2C_send_time = 0;
+            break;
+          } else if (b3 != ',') {
+            Serial.print("M: expected ',' after byte ");
+            Serial.print(i);
+            Serial.print(", got ");
+            Serial.println(b3);
+            goto error;
+          }
+          skip_ws();
+          buffer[i] = Serial.parseInt();
+        } // end for (i)
+        if (b2 == 0) {
+          Serial.println("Message sent");
+        } else {
+          skip_ws();
+          b3 = getResponse(b1, b2, 0);
+          I2C_request_from_time = 0;
+          I2C_read_time = 0;
+          if (b3 == 0) {
+            Serial.println("no response");
+          } else {
+            Serial.print(ResponseData[0]);
+            for (i = 1; i < b3; i++) {
+              Serial.print(", "); Serial.print(ResponseData[i]);
+            }
+            Serial.println();
+          }
+        }
+       error:
+        break;
+      case 'G': // G<first>,<last> - generate raw bytes in the range first-last (inclusive)
+        b1 = Serial.parseInt(); // first
+        b3 = Serial.read();     // comma delimiter
+        if (b3 != ',') {
+          Serial.print("G: expected ',' after first, got ");
+          Serial.println(b3);
+          goto error;
+        }
+        skip_ws();
+        b2 = Serial.parseInt(); // last
+        b3 = Serial.read();     // \n
+        if (b3 != '\n') {
+          Serial.print("G: expected '\\n' after last, got ");
+          Serial.println(b3);
+          goto error;
+        }
+        for (i = b1; i <= b2; i++) {
+          Serial.write(i);
+          if (i == 255) break;  // so i doesn't get incremented back to 0
+        }
+        break;
+      case 'V': // V<first>,<last>\n<raw_bytes> - verify that raw_bytes are in the range first-last
+        b1 = Serial.parseInt(); // first
+        b3 = Serial.read();     // comma delimiter
+        if (b3 != ',') {
+          Serial.print("V: expected ',' after first, got ");
+          Serial.println(b3);
+          goto error;
+        }
+        skip_ws();
+        b2 = Serial.parseInt(); // last
+        b3 = Serial.read();     // comma delimiter
+        if (b3 != '\n') {
+          Serial.print("V: expected '\\n' after last, got ");
+          Serial.println(b3);
+          goto error;
+        }
+        b4 = 0;  // num errors
+        for (i = b1; i <= b2; i++) {
+          b3 = Serial.read();
+          if (b3 != i) {
+            if (b4 == 0) {
+              Serial.print("V ERRORS: ");
+            } else {
+              Serial.print(", ");
+            }
+            Serial.print("expected ");
+            Serial.print(i);
+            Serial.print(" got ");
+            Serial.print(b3);
+            b4 += 1;
+          }
+          if (i == 255) break;  // so i doesn't get incremented back to 0
+        }
+        if (b4 == 0) {
+          Serial.println("V: no errors");
+        } else {
+          Serial.println();
+        }
         break;
       case ' ': case '\t': case '\n': case '\r': break;
       default: running_help(); break;
@@ -538,6 +698,7 @@ void loop() {
           skip_ws();
           buffer[b1] = Serial.parseInt();
         } // end for (b1)
+
         break;
       case 'Q': // receive I2C report from pot_controller
         skip_ws();
@@ -600,60 +761,6 @@ void loop() {
           Serial.println(F("ERROR: len_expected > 32"));
         } else {
           b2 = getResponse(I2C_LED_CONTROLLER, b1, 0);
-          Serial.print(F("I2C_request_from_time ")); Serial.print(I2C_request_from_time);
-          Serial.println(F(" uSec"));
-          I2C_request_from_time = 0;
-          Serial.print(F("I2C_read_time ")); Serial.print(I2C_read_time);
-          Serial.println(F(" uSec"));
-          I2C_read_time = 0;
-          if (b2 == 0) {
-            Serial.print("got Errno "); Serial.print(Errno);
-            Serial.print(", Err_data "); Serial.println(Err_data);
-          } else {
-            Serial.print(ResponseData[0]);
-            for (i = 1; i < b2; i++) {
-              Serial.print(", "); Serial.print(ResponseData[i]);
-            }
-            Serial.println();
-          }
-        }
-        break;
-      case 'T': // send I2C command to ram_controller
-        skip_ws();
-        buffer[0] = Serial.parseInt();
-        for (b1 = 1; b1 < 32; b1++) {
-          b2 = Serial.read();
-          if (b2 == '\n') {
-            sendRequest(I2C_RAM_CONTROLLER, buffer, b1);
-            Serial.print(b1);
-            Serial.println(" bytes sent to RAM Controller");
-            for (b2 = 0; b2 < b1; b2++) {
-              Serial.print(buffer[b2]);
-              if (b2 + 1 < b1) {
-                Serial.print(", ");
-              }
-            }
-            Serial.println();
-            Serial.println();
-            Serial.print(F("I2C_send_time ")); Serial.print(I2C_send_time);
-            Serial.println(F(" uSec"));
-            I2C_send_time = 0;
-            break;
-          } else if (b2 != ',') {
-            Serial.println(F("comma expected between bytes"));
-            break;
-          }
-          skip_ws();
-          buffer[b1] = Serial.parseInt();
-        } // end for (b1)
-        break;
-      case 'U': // receive I2C report from ram_controller
-        skip_ws();
-        b1 = Serial.parseInt();
-        if (b1 > 32) {
-          Serial.println(F("ERROR: len_expected > 32"));
-        } else {
-          b2 = getResponse(I2C_RAM_CONTROLLER, b1, 0);
           Serial.print(F("I2C_request_from_time ")); Serial.print(I2C_request_from_time);
           Serial.println(F(" uSec"));
           I2C_request_from_time = 0;
