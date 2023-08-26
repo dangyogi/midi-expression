@@ -10,6 +10,7 @@ import os
 
 from interfaces import read_interfaces
 import master_requests
+import user_requests
 import utils
 
 
@@ -43,12 +44,14 @@ def read_stdin():
     #print("read_stdin called")
     line = sys.stdin.readline()
     #print("read_stdin got", repr(line))
-    if line:
+    if not line:
+        return True  # quit!
+    if line[0] == '$':
+        getattr(user_requests, line[1])(line)
+    else:
         bytes = utils.to_bytes(line)
         utils.Master_out.write(bytes)
         utils.Master_out.flush()
-    else:
-        return True  # quit!
 
 def drive():
     read_interfaces()
@@ -116,6 +119,7 @@ def init():
     if num_errors == 0:
         print("G: no errors")
     print("init done")
+    print()
 
 def process(timeout=None):
     if timeout is not None:
