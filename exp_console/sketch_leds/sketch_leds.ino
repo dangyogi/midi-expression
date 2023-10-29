@@ -12,7 +12,7 @@
 #include "numeric_displays.h"
 #include "alpha_displays.h"
 
-#define PROGRAM_ID          "LEDs V3"
+#define PROGRAM_ID          "LEDs V5"
 
 #define NUM_EEPROM_USED     EEPROM_needed
 #define EEPROM_SIZE         (EEPROM.length())
@@ -431,10 +431,11 @@ void help(void) {
   Serial.println("O<disp_addr>,<note>,<sharp_flat> - load note/sharp_flat 0=nat, 1=#, 2=b");
   Serial.println("H<disp_addr>,<sharp_flat> - load sharp_flat, 0=nat, 1=sharp, 2=flat");
   Serial.println("I<str#>,<string> - load string");
-  //--- avail letters: J, K, Q, V, Y, Z
   Serial.println("J - test led order");
   Serial.println("Q - test numeric decoder");
   Serial.println("Z - test alpha decoder");
+  Serial.println("K - Enter testing mode");
+  //--- avail letters: V, Y
 }
 
 byte from_hex(byte ch) {
@@ -445,6 +446,8 @@ byte from_hex(byte ch) {
 }
 
 unsigned long Timeout_start_time;   // micros
+
+byte Testing_mode;
 
 void timeout(void) {
   // This is the slow loop.  It is run roughly every 1.7 mSec (with 13 rows), and takes 30 uSec to run (on avg).
@@ -869,6 +872,12 @@ void timeout(void) {
       Timeout_fun_runtime[TEST_ALPHA_DECODER] = 1;
       Serial.println("test_alpha_decoder done");
       break;
+    case 'K':  // enter testing mode
+      turn_off_all_columns();
+      turn_on_last_row();     // row 15 is not connected, so this is like all rows off
+      Testing_mode = 1;
+      Serial.println("Testing mode");
+      break;
     case ' ': case '\t': case '\n': case '\r': break;
     default: help(); break;
     } // end switch (c)
@@ -891,31 +900,71 @@ void schedule_step_fun(byte step_fun) {
   }
 }
 
+void testing_help(void) {
+  Serial.println();
+  Serial.println("? - help");
+  Serial.println("C<col> - turn on <col>");
+  Serial.println("R - turn on next row");
+}
+
 void loop() {
   // put your main code here, to run repeatedly:
-
-  // Run next step_fun:
-  if (Next_step_fun != 0xFF) {
-    byte next_step_fun = Next_step_fun;
-    Step_fun_scheduled[next_step_fun] = 0;
-    Next_step_fun = 0xFF;
-    switch (next_step_fun) {
-    case STEP_RECEIVE_REQUEST: step_receiveRequest(); break;
-    } // end switch (next_step_fun)
-    step(40*next_step_fun + 1);
-    if (Next_step_fun > next_step_fun) {
-      byte end = Next_step_fun == 0xFF ? NUM_STEP_FUNS : Next_step_fun;
-      for (byte i = next_step_fun; i < end; i++) {
-        if (Step_fun_scheduled[i]) {
-          Next_step_fun = i;
-          break;
+  if (Testing_mode) {
+    if (Serial.available()) {
+      char c = toupper(Serial.read());
+      byte b0;
+      switch (c) {
+      case '?': testing_help(); break;
+      case 'C':
+        b0 = Serial.parseInt();
+        turn_off_all_columns();
+        turn_on_last_row();     // row 15 is not connected, so this is like all rows off
+        if (b0 > NUM_COLS) {
+          Serial.print("C<col>: col > "); Serial.print(NUM_COLS);
+          Serial.print(", got "); Serial.println(b0);
+        } else {
+          turn_on_column(b0);
+          Serial.print("Column ");
+          Serial.print(b0);
+          Serial.println(" on");
         }
-      } // end for (i)
-      step(62);
-    } // end if (Next_step_fun > next_step_fun)
-  } else {  // Nothing else to run...
-    step(63);
-  } // end if (Next_step_fun != 0xFF)
+        break;
+      case 'R':
+        turn_off_all_columns();
+        turn_on_next_row();
+        Serial.print("Row "); Serial.print(Current_row - 1); Serial.println(" on");
+        break;
+      case ' ': case '\t': case '\n': case '\r': break;
+      default:
+        Serial.print("Unknown testing command ");
+        Serial.println(c);
+        break;
+      }
+    }
+  } else {
+    // Run next step_fun:
+    if (Next_step_fun != 0xFF) {
+      byte next_step_fun = Next_step_fun;
+      Step_fun_scheduled[next_step_fun] = 0;
+      Next_step_fun = 0xFF;
+      switch (next_step_fun) {
+      case STEP_RECEIVE_REQUEST: step_receiveRequest(); break;
+      } // end switch (next_step_fun)
+      step(40*next_step_fun + 1);
+      if (Next_step_fun > next_step_fun) {
+        byte end = Next_step_fun == 0xFF ? NUM_STEP_FUNS : Next_step_fun;
+        for (byte i = next_step_fun; i < end; i++) {
+          if (Step_fun_scheduled[i]) {
+            Next_step_fun = i;
+            break;
+          }
+        } // end for (i)
+        step(62);
+      } // end if (Next_step_fun > next_step_fun)
+    } else {  // Nothing else to run...
+      step(63);
+    } // end if (Next_step_fun != 0xFF)
+  }
 }
 
 // vim: sw=2

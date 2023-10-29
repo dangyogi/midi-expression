@@ -17,6 +17,8 @@ extern byte setup_alpha_displays(byte my_EEPROM_offset);
 
 extern void load_string(byte string_num, char *s);
 
+unsigned short test_alpha_decoder(void);
+
 // Timeout function: Returns how long to wait until next call (mSec).
 extern unsigned short advance_strings(void);
 

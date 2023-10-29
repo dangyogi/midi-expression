@@ -16,6 +16,8 @@ extern byte Numeric_display_offset[MAX_NUMERIC_DISPLAYS];  // byte_num of left-m
 // value of 10 produces '-'
 extern void load_digit(byte display_num, byte digit_num, byte value, byte dp);
 
+extern void test_numeric_decoder(void);
+
 // value may be < 0, but then is limited to one less digit.
 // decimal_place of 0 means no decimal.  Otherwise it is the digit number for the DP.
 extern void load_numeric(byte display_num, short value, byte decimal_place);
