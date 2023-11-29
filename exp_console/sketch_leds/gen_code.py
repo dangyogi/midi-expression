@@ -64,7 +64,7 @@ def decode(assignments):
     for bits in range(256):
         ports = defaultdict(int)
         for bit_num, (port, num) in zip(range(8), assignments):
-            if bits & (1 << bit_num):
+            if bits & (0b10000000 >> bit_num):
                 ports[port] |= 1 << int(num)
         for key, bits in ports.items():
             ports_used[key] |= bits

@@ -30,9 +30,11 @@ extern byte load_16(unsigned short bits, byte row_num);
 
 extern void turn_off_all_columns(void);
 extern void turn_on_column(byte col);
+extern void turn_on_led_columns(byte row);
 
+extern void disable_all_rows(void);
+extern void enable_all_rows(void);
 extern void turn_on_first_row(void);
-extern void turn_on_last_row(void);
-extern void turn_on_next_row(void);
+extern void turn_on_next_row(byte num_rows);
 
 // vim: sw=2

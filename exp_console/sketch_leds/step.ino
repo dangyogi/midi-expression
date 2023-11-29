@@ -245,6 +245,30 @@ void turn_on_column(byte col) {
   } // end switch (col)
 }
 
+#define TURN_ON_LED_COLUMNS(row)        \
+  PORTB.OUTSET = Col_ports[row].port_b; \
+  PORTC.OUTSET = Col_ports[row].port_c; \
+  PORTD.OUTSET = Col_ports[row].port_d; \
+  PORTE.OUTSET = Col_ports[row].port_e
+
+void turn_on_led_columns(byte row) {
+  TURN_ON_LED_COLUMNS(row);
+}
+
+#define DISABLE_ALL_ROWS()  \
+  digitalWrite(ROWS_ENABLE_NOT, HIGH) 	// disable all rows
+
+#define ENABLE_ALL_ROWS()  \
+  digitalWrite(ROWS_ENABLE_NOT, LOW) 	// enable all rows
+
+void disable_all_rows(void) {
+  DISABLE_ALL_ROWS();
+}
+
+void enable_all_rows(void) {
+  ENABLE_ALL_ROWS();
+}
+
 #define TURN_ON_FIRST_ROW()                                       \
     /* 1 processor clock cycle is 62.5 nSec */                    \
     digitalWrite(COUNTER_MR_NOT, LOW);  /* 30nSec pulse width */  \
@@ -255,8 +279,8 @@ void turn_on_first_row(void) {
   TURN_ON_FIRST_ROW();
 }
 
-#define TURN_ON_NEXT_ROW()                                      \
-  if (Current_row >= Num_rows) {                                \
+#define TURN_ON_NEXT_ROW(num_rows)                              \
+  if (Current_row + 1 >= (num_rows)) {                          \
     TURN_ON_FIRST_ROW();                                        \
   } else {                                                      \
     digitalWrite(COUNTER_CP, HIGH); /* 25nSec pulse width */    \
@@ -264,16 +288,8 @@ void turn_on_first_row(void) {
     digitalWrite(COUNTER_CP, LOW);                              \
   }
 
-void turn_on_next_row(void) {
-  TURN_ON_NEXT_ROW();
-}
-
-void turn_on_last_row(void) {
-  byte i;
-  TURN_ON_FIRST_ROW();
-  for (i = 1; i <= 15; i++) {
-    TURN_ON_NEXT_ROW();
-  }
+void turn_on_next_row(byte num_rows) {
+  TURN_ON_NEXT_ROW(num_rows);
 }
 
 void step(byte who_dunnit_errno) {
@@ -305,11 +321,11 @@ void step(byte who_dunnit_errno) {
   }
 
   // Turn off all Rows and Columns:
-  digitalWrite(ROWS_ENABLE_NOT, HIGH);	// disable all rows
+  DISABLE_ALL_ROWS();
   TURN_OFF_ALL_COLUMNS();
 
   // Turn on next Row:
-  TURN_ON_NEXT_ROW();
+  TURN_ON_NEXT_ROW(Num_rows);
 
   if (Errno == who_dunnit_errno) {
     Err_data = (now - On_end) / 10;
@@ -322,12 +338,10 @@ void step(byte who_dunnit_errno) {
   }
 
   // Turn on LED Columns for this Row:
-  PORTB.OUTSET = Col_ports[Current_row].port_b;
-  PORTC.OUTSET = Col_ports[Current_row].port_c;
-  PORTD.OUTSET = Col_ports[Current_row].port_d;
-  PORTE.OUTSET = Col_ports[Current_row].port_e;
+  TURN_ON_LED_COLUMNS(Current_row);
+
   On_start = (unsigned short)micros();
-  digitalWrite(ROWS_ENABLE_NOT, LOW);	// enable all rows
+  ENABLE_ALL_ROWS();
   On_end = On_start + 100;
 }
 

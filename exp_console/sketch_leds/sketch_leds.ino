@@ -12,7 +12,7 @@
 #include "numeric_displays.h"
 #include "alpha_displays.h"
 
-#define PROGRAM_ID          "LEDs V5"
+#define PROGRAM_ID          "LEDs V10"
 
 #define NUM_EEPROM_USED     EEPROM_needed
 #define EEPROM_SIZE         (EEPROM.length())
@@ -874,7 +874,7 @@ void timeout(void) {
       break;
     case 'K':  // enter testing mode
       turn_off_all_columns();
-      turn_on_last_row();     // row 15 is not connected, so this is like all rows off
+      disable_all_rows();
       Testing_mode = 1;
       Serial.println("Testing mode");
       break;
@@ -903,8 +903,48 @@ void schedule_step_fun(byte step_fun) {
 void testing_help(void) {
   Serial.println();
   Serial.println("? - help");
-  Serial.println("C<col> - turn on <col>");
-  Serial.println("R - turn on next row");
+  Serial.println("C - sequence through all columns 0-15");
+  Serial.println("L<Mask> - scroll Mask right to left twice (two different rows), -Mask notted.");
+  Serial.println("R - sequence through all rows 0-15");
+  Serial.println("K - terminate test mode");
+}
+
+void test_sequence(void fn(byte i)) {
+  byte i;
+  for (i = 0; i < 16; i++) {
+    fn(i);
+    delay(250);
+  }
+}
+
+void test_turn_on_column(byte col) {
+  turn_off_all_columns();
+  turn_on_column(col);
+  Serial.print("Column "); Serial.print(col); Serial.println(" on");
+}
+
+byte Test_row;
+unsigned short Test_mask;
+byte Negate;
+
+void test_load_16(byte col) {
+  unsigned short bits = Test_mask << col;
+  if (Negate) bits = ~bits;
+  load_16(bits, Test_row);
+  turn_off_all_columns();
+  turn_on_led_columns(Test_row);
+  Serial.print("Bits "); Serial.println(bits, BIN);
+  Serial.print("Port D: "); Serial.println(Col_ports[Test_row].port_d, BIN);
+  Serial.print("Port B: "); Serial.println(Col_ports[Test_row].port_b, BIN);
+  Serial.print("Port C: "); Serial.println(Col_ports[Test_row].port_c, BIN);
+  Serial.print("Port E: "); Serial.println(Col_ports[Test_row].port_e, BIN);
+}
+
+void test_row(byte i) {
+  disable_all_rows();
+  if (i) turn_on_next_row(NUM_ROWS);
+  enable_all_rows();
+  Serial.print("Row "); Serial.print(Current_row); Serial.println(" on");
 }
 
 void loop() {
@@ -912,27 +952,47 @@ void loop() {
   if (Testing_mode) {
     if (Serial.available()) {
       char c = toupper(Serial.read());
-      byte b0;
+      long l0;
       switch (c) {
       case '?': testing_help(); break;
       case 'C':
-        b0 = Serial.parseInt();
+        disable_all_rows();
+        test_sequence(test_turn_on_column);
         turn_off_all_columns();
-        turn_on_last_row();     // row 15 is not connected, so this is like all rows off
-        if (b0 > NUM_COLS) {
-          Serial.print("C<col>: col > "); Serial.print(NUM_COLS);
-          Serial.print(", got "); Serial.println(b0);
+        Serial.println("Test done"); Serial.println();
+        break;
+      case 'L':
+        l0 = Serial.parseInt(SKIP_WHITESPACE);
+        if (l0 < 0) {
+          Negate = 1;
+          Test_mask = (unsigned short)-l0;
         } else {
-          turn_on_column(b0);
-          Serial.print("Column ");
-          Serial.print(b0);
-          Serial.println(" on");
+          Negate = 0;
+          Test_mask = (unsigned short)l0;
         }
+        disable_all_rows();
+        Test_row = 0;
+        test_sequence(test_load_16);
+        turn_off_all_columns();
+        delay(500);
+        Test_row = 4;
+        test_sequence(test_load_16);
+        turn_off_all_columns();
+        Serial.println("Test done"); Serial.println();
         break;
       case 'R':
         turn_off_all_columns();
-        turn_on_next_row();
-        Serial.print("Row "); Serial.print(Current_row - 1); Serial.println(" on");
+        disable_all_rows();
+        turn_on_first_row();    // still disabled, enabled by test_row
+        test_sequence(test_row);
+        disable_all_rows();
+        Serial.println("Test done"); Serial.println();
+        break;
+      case 'K':  // enter normal mode
+        turn_off_all_columns();
+        disable_all_rows();
+        Testing_mode = 0;
+        Serial.println("Normal mode"); Serial.println();
         break;
       case ' ': case '\t': case '\n': case '\r': break;
       default:
@@ -941,7 +1001,7 @@ void loop() {
         break;
       }
     }
-  } else {
+  } else { // not Testing_mode
     // Run next step_fun:
     if (Next_step_fun != 0xFF) {
       byte next_step_fun = Next_step_fun;
