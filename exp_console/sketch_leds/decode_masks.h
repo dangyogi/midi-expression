@@ -1,7 +1,7 @@
 // decode_masks.h
 
 // The unused bits in each port are always 0 here.
-const col_ports_t Decode_high[] PROGMEM = {
+const col_ports_t Decode_low[] PROGMEM = {
   {0b00000000, 0b00000000, 0b00000000, 0b00000000},   // 0
   {0b00000000, 0b00000000, 0b00000000, 0b00000001},   // 1
   {0b00000000, 0b00000010, 0b00000000, 0b00000000},   // 2
@@ -260,13 +260,13 @@ const col_ports_t Decode_high[] PROGMEM = {
   {0b00000000, 0b00000111, 0b01110000, 0b00001001},   // 255
 };
 
-const col_ports_t Masks_high = {   // 1 bits are not used by any of the high columns
+const col_ports_t Masks_low = {   // 1 bits are not used by any of the low columns
   0b11111111, 0b11111000, 0b10001111, 0b11110110, 
 };
 
 
 // The unused bits in each port are always 0 here.
-const col_ports_t Decode_low[] PROGMEM = {
+const col_ports_t Decode_high[] PROGMEM = {
   {0b00000000, 0b00000000, 0b00000000, 0b00000000},   // 0
   {0b10000000, 0b00000000, 0b00000000, 0b00000000},   // 1
   {0b00001000, 0b00000000, 0b00000000, 0b00000000},   // 2
@@ -525,7 +525,7 @@ const col_ports_t Decode_low[] PROGMEM = {
   {0b10111111, 0b00000000, 0b00000000, 0b00000010},   // 255
 };
 
-const col_ports_t Masks_low = {   // 1 bits are not used by any of the low columns
+const col_ports_t Masks_high = {   // 1 bits are not used by any of the high columns
   0b01000000, 0b11111111, 0b11111111, 0b11111101, 
 };
 

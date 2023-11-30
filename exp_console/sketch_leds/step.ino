@@ -255,6 +255,13 @@ void turn_on_led_columns(byte row) {
   TURN_ON_LED_COLUMNS(row);
 }
 
+void clear_row(byte row) {
+  Col_ports[row].port_b = 0;
+  Col_ports[row].port_c = 0;
+  Col_ports[row].port_d = 0;
+  Col_ports[row].port_e = 0;
+}
+
 #define DISABLE_ALL_ROWS()  \
   digitalWrite(ROWS_ENABLE_NOT, HIGH) 	// disable all rows
 

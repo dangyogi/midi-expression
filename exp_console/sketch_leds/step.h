@@ -13,6 +13,7 @@ typedef struct {   // size 4 bytes, representing 16 bits (cols)
 } col_ports_t;
 
 extern col_ports_t Col_ports[NUM_ROWS];   // 64 bytes
+extern const col_ports_t All_leds_off;
 
 extern byte Num_rows;
 extern byte Current_row;
@@ -31,6 +32,7 @@ extern byte load_16(unsigned short bits, byte row_num);
 extern void turn_off_all_columns(void);
 extern void turn_on_column(byte col);
 extern void turn_on_led_columns(byte row);
+extern void clear_row(byte row);
 
 extern void disable_all_rows(void);
 extern void enable_all_rows(void);

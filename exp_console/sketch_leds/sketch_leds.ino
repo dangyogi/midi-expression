@@ -12,7 +12,7 @@
 #include "numeric_displays.h"
 #include "alpha_displays.h"
 
-#define PROGRAM_ID          "LEDs V10"
+#define PROGRAM_ID          "LEDs V14"
 
 #define NUM_EEPROM_USED     EEPROM_needed
 #define EEPROM_SIZE         (EEPROM.length())
@@ -902,10 +902,19 @@ void schedule_step_fun(byte step_fun) {
 
 void testing_help(void) {
   Serial.println();
+  Serial.println(PROGRAM_ID);
+  Serial.println("Testing mode");
+  Serial.println();
   Serial.println("? - help");
   Serial.println("C - sequence through all columns 0-15");
-  Serial.println("L<Mask> - scroll Mask right to left twice (two different rows), -Mask notted.");
+  Serial.println("T - (bi-T) sequence through led_on, then led_off twice (two different rows)");
+  Serial.println("B<Mask> - (B-yte) load_8 twice (low/high) for two different rows");
+  Serial.println("S<Mask> - (S-hort) scroll Mask right to left twice with load_16 (two rows),");
+  Serial.println("          -Mask bits are flipped.");
   Serial.println("R - sequence through all rows 0-15");
+  Serial.println("N - next row");
+  Serial.println("D - disable all rows");
+  Serial.println("E - enable all rows");
   Serial.println("K - terminate test mode");
 }
 
@@ -926,6 +935,23 @@ void test_turn_on_column(byte col) {
 byte Test_row;
 unsigned short Test_mask;
 byte Negate;
+byte Test_start_bit_num;
+
+void test_led_on(byte col) {
+  byte bit_num = col + Test_start_bit_num;
+  led_on(bit_num);
+  turn_off_all_columns();
+  turn_on_led_columns(Test_row);
+  Serial.print("len_on: bit "); Serial.println(bit_num);
+}
+
+void test_led_off(byte col) {
+  byte bit_num = col + Test_start_bit_num;
+  led_off(bit_num);
+  turn_off_all_columns();
+  turn_on_led_columns(Test_row);
+  Serial.print("len_off: bit "); Serial.println(bit_num);
+}
 
 void test_load_16(byte col) {
   unsigned short bits = Test_mask << col;
@@ -952,16 +978,64 @@ void loop() {
   if (Testing_mode) {
     if (Serial.available()) {
       char c = toupper(Serial.read());
+      byte i, j, b0;
       long l0;
       switch (c) {
       case '?': testing_help(); break;
+      case 'B':   // (B-yte) load_8 twice (low/high) for two different rows
+        b0 = Serial.parseInt(SKIP_WHITESPACE);
+        Serial.print("Bits "); Serial.println(b0, BIN);
+        disable_all_rows();
+        for (i = 0; i <= 1; i++) {
+          Test_row = i * 5;
+          Serial.print("Test_row "); Serial.println(Test_row);
+          for (j = 0; j <= 1; j++) {
+            clear_row(Test_row);
+            load_8(b0, Test_row * 2 + j);
+            turn_off_all_columns();
+            turn_on_led_columns(Test_row);
+            delay(250);
+            turn_off_all_columns();
+          }
+          delay(500);
+        }
+        Serial.println("Test done"); Serial.println();
+        break;
       case 'C':
         disable_all_rows();
         test_sequence(test_turn_on_column);
         turn_off_all_columns();
         Serial.println("Test done"); Serial.println();
         break;
-      case 'L':
+      case 'D':
+        disable_all_rows();
+        Serial.println("All rows disabled");
+        break;
+      case 'E':
+        enable_all_rows();
+        Serial.println("All rows enabled");
+        break;
+      case 'K':  // enter normal mode
+        turn_off_all_columns();
+        disable_all_rows();
+        Testing_mode = 0;
+        Serial.println("Normal mode"); Serial.println();
+        break;
+      case 'N':
+        disable_all_rows();
+        turn_on_next_row(NUM_ROWS);
+        enable_all_rows();
+        Serial.print("Row "); Serial.print(Current_row); Serial.println(" on");
+        break;
+      case 'R':
+        turn_off_all_columns();
+        disable_all_rows();
+        turn_on_first_row();    // still disabled, enabled by test_row
+        test_sequence(test_row);
+        disable_all_rows();
+        Serial.println("Test done"); Serial.println();
+        break;
+      case 'S':
         l0 = Serial.parseInt(SKIP_WHITESPACE);
         if (l0 < 0) {
           Negate = 1;
@@ -972,27 +1046,26 @@ void loop() {
         }
         disable_all_rows();
         Test_row = 0;
+        clear_row(Test_row);
         test_sequence(test_load_16);
         turn_off_all_columns();
         delay(500);
         Test_row = 4;
+        clear_row(Test_row);
         test_sequence(test_load_16);
         turn_off_all_columns();
         Serial.println("Test done"); Serial.println();
         break;
-      case 'R':
-        turn_off_all_columns();
+      case 'T':   // sequence through led_on, then led_off
         disable_all_rows();
-        turn_on_first_row();    // still disabled, enabled by test_row
-        test_sequence(test_row);
-        disable_all_rows();
+        for (i = 0; i <= 1; i++) {
+          Test_row = i * 6;
+          Test_start_bit_num = Test_row * NUM_COLS;
+          clear_row(Test_row);
+          test_sequence(test_led_on);
+          test_sequence(test_led_off);
+        }
         Serial.println("Test done"); Serial.println();
-        break;
-      case 'K':  // enter normal mode
-        turn_off_all_columns();
-        disable_all_rows();
-        Testing_mode = 0;
-        Serial.println("Normal mode"); Serial.println();
         break;
       case ' ': case '\t': case '\n': case '\r': break;
       default:

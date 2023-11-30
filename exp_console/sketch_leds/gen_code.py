@@ -39,7 +39,7 @@ def gen_off():
         print(f"  case {i:2}: Col_ports[row].port_{port.lower()} &= ~0b{bit}; break;")
 
 def gen_decode(file, start=0):
-    high_low = 'low' if start else 'high'
+    high_low = 'high' if start else 'low'
     col_ports, ports_used = decode(Assignments[start: start + 8])
     print(file=file)
     print("// The unused bits in each port are always 0 here.", file=file)
@@ -82,5 +82,5 @@ if __name__ == "__main__":
     gen_off()
     with open("decode_masks.h", "w") as f:
         print("//", "decode_masks.h", file=f)
-        gen_decode(f)
-        gen_decode(f, 8)
+        gen_decode(f)           # low:  C0-7
+        gen_decode(f, 8)        # high: C8-15
