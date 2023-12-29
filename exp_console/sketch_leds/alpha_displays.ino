@@ -56,26 +56,40 @@ byte setup_alpha_displays(byte my_EEPROM_offset) {
     } else Alpha_index[i] = b;
   } // end for (i)
 
+  Timeout_fun_runtime[ADVANCE_STRINGS] = 1;  // activate advance_strings
+
   return 1 + 2*MAX_NUM_STRINGS;
 } // end setup_alpha_displays()
 
-col_ports_t Alpha_string[MAX_STRING_LEN + END_GAP][MAX_NUM_STRINGS];
+col_ports_t Alpha_string[MAX_NUM_STRINGS][MAX_STRING_LEN + END_GAP];
 byte String_len[MAX_NUM_STRINGS];
 byte Scrolling_index[MAX_NUM_STRINGS];   // current starting scrolling index
+
+void display_string(byte string_num) {
+  byte j;
+  for (j = 0; j < Alpha_num_chars[string_num]; j++) {
+    Col_ports[Alpha_index[string_num] + j] =
+      Alpha_string[string_num][(Scrolling_index[string_num] + j) % String_len[string_num]];
+  } // end for (j)
+}
 
 unsigned short advance_strings(void) {
   // Called by timeout().
   byte i;
   for (i = 0; i < MAX_NUM_STRINGS; i++) {
+    if (Trace) {
+      Serial.print("advance_string "); Serial.print(i);
+      Serial.print(": String_len "); Serial.print(String_len[i]);
+      Serial.print(", Alpha_num_chars "); Serial.println(Alpha_num_chars[i]);
+    }
     if (String_len[i] > Alpha_num_chars[i]) {
       // We're scrolling this string!  Time to advance 1 char...
       Scrolling_index[i] += 1;
       Scrolling_index[i] %= String_len[i];
-      byte j;
-      for (j = 0; j < Alpha_num_chars[i]; j++) {
-        Col_ports[Alpha_index[i] + j] =
-          Alpha_string[(Scrolling_index[i] + j) % String_len[i]][i];
-      } // end for (j)
+      if (Trace) {
+        Serial.print("  New Scrolling_index "); Serial.print(Scrolling_index[i]);
+      }
+      display_string(i);
     } // end if (scrolling this string?)
   } // end for (i)
   return SCROLL_DELAY;
@@ -93,30 +107,49 @@ void load_string(byte string_num, char *s) {
     for (as_index = 0; as_index < Alpha_num_chars[string_num]; as_index++) {
       Col_ports[Alpha_index[string_num] + as_index++] = Alpha_decoder[' '];
     }
+    display_string(string_num);
   } else if (strlen(s) > MAX_STRING_LEN) {
     Errno = 85;
     Err_data = strlen(s);
   } else {
     while (*s) {
       if (*s == '.') {
-        if (as_index == 0) {
-          Alpha_string[as_index++][string_num] = Alpha_decoder[' '];
+        if (Trace) {
+          Serial.println("load_string: got '.', tack onto last char");
         }
-        Alpha_string[as_index - 1][string_num].port_d |= 0b10;  // DP
+        if (as_index == 0) {
+          Alpha_string[string_num][as_index++] = Alpha_decoder[' '];
+          if (Trace) {
+            Serial.println("load_string: adding ' ' for '.'");
+          }
+        }
+        Alpha_string[string_num][as_index - 1].port_d |= 0b10;  // DP
         s++;
       } else {
-        Alpha_string[as_index++][string_num] = Alpha_decoder[*s++];
+        if (Trace) {
+          Serial.print("load_string: adding "); Serial.println(*s);
+        }
+        Alpha_string[string_num][as_index++] = Alpha_decoder[*s++];
       } // end if ('.')
     } // end while (*s)
-    for (byte i = 0; i < END_GAP; i++) {
-      Alpha_string[as_index++][string_num] = Alpha_decoder[' '];
+    if (as_index > Alpha_num_chars[string_num]) {
+      for (byte i = 0; i < END_GAP; i++) {
+        if (Trace) {
+          Serial.println("load_string: adding ' ' for END_GAP");
+        }
+        Alpha_string[string_num][as_index++] = Alpha_decoder[' '];
+      }
+    }
+    if (Trace) {
+      Serial.print("load_string: final String_len "); Serial.println(as_index);
     }
     String_len[string_num] = as_index;
     Scrolling_index[string_num] = 0;
+    display_string(string_num);
   }
 }
 
-#define TEST_ALPHA_DECODER_STRING_DELAY   (SCROLL_DELAY * 33 + 1000)
+#define TEST_ALPHA_DECODER_STRING_DELAY   1000
 #define TEST_STRING1                      "! $&*+-./0123456789<=>\\_|"   
 #define TEST_STRING2                      "A'B`CD\"E\"FGHIJKLMNOPQRSTUVWXYZ"   
 
@@ -125,6 +158,7 @@ byte Test_i;
 // Activate by setting Timeout_fun_runtime[TEST_ALPHA_DECODER] = 1;
 
 unsigned short test_alpha_decoder(void) {
+  // Returns delay (in msecs) until next step, 0 means done.
   if (Test_i == 0) {
     load_string(0, TEST_STRING1);
     Test_i++;
@@ -137,7 +171,7 @@ unsigned short test_alpha_decoder(void) {
   }
   load_string(0, "");
   Test_i = 0;
-  return 0;
+  return 0; // done!
 }
 
 // vim: sw=2

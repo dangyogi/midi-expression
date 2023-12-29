@@ -12,7 +12,7 @@
 #include "numeric_displays.h"
 #include "alpha_displays.h"
 
-#define PROGRAM_ID          "LEDs V14"
+#define PROGRAM_ID          "LEDs V17"
 
 #define NUM_EEPROM_USED     EEPROM_needed
 #define EEPROM_SIZE         (EEPROM.length())
@@ -78,6 +78,7 @@ byte Report_addr = 0;
 unsigned long Timeout_cycle_time;  // uSec between timeout() calls
 unsigned long Timeout_runtime;     // uSec consumed by timeout()
 unsigned long Num_timeout_calls;
+byte Trace;
 
 byte check_eq(byte b, byte n, byte errno) {
   if (b != n) {
@@ -420,22 +421,25 @@ void help(void) {
   Serial.println(
     "U<disp>,size,offset - set Numeric_display_size, Numeric_display_offset for <disp>");
   Serial.println("T - show Timeout_cycle_time stats");
+  Serial.println("Y - toggle trace mode");
   Serial.println("X<errno> - set Errno");
   Serial.println("E - show Errno, Err_data");
+  Serial.println("V - Turn all LEDs off");
   Serial.println("L<bit> - led oN");
   Serial.println("F<bit> - led ofF");
   Serial.println("B<byte_addr>,<2hex> - set 8 bits");
   Serial.println("W<word_addr>,<4hex> - set 16 bits");
-  Serial.println("G<disp_addr>,<digit>,<value>,<dp> - load digit");
+  Serial.println("G<disp_addr>,<digit_num>,<value>,<dp> - load digit, digit_num goes left to right");
   Serial.println("M<disp_addr>,<value>,<decimal_place> - load numeric");
-  Serial.println("O<disp_addr>,<note>,<sharp_flat> - load note/sharp_flat 0=nat, 1=#, 2=b");
+  Serial.println("O<disp_addr>,<note>,<sharp_flat> - load note(0=A,6=G)/sharp_flat 0=nat, 1=#, 2=b");
   Serial.println("H<disp_addr>,<sharp_flat> - load sharp_flat, 0=nat, 1=sharp, 2=flat");
   Serial.println("I<str#>,<string> - load string");
   Serial.println("J - test led order");
   Serial.println("Q - test numeric decoder");
   Serial.println("Z - test alpha decoder");
   Serial.println("K - Enter testing mode");
-  //--- avail letters: V, Y
+  Serial.println();
+  //--- avail letters: <none>
 }
 
 byte from_hex(byte ch) {
@@ -464,7 +468,7 @@ void timeout(void) {
 
   byte i;
   for (i = 0; i < NUM_TIMEOUT_FUNS; i++) {
-    if (millis >= Timeout_fun_runtime[i] && Timeout_fun_runtime[i]) {
+    if (now >= Timeout_fun_runtime[i] && Timeout_fun_runtime[i]) {
       unsigned short delay;  // mSec to next call, 0 means no next call (as of now)
       switch (i) {
       case ADVANCE_STRINGS: delay = advance_strings(); break;
@@ -476,8 +480,8 @@ void timeout(void) {
       } else {
         Timeout_fun_runtime[i] = now + delay;
       }
-      Timeout_runtime += micros() - now_micros;
-      return;
+      //Timeout_runtime += micros() - now_micros;
+      //return;
     } // end if (Timeout_fun_scheduled[i])
   } // end for (i)
   
@@ -503,6 +507,8 @@ void timeout(void) {
       } else {
         Num_rows = b0;
         EEPROM[EEPROM_Num_rows] = b0;
+        Serial.print("Num_rows set to ");
+        Serial.println(b0);    
       }
       break;
 
@@ -525,6 +531,8 @@ void timeout(void) {
       } else {
         Num_alpha_strings = b0;
         EEPROM[EEPROM_Num_alpha_strings()] = b0;
+        Serial.print("Num_alpha_strings set to ");
+        Serial.println(b0);    
       }
       break;
     case 'C':
@@ -557,6 +565,11 @@ void timeout(void) {
             EEPROM[EEPROM_Alpha_num_chars(b0)] = b1;
             Alpha_index[b0] = b2;
             EEPROM[EEPROM_Alpha_index(b0)] = b2;
+            Serial.print("For alpha_string "); Serial.println(b0);
+            Serial.print("  Alpha_num_chars set to ");
+            Serial.println(b1);
+            Serial.print("  Alpha_index set to ");
+            Serial.println(b2);
           }
         }
       }
@@ -581,6 +594,8 @@ void timeout(void) {
       } else {
         Num_numeric_displays = b0;
         EEPROM[EEPROM_Num_numeric_displays()] = b0;
+        Serial.print("Num_numeric_displays set to ");
+        Serial.println(b0);    
       }
       break;
     case 'U':
@@ -613,17 +628,36 @@ void timeout(void) {
             EEPROM[EEPROM_Numeric_display_size(b0)] = b1;
             Numeric_display_offset[b0] = b2;
             EEPROM[EEPROM_Numeric_display_offset(b0)] = b2;
+            Serial.print("For numeric_display "); Serial.println(b0);
+            Serial.print("  Numeric_display_size set to ");
+            Serial.println(b1);
+            Serial.print("  Numeric_display_offset set to ");
+            Serial.println(b2);
           }
         }
       }
       break;
-
     case 'T':
       Serial.print("Num_timeout_calls "); Serial.print(Num_timeout_calls);
       Serial.print(", avg Timeout_cycle_time is "); Serial.print(Timeout_cycle_time / Num_timeout_calls); Serial.print(" uSec");
       Serial.print(", avg Timeout_runtime is "); Serial.print(Timeout_runtime / Num_timeout_calls); Serial.print(" uSec");
       Serial.print(", avg Step_runtime/row is "); Serial.print((Timeout_cycle_time - Timeout_runtime) / (Num_timeout_calls * Num_rows) - 100);
       Serial.println(" uSec");
+      break;
+    case 'Y':
+      if (Trace) {
+        Serial.println("Trace off");
+        Trace = 0;
+      } else {
+        Serial.println("Trace on:");
+        Trace = 1;
+        for (b0 = 0; b0 < NUM_TIMEOUT_FUNS; b0++) {
+          Serial.print("  Timeout_fun ");
+          Serial.print(b0);
+          Serial.print(": runtime ");
+          Serial.println(Timeout_fun_runtime[b0]);
+        }
+      }
       break;
     case 'X':
       Errno = Serial.parseInt(SKIP_WHITESPACE);
@@ -639,6 +673,12 @@ void timeout(void) {
       Errno = 0;
       Err_data = 0;
       break;
+    case 'V': // all leds off
+      for (b0 = 0; b0 < Num_rows * NUM_COLS; b0++) {
+        led_off(b0);
+      }
+      Serial.println("All LEDs are off.");
+      break;
     case 'L': // led on
       b0 = Serial.parseInt(SKIP_WHITESPACE);
       if (b0 >= Num_rows * NUM_COLS) {
@@ -648,6 +688,8 @@ void timeout(void) {
         Serial.println(Num_rows * NUM_COLS);    
       } else {
         led_on(b0);
+        Serial.print("LED on: ");
+        Serial.println(b0);    
       }
       break;
     case 'F': // led off
@@ -659,6 +701,8 @@ void timeout(void) {
         Serial.println(Num_rows * NUM_COLS);    
       } else {
         led_off(b0);
+        Serial.print("LED off: ");
+        Serial.println(b0);    
       }
     case 'B':  // set 8 bits
       b0 = Serial.parseInt(SKIP_WHITESPACE);
@@ -682,6 +726,10 @@ void timeout(void) {
           } else {
             b1 = (b1 << 4) | b2;
             load_8(b1, b0);
+            Serial.print("8 bits at byte_num ");
+            Serial.print(b0);    
+            Serial.print(" set to ");
+            Serial.println(b1, BIN);    
           }
         }
       }
@@ -706,6 +754,7 @@ void timeout(void) {
             Serial.print("Invalid hex digit ");  
             Serial.println(b2);
           } else {
+            us0 = (b1 << 4) | b2;
             b2 = from_hex(Serial.read());
             if (b2 == 0xFF) {
               Serial.print("Invalid hex digit ");  
@@ -719,6 +768,10 @@ void timeout(void) {
               } else {
                 us0 = (us0 << 4) | b2;
                 load_16(us0, b0);
+                Serial.print("16 bits on row ");
+                Serial.print(b0);    
+                Serial.print(" set to ");
+                Serial.println(us0, BIN);
               }
             }
           }
@@ -737,7 +790,7 @@ void timeout(void) {
       } else {
         b1 = Serial.parseInt(SKIP_WHITESPACE);
         if (b1 >= Numeric_display_size[b0]) {
-          Serial.print("Invalid digit ");  
+          Serial.print("Invalid digit number ");  
           Serial.print(b1);
           Serial.print(" must be < ");
           Serial.println(Numeric_display_size[b0]);    
@@ -761,6 +814,14 @@ void timeout(void) {
               Serial.println(2);    
             } else {
               load_digit(b0, b1, b2, b3);
+              Serial.print("numeric_display ");
+              Serial.print(b0);    
+              Serial.print(", digit_num ");
+              Serial.print(b1);
+              Serial.print(" set to ");
+              Serial.print(b2);
+              if (b3) Serial.println(" without dp");
+              else Serial.println(" with dp");
             }
           }
         }
@@ -788,6 +849,12 @@ void timeout(void) {
             Serial.println(Numeric_display_size[b0]);    
           } else {
             load_numeric(b0, ss0, b1);
+            Serial.print("numeric_display ");
+            Serial.print(b0);    
+            Serial.print(" set to ");
+            Serial.print(ss0);
+            Serial.print(", with dp at ");
+            Serial.println(b1);
           }
         }
       }
@@ -820,6 +887,13 @@ void timeout(void) {
             Serial.println(3);    
           } else {
             load_note(b0, b1, b2);
+            Serial.print("numeric_display ");
+            Serial.print(b0);    
+            Serial.print(" set to note ");
+            Serial.print(b1);
+            if (b2 == 1) Serial.println(" sharp");
+            else if (b2 == 2) Serial.println(" flat");
+            else Serial.println();
           }
         }
       }
@@ -842,6 +916,12 @@ void timeout(void) {
           Serial.println(3);    
         } else {
           load_sharp_flat(b0, b1);
+          Serial.print("numeric_display ");
+          Serial.print(b0);    
+          Serial.print(" set");
+          if (b2 == 1) Serial.println(" sharp");
+          else if (b2 == 2) Serial.println(" flat");
+          else Serial.println(" natural");
         }
       }
       break;
@@ -858,6 +938,9 @@ void timeout(void) {
         b1 = Serial.readBytesUntil('\n', s, MAX_STRING_LEN);
         s[b1] = 0;
         load_string(b0, s);
+        Serial.print("alpha_string "); Serial.print(b0);
+        Serial.print(", set to the "); Serial.print(strlen(s));    
+        Serial.print(" chars: "); Serial.println(s);    
       }
       break;
     case 'J':  // test_led_order
@@ -870,18 +953,24 @@ void timeout(void) {
       break;
     case 'Z':  // test_alpha_decoder
       Timeout_fun_runtime[TEST_ALPHA_DECODER] = 1;
-      Serial.println("test_alpha_decoder done");
+      Serial.println("test_alpha_decoder started");
       break;
     case 'K':  // enter testing mode
       turn_off_all_columns();
       disable_all_rows();
       Testing_mode = 1;
-      Serial.println("Testing mode");
+      Serial.println("Entering testing mode!");
       break;
     case ' ': case '\t': case '\n': case '\r': break;
-    default: help(); break;
+    default:
+      Serial.print("Unrecognized command: '");
+      Serial.print(char(b0));
+      Serial.println("'");
+      break;
     } // end switch (c)
   } // end if (Serial.available())
+
+  while (Serial.available() && Serial.read() != '\n') ;
 
   errno();
   Timeout_runtime += micros() - now_micros;
@@ -1069,10 +1158,12 @@ void loop() {
         break;
       case ' ': case '\t': case '\n': case '\r': break;
       default:
-        Serial.print("Unknown testing command ");
-        Serial.println(c);
+        Serial.print("Unknown testing command: '");
+        Serial.print(c);
+        Serial.println("'");
         break;
-      }
+      } // end switch (c)
+      while (Serial.available() && Serial.read() != '\n') ;
     }
   } else { // not Testing_mode
     // Run next step_fun:

@@ -60,7 +60,7 @@ const byte Numeric_7_segment_decode[] = {
   0b01100000,    // 1          F B
   0b11011010,    // 2           G
   0b11110010,    // 3          E C
-  0b11100110,    // 4           D
+  0b01100110,    // 4           D
   0b10110110,    // 5
   0b10111110,    // 6
   0b11100000,    // 7
@@ -76,11 +76,12 @@ const byte Numeric_7_segment_decode[] = {
   0b10001110,    // 17 'F'
   0b10111100,    // 18 'G'
   0b10110110,    // 19 'S'
-  0b00101110,    // 20 'h'
+  0b01101110,    // 20 'H'
   0b00011100,    // 21 'L'
 };
 
 void load_digit(byte display_num, byte digit_num, byte value, byte dp) {
+  // digit_nums go left to right.
   // value of 10 produces a '-', 11 turns all segments off
   if (display_num >= Num_numeric_displays) {
     Errno = 94;
@@ -109,11 +110,12 @@ void test_numeric_decoder(void) {
 void load_numeric(byte display_num, short value, byte decimal_place) {
   // display_num indexes Numeric_display_size and Numeric_display_offset.
   // value must fit in the number of digits (reduced by 1 for '-' sign if value < 0).
-  // decimal_place of 0, means no DP.  Otherwise it displayed on Nth digit from the right.
+  // decimal_place of 0, means no DP.  Otherwise it's the number of digits to the
+  // right of the decimal point.
   if (display_num >= Num_numeric_displays) {
     Errno = 97;
     Err_data = display_num;
-  } else if (decimal_place > Numeric_display_size[display_num]) {
+  } else if (decimal_place >= Numeric_display_size[display_num]) {
     Errno = 98;
     Err_data = decimal_place;
   } else if (value >= Powers_of_ten[Numeric_display_size[display_num]] || 
@@ -131,20 +133,18 @@ void load_numeric(byte display_num, short value, byte decimal_place) {
     value = abs(value);
     byte bits;
     i = 0;
-    while (i == 0 || value) {
+    while (i == 0 || value || i < decimal_place) {
       bits = Numeric_7_segment_decode[value % 10];
-      if (decimal_place == i + 1) bits |= 1;
-      load_8(bits, addr + 2*i);
+      if (decimal_place && decimal_place == i) bits |= 1;
+      load_8(bits, addr + 2*(2 - i));
       value /= 10;
       i++;
     } // end while
+    bits = decimal_place == i ? 0b1 : 0;
     if (negative) {
-      bits = 0b10;
-      if (decimal_place == i + 1) bits |= 1;
-      load_8(bits, addr + 2*i);
-    } else if (decimal_place == i + 1) {
-      load_8(0b1, addr + 2*i);
+      bits |= 0b10;  // G segment (middle horz)
     }
+    load_8(bits, addr + 2*(2 - i));
   } // end ifs
 }
 
@@ -156,18 +156,19 @@ void load_sharp_flat(byte display_num, byte sharp_flat) {
     Errno = 101;
     Err_data = sharp_flat;
   } else {
+    byte addr = Numeric_display_offset[display_num];
     switch (sharp_flat) {
     case 0: // natural
-      load_8(0b0, display_num + 2*1);
-      load_8(0b0, display_num + 2*2);
+      load_8(0b0, addr + 2*1);
+      load_8(0b0, addr + 2*2);
       break;
     case 1: // sharp
-      load_8(Numeric_7_segment_decode[19], display_num + 2*1);
-      load_8(Numeric_7_segment_decode[20], display_num + 2*2);
+      load_8(Numeric_7_segment_decode[19], addr + 2*1);
+      load_8(Numeric_7_segment_decode[20], addr + 2*2);
       break;
     case 2: // flat
-      load_8(Numeric_7_segment_decode[17], display_num + 2*1);
-      load_8(Numeric_7_segment_decode[21], display_num + 2*2);
+      load_8(Numeric_7_segment_decode[17], addr + 2*1);
+      load_8(Numeric_7_segment_decode[21], addr + 2*2);
       break;
     } // end switch
   } // end ifs
