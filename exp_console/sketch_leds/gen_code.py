@@ -2,26 +2,7 @@
 
 from collections import defaultdict
 
-
-Assignments = tuple(reversed((
-    "D7",       # C15
-    "D3",       # C14
-    "D2",       # C13
-    "D1",       # C12
-    "D0",       # C11
-    "D4",       # C10
-    "D5",       # C9
-    "E1",       # C8
-
-    "E0",       # C7
-    "B1",       # C6
-    "B0",       # C5
-    "E3",       # C4
-    "B2",       # C3
-    "C6",       # C2
-    "C5",       # C1
-    "C4",       # C0
-)))
+from col_ports import *
 
 #Port_nums = dict(B=1, C=2, D=3, E=4)
 

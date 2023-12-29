@@ -77,17 +77,15 @@ unsigned short advance_strings(void) {
   // Called by timeout().
   byte i;
   for (i = 0; i < MAX_NUM_STRINGS; i++) {
-    if (Trace) {
-      Serial.print("advance_string "); Serial.print(i);
-      Serial.print(": String_len "); Serial.print(String_len[i]);
-      Serial.print(", Alpha_num_chars "); Serial.println(Alpha_num_chars[i]);
-    }
     if (String_len[i] > Alpha_num_chars[i]) {
       // We're scrolling this string!  Time to advance 1 char...
       Scrolling_index[i] += 1;
       Scrolling_index[i] %= String_len[i];
       if (Trace) {
-        Serial.print("  New Scrolling_index "); Serial.print(Scrolling_index[i]);
+        Serial.print("advance_string "); Serial.print(i);
+        Serial.print(": String_len "); Serial.print(String_len[i]);
+        Serial.print(", Alpha_num_chars "); Serial.print(Alpha_num_chars[i]);
+        Serial.print(", New Scrolling_index "); Serial.println(Scrolling_index[i]);
       }
       display_string(i);
     } // end if (scrolling this string?)

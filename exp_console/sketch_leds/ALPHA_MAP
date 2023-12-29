@@ -1,21 +1,27 @@
+This file maps the various characters to segments on the 14 segments alpha displays.
+
+Run segments.py on this to generate letters.py with a Segment_map dict mapping letters to lists of segments.
+
+Segments:
+
    ---              A
   |\|/|          F HIJ B
-   - -             G1 G2
+   - -            G1 G2
   |/|\|          E MLK C
    ---              D
 
-Other possibilies: ` $ % * ( ) + = \ | ' < > / "
+Letters:
 
+A       --   A B C F E G1 G2
+   |\  |  |
+    -   --
+   | \ |  |
 
-A  |\        F H G1 E K
-    -
-   | \
-
-B  --        A F J G1 E K D
-  | /
-   -
-  | \
-   --
+B  --  ---   A B C D I L G2
+  | /   | |
+   -     -
+  | \   | |
+   --  ---
 
 C  --       A F E D
   |
@@ -53,10 +59,11 @@ I  ---      A I L D
     |
    ---
 
-J  ---      A B E C D
-     |
-   | |
+J  ---  --- A I M E
+     |   |
+   | |  |/
    ---
+   
 
 K | /       F J G1 E K
    -
@@ -92,11 +99,11 @@ R  --      A F B G1 G2 E K
    --
   | \
 
-S  --      --      --    A H G2 C D
-  |        \      |   
-   --       -      - 
-     |       |      \
-   --      --      --    
+S  --    --    --   A H G2 C D
+  |     |     \       
+   --    -     -     
+     |    \     |
+   --    --   --  
 
 T  ---     A I L
     |
@@ -122,6 +129,9 @@ Z  --      A J M D
     /
    /
    --
+
+
+digits:
 
 0  --      A F J B E M C D
   | /|
@@ -176,16 +186,124 @@ Z  --      A J M D
      |
    --
 
--         G1 G2
+Other possibilies: ` $ % * ( ) + = \ | ' < > / "
 
-   --
+~         F H B
+
+   |\/
+
+`         H
+    \
+
+@   -----       A B C D E L G1
+        |
+     -
+    | | |
+    -----
+
+$    ---        A C D F G1 G2 I L
+    | |
+     - -
+      | |
+     ---
+
+^               F H
+         |\
+
+    / \
+
+
+*               H I J K L M
+   \|/
+   /|\
+
+(               J K
+
+    /
+    \
+
+)               H M
+
+   \
+   /
 
 _         D
 
 
    --
 
-.  .     DP
+-         G1 G2
+
+   --
+
++         I L G1 G2
+
+    |
+   - -
+    |
+
+=         G1 G2 D
+
+
+   - -
+
+   ---
+
+{          J K G1
+
+    /
+   -
+    \
+
+}          H M G2
+
+   \
+    -
+   /
+
+|          I L
+
+    |
+
+    |
+
+\          H K
+
+   \
+    \
+
+"          I B
+    | |
+
+
+'          J
+    /
+
+
+<          J K
+
+     /
+     \
+
+>          H M
+
+   \
+   /
+
+
+/          J M
+
+    /
+   /
+
+sp
+tab
+
+unknown   ---     A B C D E F H J M K
+         |\ /|
+         |/ \|
+          ---
+
 
 
 
