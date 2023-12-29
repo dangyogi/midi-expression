@@ -1,6 +1,5 @@
 # Project specific files
 synth/synth_settings.py
-exp_console/sketch_leds/letters.py
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
