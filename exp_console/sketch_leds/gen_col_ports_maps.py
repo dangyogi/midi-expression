@@ -1,4 +1,4 @@
-# gen_code.py
+# gen_col_ports_maps.py
 
 from collections import defaultdict
 
@@ -7,17 +7,25 @@ from col_ports import *
 #Port_nums = dict(B=1, C=2, D=3, E=4)
 
 
-def gen_on():
+def gen_col_on(f):
+    print("void col_on(col_ports_t *col, byte col_num) {", file=f)
+    print("  switch (col_num) {     // 76543210", file=f)
     for i, (port, num) in enumerate(Assignments):
         n = int(num)
         bit = '0' * (7 - n) + '1' + '0' * n
-        print(f"  case {i:2}: Col_ports[row].port_{port.lower()} |= 0b{bit}; break;")
+        print(f"  case {i:2}: col->port_{port.lower()} |= 0b{bit}; break;", file=f)
+    print("  }", file=f)
+    print("}", file=f)
 
-def gen_off():
+def gen_col_off(f):
+    print("void col_off(col_ports_t *col, byte col_num) {", file=f)
+    print("  switch (col_num) {      // 76543210", file=f)
     for i, (port, num) in enumerate(Assignments):
         n = int(num)
         bit = '0' * (7 - n) + '1' + '0' * n
-        print(f"  case {i:2}: Col_ports[row].port_{port.lower()} &= ~0b{bit}; break;")
+        print(f"  case {i:2}: col->port_{port.lower()} &= ~0b{bit}; break;", file=f)
+    print("  }", file=f)
+    print("}", file=f)
 
 def gen_decode(file, start=0):
     high_low = 'high' if start else 'low'
@@ -57,11 +65,11 @@ def decode(assignments):
 
 if __name__ == "__main__":
     #print(len(Assignments))
-    print()
-    gen_on()
-    print()
-    gen_off()
-    with open("decode_masks.h", "w") as f:
-        print("//", "decode_masks.h", file=f)
+    with open("col_ports_maps.h", "w") as f:
+        print("//", "col_ports_maps.h", file=f)
+        print(file=f)
+        gen_col_on(f)
+        print(file=f)
+        gen_col_off(f)
         gen_decode(f)           # low:  C0-7
         gen_decode(f, 8)        # high: C8-15

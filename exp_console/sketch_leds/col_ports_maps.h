@@ -1,4 +1,46 @@
-// decode_masks.h
+// col_ports_maps.h
+
+void col_on(col_ports_t *col, byte col_num) {
+  switch (col_num) {     // 76543210
+  case  0: col->port_c |= 0b00010000; break;
+  case  1: col->port_c |= 0b00100000; break;
+  case  2: col->port_c |= 0b01000000; break;
+  case  3: col->port_b |= 0b00000100; break;
+  case  4: col->port_e |= 0b00001000; break;
+  case  5: col->port_b |= 0b00000001; break;
+  case  6: col->port_b |= 0b00000010; break;
+  case  7: col->port_e |= 0b00000001; break;
+  case  8: col->port_e |= 0b00000010; break;
+  case  9: col->port_d |= 0b00100000; break;
+  case 10: col->port_d |= 0b00010000; break;
+  case 11: col->port_d |= 0b00000001; break;
+  case 12: col->port_d |= 0b00000010; break;
+  case 13: col->port_d |= 0b00000100; break;
+  case 14: col->port_d |= 0b00001000; break;
+  case 15: col->port_d |= 0b10000000; break;
+  }
+}
+
+void col_off(col_ports_t *col, byte col_num) {
+  switch (col_num) {      // 76543210
+  case  0: col->port_c &= ~0b00010000; break;
+  case  1: col->port_c &= ~0b00100000; break;
+  case  2: col->port_c &= ~0b01000000; break;
+  case  3: col->port_b &= ~0b00000100; break;
+  case  4: col->port_e &= ~0b00001000; break;
+  case  5: col->port_b &= ~0b00000001; break;
+  case  6: col->port_b &= ~0b00000010; break;
+  case  7: col->port_e &= ~0b00000001; break;
+  case  8: col->port_e &= ~0b00000010; break;
+  case  9: col->port_d &= ~0b00100000; break;
+  case 10: col->port_d &= ~0b00010000; break;
+  case 11: col->port_d &= ~0b00000001; break;
+  case 12: col->port_d &= ~0b00000010; break;
+  case 13: col->port_d &= ~0b00000100; break;
+  case 14: col->port_d &= ~0b00001000; break;
+  case 15: col->port_d &= ~0b10000000; break;
+  }
+}
 
 // The unused bits in each port are always 0 here.
 const col_ports_t Decode_low[] PROGMEM = {

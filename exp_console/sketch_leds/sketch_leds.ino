@@ -12,7 +12,7 @@
 #include "numeric_displays.h"
 #include "alpha_displays.h"
 
-#define PROGRAM_ID          "LEDs V20"
+#define PROGRAM_ID          "LEDs V21"
 
 #define NUM_EEPROM_USED     EEPROM_needed
 #define EEPROM_SIZE         (EEPROM.length())

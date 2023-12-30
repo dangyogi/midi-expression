@@ -102,9 +102,10 @@ void load_string(byte string_num, char *s) {
   } else if (s == NULL || *s == 0) {
     // Turn off this string and set it to blanks.
     for (as_index = 0; as_index < Alpha_num_chars[string_num]; as_index++) {
-      Col_ports[Alpha_index[string_num] + as_index] = Alpha_decoder[' '];
+      Alpha_string[string_num][as_index] = Alpha_decoder[' '];
     }
     String_len[string_num] = as_index;
+    Scrolling_index[string_num] = 0;
     display_string(string_num);
   } else if (strlen(s) > MAX_STRING_LEN) {
     Errno = 85;
@@ -121,7 +122,7 @@ void load_string(byte string_num, char *s) {
             Serial.println("load_string: adding ' ' for '.'");
           }
         }
-        Alpha_string[string_num][as_index - 1].port_d |= 0b10;  // DP
+        col_on(&Alpha_string[string_num][as_index - 1], 14);  // DP is col 14
         s++;
       } else {
         if (Trace) {

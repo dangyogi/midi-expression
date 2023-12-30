@@ -23,6 +23,8 @@ extern void step(byte who_dunnit_errno);
 
 extern void led_on(byte bit_num);
 extern void led_off(byte bit_num);
+extern void col_on(col_ports_t *col, byte col_num);
+extern void col_off(col_ports_t *col, byte col_num);
 
 extern unsigned short test_led_order(void);
 
