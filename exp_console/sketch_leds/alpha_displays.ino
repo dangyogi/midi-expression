@@ -101,10 +101,10 @@ void load_string(byte string_num, char *s) {
     Err_data = string_num;
   } else if (s == NULL || *s == 0) {
     // Turn off this string and set it to blanks.
-    String_len[string_num] = 0;
     for (as_index = 0; as_index < Alpha_num_chars[string_num]; as_index++) {
-      Col_ports[Alpha_index[string_num] + as_index++] = Alpha_decoder[' '];
+      Col_ports[Alpha_index[string_num] + as_index] = Alpha_decoder[' '];
     }
+    String_len[string_num] = as_index;
     display_string(string_num);
   } else if (strlen(s) > MAX_STRING_LEN) {
     Errno = 85;
@@ -130,13 +130,19 @@ void load_string(byte string_num, char *s) {
         Alpha_string[string_num][as_index++] = Alpha_decoder[*s++];
       } // end if ('.')
     } // end while (*s)
+    byte end_gap_len;
     if (as_index > Alpha_num_chars[string_num]) {
-      for (byte i = 0; i < END_GAP; i++) {
-        if (Trace) {
-          Serial.println("load_string: adding ' ' for END_GAP");
-        }
-        Alpha_string[string_num][as_index++] = Alpha_decoder[' '];
+      // gap between two copies of string during scrolling
+      end_gap_len = END_GAP;
+    } else {
+      // fill out string Alpha_num_chars[string_num] to blank out prior string
+      end_gap_len = Alpha_num_chars[string_num] - as_index;
+    }
+    for (byte i = 0; i < end_gap_len; i++) {
+      if (Trace) {
+        Serial.println("load_string: adding ' ' for END_GAP");
       }
+      Alpha_string[string_num][as_index++] = Alpha_decoder[' '];
     }
     if (Trace) {
       Serial.print("load_string: final String_len "); Serial.println(as_index);
@@ -148,7 +154,7 @@ void load_string(byte string_num, char *s) {
 }
 
 #define TEST_ALPHA_DECODER_STRING_DELAY   1000
-#define TEST_STRING1                      "! $&*+-./0123456789<=>\\_|"   
+#define TEST_STRING1                      "~`@$^*()_-+={}\\\"'<>/ \t?"
 #define TEST_STRING2                      "A'B`CD\"E\"FGHIJKLMNOPQRSTUVWXYZ"   
 
 byte Test_i;

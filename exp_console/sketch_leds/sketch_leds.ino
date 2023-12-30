@@ -12,7 +12,7 @@
 #include "numeric_displays.h"
 #include "alpha_displays.h"
 
-#define PROGRAM_ID          "LEDs V18"
+#define PROGRAM_ID          "LEDs V20"
 
 #define NUM_EEPROM_USED     EEPROM_needed
 #define EEPROM_SIZE         (EEPROM.length())
@@ -52,6 +52,10 @@ void setup() {
   digitalWrite(ERR_LED2, LOW);
 
   Serial.println(PROGRAM_ID);
+  Serial.println();
+  Serial.print("EEPROM_needed "); Serial.println(EEPROM_needed);
+  Serial.print("NUM_EEPROM_USED "); Serial.println(EEPROM[NUM_EEPROM_USED]);
+  Serial.print("EEPROM_AVAIL "); Serial.println(EEPROM_AVAIL);
 } // end setup()
 
 #define NUM_TIMEOUT_FUNS        3
