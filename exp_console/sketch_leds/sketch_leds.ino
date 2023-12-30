@@ -12,7 +12,7 @@
 #include "numeric_displays.h"
 #include "alpha_displays.h"
 
-#define PROGRAM_ID          "LEDs V21"
+#define PROGRAM_ID          "LEDs V23"
 
 #define NUM_EEPROM_USED     EEPROM_needed
 #define EEPROM_SIZE         (EEPROM.length())
@@ -1000,11 +1000,13 @@ void testing_help(void) {
   Serial.println();
   Serial.println("? - help");
   Serial.println("C - sequence through all columns 0-15");
+  Serial.println("L<col> - turn on column");
   Serial.println("T - (bi-T) sequence through led_on, then led_off twice (two different rows)");
   Serial.println("B<Mask> - (B-yte) load_8 twice (low/high) for two different rows");
   Serial.println("S<Mask> - (S-hort) scroll Mask right to left twice with load_16 (two rows),");
   Serial.println("          -Mask bits are flipped.");
   Serial.println("R - sequence through all rows 0-15");
+  Serial.println("W<row> - turn on row");
   Serial.println("N - next row");
   Serial.println("D - disable all rows");
   Serial.println("E - enable all rows");
@@ -1159,6 +1161,29 @@ void loop() {
           test_sequence(test_led_off);
         }
         Serial.println("Test done"); Serial.println();
+        break;
+      case 'L':
+        disable_all_rows();
+        turn_off_all_columns();
+        b0 = Serial.parseInt(SKIP_WHITESPACE);
+        if (b0 > 15) {
+          Serial.println("ERROR: column number > 15");
+        } else {
+          test_turn_on_column(b0);
+        }
+        break;
+      case 'W':
+        b0 = Serial.parseInt(SKIP_WHITESPACE);
+        if (b0 > 15) {
+          Serial.println("ERROR: row number > 15");
+        } else {
+          turn_off_all_columns();
+          disable_all_rows();
+          turn_on_first_row();
+          while (Current_row < b0) turn_on_next_row(NUM_ROWS);
+          enable_all_rows();
+          Serial.print("Row "); Serial.print(Current_row); Serial.println(" on");
+        }
         break;
       case ' ': case '\t': case '\n': case '\r': break;
       default:
