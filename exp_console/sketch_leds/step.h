@@ -18,6 +18,8 @@ extern const col_ports_t All_leds_off;
 extern byte Num_rows;
 extern byte Current_row;
 
+extern unsigned short On_start, On_end;
+
 extern byte setup_step(void);   // return EEPROM needed
 extern void step(byte who_dunnit_errno);
 

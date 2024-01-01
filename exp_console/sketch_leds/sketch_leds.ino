@@ -12,7 +12,7 @@
 #include "numeric_displays.h"
 #include "alpha_displays.h"
 
-#define PROGRAM_ID          "LEDs V23"
+#define PROGRAM_ID          "LEDs V24"
 
 #define NUM_EEPROM_USED     EEPROM_needed
 #define EEPROM_SIZE         (EEPROM.length())
@@ -441,16 +441,74 @@ void help(void) {
   Serial.println("J - test led order");
   Serial.println("Q - test numeric decoder");
   Serial.println("Z - test alpha decoder");
+  Serial.println("= - dump Col_ports (in hex)");
   Serial.println("K - Enter testing mode");
   Serial.println();
   //--- avail letters: <none>
 }
 
-byte from_hex(byte ch) {
-  if (ch >= '0' && ch <= '9') return ch - '0';
-  ch = toupper(ch);
-  if (ch >= 'A' && ch <= 'F') return ch - 'A' + 10;
-  return 0xFF;  // invalid hex digit
+void print_hex2(byte b) {
+  // prints b as 2 digit hex number.
+  if (b < 0x10) Serial.print(' ');
+  Serial.print(b, HEX);
+}
+
+void dump_Col_ports(void) {
+  byte i;
+  Serial.println("Row   port_d  port_b  port_c  port_e");
+  for (i = 0; i < Num_rows; i++) {
+    Serial.print(' ');
+    if (i < 10) Serial.print(' ');
+    Serial.print(i); Serial.print(":    ");
+    print_hex2(Col_ports[i].port_d); Serial.print("      ");
+    print_hex2(Col_ports[i].port_b); Serial.print("      ");
+    print_hex2(Col_ports[i].port_c); Serial.print("      ");
+    print_hex2(Col_ports[i].port_e); Serial.println();
+  }
+  Serial.println();
+}
+
+byte from_hex(byte *ans, byte short_ok=0) {
+  // Reads and returns a 2 hex digit byte into *ans.
+  // Returns 1 on success, 0 on failure (after printing error message).
+  *ans = 0;
+  char ch;
+  byte i;
+  for (i = 0; i < 2; i++) {
+    byte hex;
+    if (Serial.readBytes(&ch, 1) != 1) {
+      Serial.println("Premature end of line");
+      return 0;  // error
+    }
+    if (short_ok && i && ch == '\n') {
+      return 1;  // success!
+    } 
+    if (ch >= '0' && ch <= '9') hex = ch - '0';
+    else {
+      ch = toupper(ch);
+      if (ch >= 'A' && ch <= 'F') hex = ch - 'A' + 10;
+      else {
+        Serial.print("Invalid hex digit ");
+        Serial.println(ch);
+        return 0;  // error
+      }
+    }
+    *ans = (*ans << 4) | hex;
+  }
+  return 1;  // success!
+}
+
+byte read_comma(void) {
+  // Returns 1 on success, 0 on failure.
+  char ch;
+  if (Serial.readBytes(&ch, 1) != 1) {
+    Serial.println("Premature end of line");
+    return 0;  // error
+  }
+  if (ch == ',') return 1;  // success!
+  Serial.print("Expected ',' got '");
+  Serial.print(ch); Serial.println("'");
+  return 0;  // error
 }
 
 unsigned long Timeout_start_time;   // micros
@@ -546,18 +604,14 @@ void timeout(void) {
         Serial.print(b0);
         Serial.print(" must be < ");
         Serial.println(Num_alpha_strings);    
-      } else if (Serial.read() != ',') {
-        Serial.println("Missing ',' in 'C' command -- aborted");
-      } else {
+      } else if (read_comma()) {
         b1 = Serial.parseInt(SKIP_WHITESPACE);
         if (b1 > MAX_STRING_LEN) {
           Serial.print("Invalid Alpha_num_chars ");  
           Serial.print(b1);
           Serial.print(" must be <= ");
           Serial.println(MAX_STRING_LEN);    
-        } else if (Serial.read() != ',') {
-          Serial.println("Missing ',' in 'C' command -- aborted");
-        } else {
+        } else if (read_comma()) {
           b2 = Serial.parseInt(SKIP_WHITESPACE);
           if (b2 >= Num_rows * NUM_COLS / 16) {
             Serial.print("Invalid Alpha_index ");  
@@ -609,18 +663,14 @@ void timeout(void) {
         Serial.print(b0);
         Serial.print(" must be < ");
         Serial.println(Num_numeric_displays);    
-      } else if (Serial.read() != ',') {
-        Serial.println("Missing ',' in 'U' command -- aborted");
-      } else {
+      } else if (read_comma()) {
         b1 = Serial.parseInt(SKIP_WHITESPACE);
         if (b1 > MAX_NUMERIC_DISPLAY_SIZE) {
           Serial.print("Invalid Numeric_display_size ");  
           Serial.print(b1);
           Serial.print(" must be <= ");
           Serial.println(MAX_NUMERIC_DISPLAY_SIZE);    
-        } else if (Serial.read() != ',') {
-          Serial.println("Missing ',' in 'U' command -- aborted");
-        } else {
+        } else if (read_comma()) {
           b2 = Serial.parseInt(SKIP_WHITESPACE);
           if (b2 >= Num_rows * NUM_COLS / 8 - 2*b1) {
             Serial.print("Invalid Numeric_display_offset ");  
@@ -715,26 +765,13 @@ void timeout(void) {
         Serial.print(b0);
         Serial.print(" must be < ");
         Serial.println(Num_rows * NUM_COLS / 8);    
-      } else if (Serial.read() != ',') {
-        Serial.println("Missing ',' in 'B' command -- aborted");
-      } else {
-        b1 = from_hex(Serial.read());
-        if (b1 == 0xFF) {
-          Serial.print("Invalid hex digit ");  
-          Serial.println(b1);
-        } else {
-          b2 = from_hex(Serial.read());
-          if (b2 == 0xFF) {
-            Serial.print("Invalid hex digit ");  
-            Serial.println(b2);
-          } else {
-            b1 = (b1 << 4) | b2;
-            load_8(b1, b0);
-            Serial.print("8 bits at byte_num ");
-            Serial.print(b0);    
-            Serial.print(" set to ");
-            Serial.println(b1, BIN);    
-          }
+      } else if (read_comma()) {
+        if (from_hex(&b1, 1)) {
+          load_8(b1, b0);
+          Serial.print("8 bits at byte_num ");
+          Serial.print(b0);    
+          Serial.print(" set to ");
+          Serial.println(b1, BIN);    
         }
       }
       break;
@@ -745,39 +782,15 @@ void timeout(void) {
         Serial.print(b0);
         Serial.print(" must be < ");
         Serial.println(Num_rows * NUM_COLS / 16);    
-      } else if (Serial.read() != ',') {
-        Serial.println("Missing ',' in 'W' command -- aborted");
-      } else {
-        b1 = from_hex(Serial.read());
-        if (b1 == 0xFF) {
-          Serial.print("Invalid hex digit ");  
-          Serial.println(b1);
-        } else {
-          b2 = from_hex(Serial.read());
-          if (b2 == 0xFF) {
-            Serial.print("Invalid hex digit ");  
-            Serial.println(b2);
-          } else {
-            us0 = (b1 << 4) | b2;
-            b2 = from_hex(Serial.read());
-            if (b2 == 0xFF) {
-              Serial.print("Invalid hex digit ");  
-              Serial.println(b2);
-            } else {
-              us0 = (us0 << 4) | b2;
-              b2 = from_hex(Serial.read());
-              if (b2 == 0xFF) {
-                Serial.print("Invalid hex digit ");  
-                Serial.println(b2);
-              } else {
-                us0 = (us0 << 4) | b2;
-                load_16(us0, b0);
-                Serial.print("16 bits on row ");
-                Serial.print(b0);    
-                Serial.print(" set to ");
-                Serial.println(us0, BIN);
-              }
-            }
+      } else if (read_comma()) {
+        if (from_hex(&b1)) {    // must have at least 3 hex digits...
+          if (from_hex(&b2)) {
+            us0 = ((unsigned short)b1 << 8) | b2;
+            load_16(us0, b0);
+            Serial.print("16 bits on row ");
+            Serial.print(b0);    
+            Serial.print(" set to ");
+            Serial.println(us0, BIN);
           }
         }
       }
@@ -789,27 +802,21 @@ void timeout(void) {
         Serial.print(b0);
         Serial.print(" must be < ");
         Serial.println(Num_numeric_displays);    
-      } else if (Serial.read() != ',') {
-        Serial.println("Missing ',' in 'G' command -- aborted");
-      } else {
+      } else if (read_comma()) {
         b1 = Serial.parseInt(SKIP_WHITESPACE);
         if (b1 >= Numeric_display_size[b0]) {
           Serial.print("Invalid digit number ");  
           Serial.print(b1);
           Serial.print(" must be < ");
           Serial.println(Numeric_display_size[b0]);    
-        } else if (Serial.read() != ',') {
-          Serial.println("Missing ',' in 'G' command -- aborted");
-        } else {
+        } else if (read_comma()) {
           b2 = Serial.parseInt(SKIP_WHITESPACE);
           if (b2 >= 12) {
             Serial.print("Invalid value ");  
             Serial.print(b2);
             Serial.print(" must be < ");
             Serial.println(12);    
-          } else if (Serial.read() != ',') {
-            Serial.println("Missing ',' in 'G' command -- aborted");
-          } else {
+          } else if (read_comma()) {
             b3 = Serial.parseInt(SKIP_WHITESPACE);
             if (b3 >= 2) {
               Serial.print("Invalid dp ");  
@@ -838,13 +845,9 @@ void timeout(void) {
         Serial.print(b0);
         Serial.print(" must be < ");
         Serial.println(Num_numeric_displays);    
-      } else if (Serial.read() != ',') {
-        Serial.println("Missing ',' in 'M' command -- aborted");
-      } else {
+      } else if (read_comma()) {
         ss0 = Serial.parseInt(SKIP_WHITESPACE);
-        if (Serial.read() != ',') {
-          Serial.println("Missing ',' in 'M' command -- aborted");
-        } else {
+        if (read_comma()) {
           b1 = Serial.parseInt(SKIP_WHITESPACE);
           if (b1 >= Numeric_display_size[b0]) {
             Serial.print("Invalid digit ");  
@@ -871,18 +874,14 @@ void timeout(void) {
         Serial.print(b0);
         Serial.print(" must be < ");
         Serial.println(Num_numeric_displays);    
-      } else if (Serial.read() != ',') {
-        Serial.println("Missing ',' in 'O' command -- aborted");
-      } else {
+      } else if (read_comma()) {
         b1 = Serial.parseInt(SKIP_WHITESPACE);
         if (b1 >= 7) {
           Serial.print("Invalid note ");  
           Serial.print(b1);
           Serial.print(" must be < ");
           Serial.println(7);    
-        } else if (Serial.read() != ',') {
-          Serial.println("Missing ',' in 'O' command -- aborted");
-        } else {
+        } else if (read_comma()) {
           b2 = Serial.parseInt(SKIP_WHITESPACE);
           if (b2 >= 3) {
             Serial.print("Invalid sharp_flat ");  
@@ -909,9 +908,7 @@ void timeout(void) {
         Serial.print(b0);
         Serial.print(" must be < ");
         Serial.println(Num_numeric_displays);    
-      } else if (Serial.read() != ',') {
-        Serial.println("Missing ',' in 'H' command -- aborted");
-      } else {
+      } else if (read_comma()) {
         b1 = Serial.parseInt(SKIP_WHITESPACE);
         if (b1 >= 3) {
           Serial.print("Invalid sharp_flat ");  
@@ -936,9 +933,7 @@ void timeout(void) {
         Serial.print(b0);
         Serial.print(" must be < ");
         Serial.println(Num_alpha_strings);    
-      } else if (Serial.read() != ',') {
-        Serial.println("Missing ',' in 'I' command -- aborted");
-      } else {
+      } else if (read_comma()) {
         b1 = Serial.readBytesUntil('\n', s, MAX_STRING_LEN);
         s[b1] = 0;
         load_string(b0, s);
@@ -958,6 +953,9 @@ void timeout(void) {
     case 'Z':  // test_alpha_decoder
       Timeout_fun_runtime[TEST_ALPHA_DECODER] = 1;
       Serial.println("test_alpha_decoder started");
+      break;
+    case '=':  // dump_Col_ports
+      dump_Col_ports();
       break;
     case 'K':  // enter testing mode
       turn_off_all_columns();
@@ -1001,6 +999,7 @@ void testing_help(void) {
   Serial.println("? - help");
   Serial.println("C - sequence through all columns 0-15");
   Serial.println("L<col> - turn on column");
+  Serial.println("= - dump Col_ports (in hex)");
   Serial.println("T - (bi-T) sequence through led_on, then led_off twice (two different rows)");
   Serial.println("B<Mask> - (B-yte) load_8 twice (low/high) for two different rows");
   Serial.println("S<Mask> - (S-hort) scroll Mask right to left twice with load_16 (two rows),");
@@ -1114,6 +1113,7 @@ void loop() {
         turn_off_all_columns();
         disable_all_rows();
         Testing_mode = 0;
+        On_start = On_end = 0;  // disable time expired check in step()
         Serial.println("Normal mode"); Serial.println();
         break;
       case 'N':
@@ -1171,6 +1171,9 @@ void loop() {
         } else {
           test_turn_on_column(b0);
         }
+        break;
+      case '=':  // dump_Col_ports
+        dump_Col_ports();
         break;
       case 'W':
         b0 = Serial.parseInt(SKIP_WHITESPACE);

@@ -23,7 +23,7 @@ Assignments = tuple(reversed((
 Port_order = "DBCE"
 
 
-# Maps segment names to bit numbers
+# Maps alpha display 14-segment names to bit numbers
 Segment_to_bit_number = {segment: i for i, segment in enumerate("A B C D E F G1 G2 H I J K L M DP".split())}
 
 
