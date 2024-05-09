@@ -21,4 +21,34 @@ Error Codes:
    25    i2c_addr           Wire.endTransmission status 5: timeout
 
 
+Switches:
+  Switch #s   Use
+    0-4       Chord Stream Switches
+    5-7       Encoder 5 (Filename)
+    8         <not used>
+    9-13      Chord Send Buttons
+    14        Save Program
+    15        Load Program
+    16        Sync to Synth
+    17        Abandon Program
+    18-32     Encoders 0-4 (see below)
+    33-34     Stream Switches
+    35        Note Continuous/Pulse Switch
+    36-45     Harmonic Switches
+    46-47     Send Buttons
+    48-53     Note Switches
+    54-69     Channel Switches
+    70-71     <not used>
+    72-77     Note Buttons
+    78-80     <not used>
+
+Encoders:
+  Encoder #  Switches   Use
+    0         18-20     Function
+    1         21-23     Function Parm 1
+    2         24-26     Function Parm 2
+    3         27-29     Function Parm 3
+    4         30-32     Function Parm 4
+    5          5-7      Filename
+
 // vim: sw=2

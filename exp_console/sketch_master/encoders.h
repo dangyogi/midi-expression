@@ -7,15 +7,15 @@
 typedef struct {
   byte min, max;
   byte flags;           // See ENCODER_FLAGS_<X> #defines
-  byte bt_mul[2];       // up, down
+  byte bt_mul[2];       // button: up, down
   byte value;
   byte changed;         // set to 1 each time value changes.
   byte param_num;       // not directly used here
 } encoder_var_t;
 
 typedef struct {
-  byte state;           // bit 0: last A, bit 1: last B
-  byte A_sw;
+  signed char count;
+  byte A_sw;            // A_sw, B_sw, Button are consecutive column numbers
   byte display_num;     // first led_num if ENCODER_FLAGS_CHOICE_LEDS, else numeric disp#
   encoder_var_t *var;   // disabled if NULL
 } encoder_t;

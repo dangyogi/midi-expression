@@ -1,6 +1,6 @@
 // switches.ino
 
-// High (rows) -- outputs, LOW is on, HIGH is off
+// High (rows) -- outputs, LOW is off, HIGH is on
 #define ROW_0            0
 #define ROW_1           22
 #define ROW_2           11
@@ -30,7 +30,7 @@ switch_t Switches[NUM_SWITCHES];
 
 byte EEPROM_switches_offset;
 
-unsigned short Debounce_period;   /* uSec */
+unsigned short Debounce_period[2];   /* 0 = switches, 1 = encoders: uSec */
 
 byte setup_switches(byte EEPROM_offset) {
   EEPROM_switches_offset = EEPROM_offset;
@@ -42,24 +42,39 @@ byte setup_switches(byte EEPROM_offset) {
     pinMode(Cols[i], INPUT_PULLDOWN);
   }
 
-  unsigned short us =   (get_EEPROM(EEPROM_switches_offset) << 8)
-                      | get_EEPROM(EEPROM_switches_offset + 1);
+  unsigned short us;
+  us = get_debounce_period(0);
   if (us == 0xFFFF) {
     if (Serial) {
-      Serial.println(F("debounce period not set in EEPROM"));
+      Serial.println(F("switch debounce period not set in EEPROM"));
     }
-    Debounce_period = 5000;
+    Debounce_period[0] = 20000;
   } else {
-    Debounce_period = us;
+    Debounce_period[0] = us;
+  }
+
+  us = get_debounce_period(1);
+  if (us == 0xFFFF) {
+    if (Serial) {
+      Serial.println(F("encoder debounce period not set in EEPROM"));
+    }
+    Debounce_period[1] = 5000;
+  } else {
+    Debounce_period[1] = us;
   }
 
   return 2;
 }
 
-void set_debounce_period(unsigned short dp) {
-  set_EEPROM(EEPROM_switches_offset, dp >> 8);
-  set_EEPROM(EEPROM_switches_offset + 1, dp & 0xFF);
-  Debounce_period = dp;
+unsigned short get_debounce_period(byte debounce_index) {
+  return ((unsigned short)get_EEPROM(EEPROM_switches_offset + 2 * debounce_period) << 8)
+       | get_EEPROM(EEPROM_switches_offset + 2 * debounce_period + 1);
+}
+
+void set_debounce_period(byte debounce_index, unsigned short dp) {
+  set_EEPROM(EEPROM_switches_offset + 2 * debounce_index, dp >> 8);
+  set_EEPROM(EEPROM_switches_offset + 2 * debounce_index + 1, dp & 0xFF);
+  Debounce_period[debounce_index] = dp;
 }
 
 unsigned long Longest_scan;  // uSec
@@ -79,8 +94,7 @@ void scan_switches(byte trace) {
         // switch closed
         if (!sw->current) {
           // currently open, close is immediate!
-          sw->current = 1;
-          sw->opening = 0;
+          sw->current = 1;      // set to currently closed
           switch_closed(sw_num);
           Close_counts[sw_num]++;
           if (trace) {
@@ -91,6 +105,7 @@ void scan_switches(byte trace) {
             Serial.println(F(" has closed"));
           } // end if (trace)
         } // end if (!sw->current)
+        sw->opening = 0;        // cancel timer
       } else {
         // switch open
         if (sw->current) {
@@ -98,24 +113,8 @@ void scan_switches(byte trace) {
           if (!sw->opening) {
             sw->opening = 1;
             sw->open_time = start_scan_time;
-          } else if (sw->open_time < sw->open_time + Debounce_period) {
-            if (start_scan_time > sw->open_time + Debounce_period ||
-                start_scan_time < sw->open_time
-            ) {
-              sw->current = 0;
-              switch_opened(sw_num);
-              if (trace) {
-                Serial.print(F("Switch at row "));
-                Serial.print(row);
-                Serial.print(F(", col "));
-                Serial.print(col);
-                Serial.println(F(" is now open"));
-              } // end if (trace)
-            } // end if (timer expired)
-          } else if (start_scan_time > sw->open_time + Debounce_period &&
-                  start_scan_time < sw->open_time
-          ) {
-            sw->current = 0;
+          } else if (start_scan_time - sw->open_time > Debounce_period[sw->debounce_index]) {
+            sw->current = 0;    // set to currently open
             switch_opened(sw_num);
             if (trace) {
               Serial.print(F("Switch at row "));
@@ -124,7 +123,7 @@ void scan_switches(byte trace) {
               Serial.print(col);
               Serial.println(F(" is now open"));
             } // end if (trace)
-          }
+          } // end if (timer expired)
         } // end if (sw->current)
       } // end else if (digitalRead)
     } // end for (col)

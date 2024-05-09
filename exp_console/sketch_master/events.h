@@ -2,9 +2,10 @@
 
 // Events for Switch_closed_events, Switch_opened_events and Encoder_events.
 #define ENC_A_CLOSED(n)                    (n)
-#define ENC_B_CLOSED(n)                    (6 + n)
-#define ENC_A_OPENED(n)                    (12 + n)
-#define ENC_B_OPENED(n)                    (18 + n)
+#define ENC_B_CLOSED(n)                    (NUM_ENCODERS + (n))
+#define ENC_A_OPENED(n)                    (2 * NUM_ENCODERS + (n))
+#define ENC_B_OPENED(n)                    (3 * NUM_ENCODERS + (n))
+#define EVENT_ENCODER_NUM(ev)              ((ev) % NUM_ENCODERS)
 #define SYNTH_PROGRAM_OR_FUNCTION_CHANGED  24
 #define NOTE_BT_ON                         25
 #define NOTE_BT_OFF                        26

@@ -8,7 +8,7 @@
 #include <Wire.h>
 #include "flash_errno.h"
 
-#define PROGRAM_ID          "Pots V2"
+#define PROGRAM_ID          "Pots V11"
 
 #define MUX_A      9
 #define MUX_B     10
@@ -45,15 +45,33 @@ byte Num_pots[NUM_A_PINS];    // number of pots on each A_pin
 #define MAX_CALIBRATION_ERROR_CENTER   60
 #define MAX_CALIBRATION_ERROR_ENDS     30
 
-struct pot_info_s {   // size 14 bytes (ints are 2 bytes)
-  int a_low;
-  int a_high;
-  int last_reported;
+#define NUM_SAMPLES             35
+
+// 5 just fits in an "int" (2 bytes, signed), so no larger than that!
+//#define NUM_SLIDING_BITS        4   /* mult by 15/16 */
+#define NUM_SLIDING_BITS        5   /* mult by 31/32 */
+
+struct pot_info_s {   // size 22 + 2 * NUM_SAMPLES(?) bytes (ints are 2 bytes, longs are 4)
+  unsigned long a_sum;         // sum of a_samples for averaging
+  unsigned int a_samples[NUM_SAMPLES];  // wrap around buffer
+
+  // FIX: a_low/a_high don't work that well... Can be deleted!
+  unsigned int a_low;          // raw analog value (0 - 1023), a_high - a_low is typically ~30
+  unsigned int a_high;         // raw analog value
+
+  unsigned int last_reported;  // raw analog value
+  unsigned int a_running_avg;  // multiplied by 31/32 each sample (0.96875), divide by 32 to get avg
+                               // or multiplied by 15/16 each sample (0.9375), divide by 16 to get avg
   int cal_low;
   int cal_center;
   int cal_high;
+
+  // For a_samples:
+  byte first_sample;
+  byte num_samples;
+
   byte calibrated;    // bits: CALIBRATED_LOW, CALIBRATED_CENTER, CALIBRATED_HIGH
-  byte value;
+  byte value;         // linearized and scaled (calibrated) value (0 - 127)
 };
 
 // indexed by [A_pin#][pot#]
@@ -75,6 +93,8 @@ void setup() {
   Serial.begin(230400);
 
   Serial.println(PROGRAM_ID);
+  //Serial.print("sizeof(int) is "); Serial.println(sizeof(int)); // 2 bytes
+  //Serial.print("sizeof(long) is "); Serial.println(sizeof(long)); // 4 bytes
   Serial.println();
 
   byte a_pin, pot_addr;
@@ -97,69 +117,75 @@ void setup() {
     } else Num_pots[a_pin] = num_pots;
     for (pot_addr = 0; pot_addr < 8; pot_addr++) {
       // Go ahead and initialize all 8, in case the number of pots changes...
-      Pot_info[a_pin][pot_addr].a_low = 100000;
-      Pot_info[a_pin][pot_addr].a_high = -100000;
+      Pot_info[a_pin][pot_addr].a_low = 10000;
+      Pot_info[a_pin][pot_addr].a_high = -10000;
       Pot_info[a_pin][pot_addr].last_reported = -1;
+      Pot_info[a_pin][pot_addr].first_sample = 0;
+      Pot_info[a_pin][pot_addr].num_samples = 0;
+      Pot_info[a_pin][pot_addr].a_sum = 0;
+      Pot_info[a_pin][pot_addr].a_running_avg = 0;
 
-      int b;
+      if (pot_addr < Num_pots[a_pin]) {
+        int b;
 
-      EEPROM.get(EEPROM_cal_low(a_pin, pot_addr), b);
-      // Serial.print("int b from EEPROM is ");
-      // Serial.println(b);
-      if (b == -1) {
-        if (!cal_msg_seen) {
-          Serial.print("cal_low for a_pin ");
-          Serial.print(a_pin);
-          Serial.print(", pot_addr ");
-          Serial.print(pot_addr);
-          Serial.println(" not set in EEPROM");
-          cal_msg_seen = 1;
+        EEPROM.get(EEPROM_cal_low(a_pin, pot_addr), b);
+        // Serial.print("int b from EEPROM is ");
+        // Serial.println(b);
+        if (b == -1) {
+          if (!cal_msg_seen) {
+            Serial.print("cal_low for a_pin ");
+            Serial.print(a_pin);
+            Serial.print(", pot_addr ");
+            Serial.print(pot_addr);
+            Serial.println(" not set in EEPROM");
+            cal_msg_seen = 1;
+          }
+          b = 0;
+        } else if (b > MAX_CALIBRATION_ERROR_ENDS) {
+          Errno = 101;
+          Err_data = 10 * a_pin + pot_addr;
+          b = 0;
         }
-        b = 0;
-      } else if (b > MAX_CALIBRATION_ERROR_ENDS) {
-        Errno = 101;
-        Err_data = 10 * a_pin + pot_addr;
-        b = 0;
-      }
-      Pot_info[a_pin][pot_addr].cal_low = b;
+        Pot_info[a_pin][pot_addr].cal_low = b;
 
-      EEPROM.get(EEPROM_cal_center(a_pin, pot_addr), b);
-      if (b == -1) {
-        if (!cal_msg_seen) {
-          Serial.print("cal_center for a_pin ");
-          Serial.print(a_pin);
-          Serial.print(", pot_addr ");
-          Serial.print(pot_addr);
-          Serial.println(" not set in EEPROM");
-          cal_msg_seen = 1;
+        EEPROM.get(EEPROM_cal_center(a_pin, pot_addr), b);
+        if (b == -1) {
+          if (!cal_msg_seen) {
+            Serial.print("cal_center for a_pin ");
+            Serial.print(a_pin);
+            Serial.print(", pot_addr ");
+            Serial.print(pot_addr);
+            Serial.println(" not set in EEPROM");
+            cal_msg_seen = 1;
+          }
+          b = 511;
+        } else if (abs(b - 511) > MAX_CALIBRATION_ERROR_CENTER) {
+          Errno = 102;
+          Err_data = 10 * a_pin + pot_addr;
+          b = 511;
         }
-        b = 511;
-      } else if (abs(b - 511) > MAX_CALIBRATION_ERROR_CENTER) {
-        Errno = 102;
-        Err_data = 10 * a_pin + pot_addr;
-        b = 511;
-      }
-      Pot_info[a_pin][pot_addr].cal_center = b;
+        Pot_info[a_pin][pot_addr].cal_center = b;
 
-      EEPROM.get(EEPROM_cal_high(a_pin, pot_addr), b);
-      // Serial.print("int b from EEPROM is ");
-      // Serial.println(b);
-      if (b == -1) {
-        if (!cal_msg_seen) {
-          Serial.print("cal_high for a_pin ");
-          Serial.print(a_pin);
-          Serial.print(", pot_addr ");
-          Serial.print(pot_addr);
-          Serial.println(" not set in EEPROM");
-          cal_msg_seen = 1;
+        EEPROM.get(EEPROM_cal_high(a_pin, pot_addr), b);
+        // Serial.print("int b from EEPROM is ");
+        // Serial.println(b);
+        if (b == -1) {
+          if (!cal_msg_seen) {
+            Serial.print("cal_high for a_pin ");
+            Serial.print(a_pin);
+            Serial.print(", pot_addr ");
+            Serial.print(pot_addr);
+            Serial.println(" not set in EEPROM");
+            cal_msg_seen = 1;
+          }
+          b = 1023;
+        } else if (b < (1023 - MAX_CALIBRATION_ERROR_ENDS)) {
+          Errno = 103;
+          Err_data = 10 * a_pin + pot_addr;
+          b = 1023;
         }
-        b = 1023;
-      } else if (b < (1023 - MAX_CALIBRATION_ERROR_ENDS)) {
-        Errno = 103;
-        Err_data = 10 * a_pin + pot_addr;
-        b = 1023;
-      }
-      Pot_info[a_pin][pot_addr].cal_high = b;
+        Pot_info[a_pin][pot_addr].cal_high = b;
+      } // end if (pot_addr in range)
       Pot_info[a_pin][pot_addr].calibrated = 0;
       Pot_info[a_pin][pot_addr].value = 0;
     } // end for (pot_addr)
@@ -306,12 +332,21 @@ void write_calibrations(void) {  // errnos 61-69
       struct pot_info_s *pi = &Pot_info[a_pin][pot_addr];
       if (pi->calibrated & CALIBRATED_LOW) {
         EEPROM.put(EEPROM_cal_low(a_pin, pot_addr), pi->cal_low);
+      } else {
+        Errno = 35;
+        Err_data = a_pin * 8 + pot_addr;
       }
       if (pi->calibrated & CALIBRATED_CENTER) {
         EEPROM.put(EEPROM_cal_center(a_pin, pot_addr), pi->cal_center);
+      } else {
+        Errno = 45;
+        Err_data = a_pin * 8 + pot_addr;
       }
       if (pi->calibrated & CALIBRATED_HIGH) {
         EEPROM.put(EEPROM_cal_high(a_pin, pot_addr), pi->cal_high);
+      } else {
+        Errno = 55;
+        Err_data = a_pin * 8 + pot_addr;
       }
       pi->calibrated = 0;
     } // end for (pot_addr)
@@ -552,37 +587,73 @@ void read(byte a_pin, byte pot_addr, byte pot_num) {
   
   if (a < pi->a_low) pi->a_low = a;
   if (a > pi->a_high) pi->a_high = a;
+
+  if (pi->num_samples < NUM_SAMPLES) {
+    pi->a_samples[(pi->first_sample + pi->num_samples) % NUM_SAMPLES] = a;
+    pi->a_sum += a;
+    pi->num_samples += 1;
+  } else {
+    pi->a_sum -= pi->a_samples[pi->first_sample];
+    pi->a_samples[pi->first_sample] = a;
+    pi->a_sum += a;
+    pi->first_sample = (pi->first_sample + 1) % NUM_SAMPLES;
+  }
+
+  // This needs to be shifted right NUM_SLIDING_BITS to get the running avg
+  pi->a_running_avg =
+      (((unsigned long)pi->a_running_avg * ((1 << NUM_SLIDING_BITS) - 1)   // * 31(15)
+                                         + (1 << (NUM_SLIDING_BITS - 1)))  // rounded up
+                                         >> NUM_SLIDING_BITS)              // / 32(16)
+                                         + a;
   
   if (Num_reads >= Read_threshold) {
-    if (pi->last_reported < pi->a_low || pi->last_reported > pi->a_high) {
-      int new_value = (pi->a_high + pi->a_low) / 2;
-      if (abs(pi->last_reported - new_value) > 8) {
-        // report new value
-        pi->last_reported = new_value;
-        byte scaled_value = scale_slide_pot(new_value, pi->cal_low, pi->cal_center, pi->cal_high);
-        if (pi->value != scaled_value) {
-          if (Trace_on) {
-            Serial.print("Trace: pot_num ");
-            Serial.print(pot_num);
-            Serial.print(", new_value ");
-            Serial.print(new_value);
-            Serial.print(", cal_low ");
-            Serial.print(pi->cal_low);
-            Serial.print(", cal_center ");
-            Serial.print(pi->cal_center);
-            Serial.print(", cal_high ");
-            Serial.print(pi->cal_high);
-            Serial.print(" -> from ");
-            Serial.print(pi->value);
-            Serial.print(" to ");
-            Serial.println(scaled_value);
-          } // end if (Trace_on)
-          pi->value = scaled_value;
-        } // end if (scaled_value changed)
-      } // end if (new_value changed)
-    } // end if (a_low/a_high changed)
-    pi->a_low = a;
-    pi->a_high = a;
+    int avg = pi->a_sum / pi->num_samples;
+    unsigned int running_avg = (pi->a_running_avg + (1 << (NUM_SLIDING_BITS - 1)))  // rounded up
+                                                  >> NUM_SLIDING_BITS;              // / 32(16)
+    //int new_raw_value = (pi->a_high + pi->a_low) / 2;
+    //int new_raw_value = running_avg;
+    int new_raw_value = avg;
+
+    if (abs(avg - pi->last_reported) > 2 && abs(running_avg - pi->last_reported) > 2) {
+      // save new raw value
+      byte scaled_value = scale_slide_pot(new_raw_value, pi->cal_low, pi->cal_center, pi->cal_high);
+      if (pi->value != scaled_value) {
+        // report new scaled value and reset a_low, a_high
+        if (Trace_on) {
+          Serial.print("Trace: pot_num ");
+          Serial.print(pot_num);
+          Serial.print(", a_low ");
+          Serial.print(pi->a_low);
+          Serial.print(", a_high ");
+          Serial.print(pi->a_high);
+          Serial.print(", num_samples ");
+          Serial.print(pi->num_samples);
+          Serial.print(", avg ");
+          Serial.print(avg);
+          Serial.print(", a_running_avg ");
+          Serial.print(pi->a_running_avg);
+          Serial.print(", running avg ");
+          Serial.print(running_avg);
+          Serial.print(", last_reported ");
+          Serial.print(pi->last_reported);
+          Serial.print(", new_raw_value ");
+          Serial.print(new_raw_value);
+          Serial.print(" -> value changed from ");
+          Serial.print(pi->value);
+          Serial.print(" to ");
+          Serial.println(scaled_value);
+        } // end if (Trace_on)
+        pi->value = scaled_value;
+        pi->a_low = a;
+        pi->a_high = a;
+        /************ Don't reset these... 
+        pi->num_samples = 1;
+        pi->a_sum = a;
+        pi->a_running_avg = a << NUM_SLIDING_BITS;
+        ************/
+      } // end if (scaled_value changed)
+      pi->last_reported = new_raw_value;
+    } // end if (new_raw_value changed)
   } // end if (Num_reads...)
 }
 
@@ -592,6 +663,7 @@ void help(void) {
   Serial.println();
   Serial.println("? - help");
   Serial.println("P - show Num_pots");
+  Serial.println("R - view current pot values");
   Serial.println("Sa_pin,n - set Num_pots on a_pin to n");
   Serial.println("T - show Cycle_time");
   Serial.println("X<errno> - set Errno");
@@ -605,6 +677,41 @@ void help(void) {
   Serial.println("F - trace ofF");
   Serial.println("An - set MUX addr to n, and disable activity, trace ofF re-enables");
   Serial.println();
+}
+
+void view_pot_values(void) {
+  byte a_pin, pot_addr, pot_num;
+  pot_num = 1;
+  for (a_pin = 0; a_pin < NUM_A_PINS; a_pin++) {
+    for (pot_addr = 0; pot_addr < Num_pots[a_pin]; pot_addr++) {
+      struct pot_info_s *pi = &Pot_info[a_pin][pot_addr];
+      Serial.print("pot: ");
+      Serial.print(pot_num);
+      Serial.print(", a_low: ");
+      Serial.print(pi->a_low);
+      Serial.print(", a_high: ");
+      Serial.print(pi->a_high);
+      Serial.print(", num_samples: ");
+      Serial.print(pi->num_samples);
+      Serial.print(", avg: ");
+      Serial.print(pi->a_sum / pi->num_samples);
+      Serial.print(", a_running_avg: ");
+      Serial.print(pi->a_running_avg);
+      Serial.print(", running_avg: ");
+      Serial.print((pi->a_running_avg + (1 << (NUM_SLIDING_BITS - 1))) >> NUM_SLIDING_BITS);
+      Serial.print(", last_reported: ");
+      Serial.print(pi->last_reported);
+      Serial.print(", value: ");
+      Serial.println(pi->value);
+      Serial.print("  Samples: ");
+      for (byte i = 0; i < pi->num_samples; i++) {
+        if (i) Serial.print(", ");
+        Serial.print(pi->a_samples[(pi->first_sample + i) % NUM_SAMPLES]);
+      }
+      Serial.println();
+      pot_num++;
+    } // end for (pot_addr)
+  } // end for (a_pin)
 }
 
 void view_calibrations(void) {
@@ -679,6 +786,7 @@ void loop() {
       }
       Serial.println(Num_pots[NUM_A_PINS - 1]);
       break;
+    case 'R': view_pot_values(); break;
     case 'S':
       a_pin = Serial.parseInt(SKIP_WHITESPACE);
       if (a_pin >= NUM_A_PINS) {
@@ -780,6 +888,8 @@ void loop() {
     case ' ': case '\t': case '\n': case '\r': break;
     default: help(); break;
     } // end switch (c)
+
+    while (Serial.available() && Serial.read() != '\n') ;
   } // end if (Serial.available())
   
   errno();   // Flash pin D13 and D12

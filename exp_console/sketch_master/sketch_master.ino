@@ -13,13 +13,13 @@
 #include "notes.h"
 #include "functions.h"
 
-#define PROGRAM_ID    "Master V5"
+#define PROGRAM_ID    "Master V8"
 
 #define ERR_LED      13   // built-in LED
 #define ERR_LED_2     1
 
 // Indexed by I2C_addr - I2C_BASE
-#define NUM_REMOTES   2
+#define NUM_REMOTES   3
 byte Remote_Errno[NUM_REMOTES];
 byte Remote_Err_data[NUM_REMOTES];
 byte Remote_char[NUM_REMOTES] = {'P', 'L'};
@@ -27,6 +27,7 @@ byte Remote_char[NUM_REMOTES] = {'P', 'L'};
 #define I2C_BASE              0x31
 #define I2C_POT_CONTROLLER    0x31
 #define I2C_LED_CONTROLLER    0x32
+#define I2C_RAM_CONTROLLER    0x33
 
 byte EEPROM_used;
 
@@ -61,18 +62,30 @@ void setup() {
   digitalWrite(ERR_LED, HIGH);
   digitalWrite(ERR_LED_2, HIGH);
 
+  /***
+  for (int i = 0; i < 100; i++) {
+    delay(500);
+    digitalWrite(ERR_LED, LOW);
+    digitalWrite(ERR_LED_2, LOW);
+    delay(500);
+    digitalWrite(ERR_LED, HIGH);
+    digitalWrite(ERR_LED_2, HIGH);
+  }
+  ***/
+  
   Serial.begin(230400);
+  Serial.println(PROGRAM_ID);
 
   Wire.begin();
   Wire.setClock(400000);
-
-  Serial.println(PROGRAM_ID);
 
   byte EEPROM_used = setup_switches(0);
   EEPROM_used += setup_events(EEPROM_used);
   EEPROM_used += setup_encoders(EEPROM_used);
   EEPROM_used += setup_functions(EEPROM_used);
   EEPROM_used += setup_notes(EEPROM_used);
+
+  Serial.print("EEPROM_used: "); Serial.println(EEPROM_used);
 
   Periodic_period[SWITCH_REPORT] = HUMAN_PERIOD;
 
@@ -94,11 +107,11 @@ void running_help(void) {
   Serial.println(F("X<errno> - set Errno"));
   Serial.println(F("E - show Errno, Err_data"));
   Serial.println(F("S - show settings"));
-  Serial.println(F("P<debounce_period> - set debounce_period in EEPROM"));
+  Serial.println(F("P<debounce_period_0>,<debounce_period_1> - set debounce_periods in EEPROM"));
   Serial.println(F("T - toggle Trace_events"));
   Serial.println(F("R<row> - dump switches on row"));
   Serial.println(F("C - dump encoders"));
-  Serial.println(F("M<controller>,<len_expected>,<comma_sep_bytes> - send I2C message to <controller>"));
+  Serial.println(F("M<controller:(P|L|R)>,<len_expected>,<comma_sep_bytes> - send I2C message to <controller>"));
   Serial.println(F("G<first>,<last> - generate raw bytes in the range first-last (inclusive)"));
   Serial.println(F("V<first>,<last>\\n<raw_bytes> - verify that raw_bytes are in the range first-last"));
   Serial.println();
@@ -238,7 +251,7 @@ void report_remote_error(byte remote_index, byte errno, byte err_data) {
 void loop() {
   // put your main code here, to run repeatedly:
   byte b0, b1, b2, b3, b4, i;
-  unsigned short us;
+  unsigned short us0, us1;
   byte buffer[32];
 
   if (!Debug) {
@@ -353,14 +366,26 @@ void loop() {
         }
         break;
       case 'S':  // show settings
-        Serial.print(F("Debounce_period is ")); Serial.print(Debounce_period);
+        Serial.print(F("Switch debounce_period is ")); Serial.print(Debounce_period[0]);
+        Serial.println(F(" uSec"));
+        Serial.print(F("Encoder debounce_period[1] is ")); Serial.print(Debounce_period[1]);
         Serial.println(F(" uSec"));
         break;
       case 'P':  // <debounce_period> - set debounce_period in EEPROM
         skip_ws();
-        us = Serial.parseInt();
-        set_debounce_period(us);
-        Serial.print(F("Debounce_period set to ")); Serial.print(us);
+        us0 = Serial.parseInt();
+        b3 = Serial.read();     // comma delimiter
+        if (b3 != ',') {
+          Serial.print("P: expected ',' after debounce_period[0], got ");
+          Serial.println(b3);
+          break;
+        }
+        us1 = Serial.parseInt();
+        set_debounce_period(0, us0);
+        Serial.print(F("Switch debounce_period set to ")); Serial.print(us0);
+        Serial.println(F(" uSec in EEPROM"));
+        set_debounce_period(1, us1);
+        Serial.print(F("Encoder debounce_period set to ")); Serial.print(us1);
         Serial.println(F(" uSec in EEPROM"));
         break;
       case 'T': // toggle Trace_events
@@ -420,6 +445,10 @@ void loop() {
         case 'l':
         case 'L':
           b1 = I2C_LED_CONTROLLER;
+          break;
+        case 'r':
+        case 'R':
+          b1 = I2C_RAM_CONTROLLER;
           break;
         default:
           Serial.print("M: unrecognized controller ");
@@ -545,6 +574,8 @@ void loop() {
       case ' ': case '\t': case '\n': case '\r': break;
       default: running_help(); break;
       } // end switch
+
+      while (Serial.available() && Serial.read() != '\n') ;
     } // end if (Serial.available())
   } else { // Debug
     if (Serial.available()) {
@@ -782,6 +813,8 @@ void loop() {
       case ' ': case '\t': case '\n': case '\r': break;
       default: debug_help(); break;
       } // end switch
+
+      while (Serial.available() && Serial.read() != '\n') ;
     } // end if (Serial.available())
   } // end else if (!Debug)
 

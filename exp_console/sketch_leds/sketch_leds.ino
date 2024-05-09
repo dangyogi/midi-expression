@@ -12,7 +12,7 @@
 #include "numeric_displays.h"
 #include "alpha_displays.h"
 
-#define PROGRAM_ID          "LEDs V24"
+#define PROGRAM_ID          "LEDs V25"
 
 #define NUM_EEPROM_USED     EEPROM_needed
 #define EEPROM_SIZE         (EEPROM.length())
@@ -778,7 +778,7 @@ void timeout(void) {
     case 'W':
       b0 = Serial.parseInt(SKIP_WHITESPACE);
       if (b0 >= Num_rows * NUM_COLS / 16) {
-        Serial.print("Invalid led byte number ");
+        Serial.print("Invalid led word number ");
         Serial.print(b0);
         Serial.print(" must be < ");
         Serial.println(Num_rows * NUM_COLS / 16);    

@@ -39,10 +39,13 @@ Error Codes:
    21    EEPROM_addr    requested EEPROM_addr for command 9 out of range
    30    request_length invalid request length for command 10, expected 1
    31    calibrate_low  calibrate_low value failed to be < 40
+   35    write_calibrations calibrate_low not set, Err_data is pot #
    40    request_length invalid request length for command 11, expected 1
    41    calibrate_center calibrate_center value failed to be within 40 of 511
+   45    write_calibrations calibrate_center not set, Err_data is pot #
    50    request_length invalid request length for command 12, expected 1
    51    calibrate_high calibrate_high value failed to be within 40 of 1023
+   55    write_calibrations calibrate_high not set, Err_data is pot #
    60    request_length invalid request length for command 13, expected 1
    65    request_length invalid request length for command 14, expected 3
    70    len_written    send_report 0 (Errno, Err_data + pot.values) - Wire.write(Errno) returned wrong length, expected 1
@@ -66,6 +69,14 @@ Error Codes:
   102    10*a_pin+pot_addr cal_center[a_pin, pot_addr] read from EEPROM > 50 from 511
   103    10*a_pin+pot_addr cal_high[a_pin, pot_addr] read from EEPROM < (1023 - 20)
   110    command_byte   invalid request command from on high
+
+
+Pots:
+
+   Pots    Use
+   1-15    Chord pots
+  16-17    Tempo and Synth Vol
+  18-20    Channel Vol, Note-on Delay, Note-off Delay
 
 
 // vim: sw=2

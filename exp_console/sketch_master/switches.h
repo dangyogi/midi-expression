@@ -15,6 +15,7 @@
 typedef struct {
   byte current;                 // 0 == open, 1 == closed
   byte opening;                 // True or False, only when current is closed
+  byte debounce_index;          // 0 (switch) or 1 (encoder)
   byte tag;                     // for use by other parts of the software
   unsigned long open_time;      // only valid when opening
 } switch_t;
@@ -24,7 +25,7 @@ extern switch_t Switches[NUM_SWITCHES];
 extern byte Rows[];  // Row pins
 extern byte Cols[];  // Col pins
 
-extern unsigned short Debounce_period;
+extern unsigned short Debounce_period[2];  // long (switches), short (encoders)
 
 extern byte setup_switches(byte EEPROM_offset);
 
