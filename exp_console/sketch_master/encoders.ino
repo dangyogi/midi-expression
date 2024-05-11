@@ -12,6 +12,10 @@ encoder_var_t Function_var[2] = {  // Synth, Program
   {0, 14, ENCODER_FLAGS_ENABLED | ENCODER_FLAGS_CYCLE | ENCODER_FLAGS_CHOICE_LEDS, 1, 4}
 };
 
+void set_debounce(byte A_sw) {
+  Switches[A_sw].debounce_index = Switches[A_sw + 1].debounce_index = 1;
+}
+
 byte setup_encoders(byte EEPROM_offset) {
   EEPROM_encoder_offset = EEPROM_offset;
 
@@ -19,24 +23,30 @@ byte setup_encoders(byte EEPROM_offset) {
   Encoders[FUNCTION_ENCODER].A_sw = SWITCH_NUM(2, 0);
   Encoders[FUNCTION_ENCODER].display_num = 176;  // first LED #
   Encoders[FUNCTION_ENCODER].var = &Function_var[SAVE_OR_SYNTH];
+  set_debounce(Encoders[FUNCTION_ENCODER].A_sw);
 
   // Function Params
   Encoders[1].A_sw = SWITCH_NUM(2, 3);
   Encoders[1].display_num = 0;
   Encoders[1].var = NULL;
+  set_debounce(Encoders[1].A_sw);
   Encoders[2].A_sw = SWITCH_NUM(2, 6);
   Encoders[2].display_num = 1;
   Encoders[2].var = NULL;
+  set_debounce(Encoders[2].A_sw);
   Encoders[3].A_sw = SWITCH_NUM(3, 0);
   Encoders[3].display_num = 2;
   Encoders[3].var = NULL;
+  set_debounce(Encoders[3].A_sw);
   Encoders[4].A_sw = SWITCH_NUM(3, 3);
   Encoders[4].display_num = 3;
   Encoders[4].var = NULL;
+  set_debounce(Encoders[4].A_sw);
 
   // Filename
   Encoders[FILENAME_ENCODER].A_sw = SWITCH_NUM(0, 5);
   Encoders[FILENAME_ENCODER].var = &Filename_var;
+  set_debounce(Encoders[FILENAME_ENCODER].A_sw);
 
   byte i;
   for (i = 0; i < NUM_ENCODERS; i++) {

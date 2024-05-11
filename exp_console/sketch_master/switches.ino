@@ -43,7 +43,7 @@ byte setup_switches(byte EEPROM_offset) {
   }
 
   unsigned short us;
-  us = get_debounce_period(0);
+  us = get_debounce_period(0);    // Switch debounce
   if (us == 0xFFFF) {
     if (Serial) {
       Serial.println(F("switch debounce period not set in EEPROM"));
@@ -53,12 +53,12 @@ byte setup_switches(byte EEPROM_offset) {
     Debounce_period[0] = us;
   }
 
-  us = get_debounce_period(1);
+  us = get_debounce_period(1);    // encoder debounce
   if (us == 0xFFFF) {
     if (Serial) {
       Serial.println(F("encoder debounce period not set in EEPROM"));
     }
-    Debounce_period[1] = 5000;
+    Debounce_period[1] = 1000;
   } else {
     Debounce_period[1] = us;
   }
@@ -67,8 +67,8 @@ byte setup_switches(byte EEPROM_offset) {
 }
 
 unsigned short get_debounce_period(byte debounce_index) {
-  return ((unsigned short)get_EEPROM(EEPROM_switches_offset + 2 * debounce_period) << 8)
-       | get_EEPROM(EEPROM_switches_offset + 2 * debounce_period + 1);
+  return ((unsigned short)get_EEPROM(EEPROM_switches_offset + 2 * debounce_index) << 8)
+       | get_EEPROM(EEPROM_switches_offset + 2 * debounce_index + 1);
 }
 
 void set_debounce_period(byte debounce_index, unsigned short dp) {
@@ -79,7 +79,9 @@ void set_debounce_period(byte debounce_index, unsigned short dp) {
 
 unsigned long Longest_scan;  // uSec
 
+#define MAX_DEBOUNCE_COUNT    30
 byte Close_counts[NUM_SWITCHES];
+byte Debounce_delay_counts[2][MAX_DEBOUNCE_COUNT + 1];   // debounce_index, mSec
 
 void scan_switches(byte trace) {
   // Takes 210 uSec to run with no activity on Nano 33 IoT.
@@ -92,6 +94,17 @@ void scan_switches(byte trace) {
       switch_t *sw = &Switches[sw_num];
       if (digitalRead(Cols[col])) {
         // switch closed
+
+        // Update Debounce_delay_counts
+        unsigned long time_open = start_scan_time - sw->open_time;
+        byte mSec = time_open / 1000ul;
+        if (mSec < 100) {
+          if (mSec > MAX_DEBOUNCE_COUNT) mSec = MAX_DEBOUNCE_COUNT;
+          if (Debounce_delay_counts[sw->debounce_index][mSec] < 255) {
+            Debounce_delay_counts[sw->debounce_index][mSec] += 1;
+          }
+        }
+
         if (!sw->current) {
           // currently open, close is immediate!
           sw->current = 1;      // set to currently closed

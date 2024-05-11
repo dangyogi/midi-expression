@@ -6,6 +6,7 @@ void inc_encoder(byte enc) {
   byte new_value;
   if (Encoders[enc].count >= 2) {
     // inc encoder value
+    encoder_var_t *var = Encoders[enc].var;
     new_value = var->value + var->bt_mul[Switches[Encoders[enc].A_sw + 2].current];
     if (new_value > var->max) {
       if (var->flags & ENCODER_FLAGS_CYCLE) {
@@ -25,6 +26,7 @@ void inc_encoder(byte enc) {
     }
   } else if (Encoders[enc].count <= 2) {
     // dec encoder value
+    encoder_var_t *var = Encoders[enc].var;
     byte adj = var->bt_mul[Switches[Encoders[enc].A_sw + 2].current];
     if (var->value < adj) {
       if (var->flags & ENCODER_FLAGS_CYCLE) {
@@ -50,7 +52,6 @@ void run_event(byte event_num, byte param) {
   // This runs Switch_closed_events, Switch_opened_events and Encoder_event events.
   if (event_num != 0xFF) {
     byte enc;
-    byte adj;
     encoder_var_t *var;
     switch (event_num) {
     case ENC_A_CLOSED(0): case ENC_A_CLOSED(1): case ENC_A_CLOSED(2):
@@ -74,7 +75,7 @@ void run_event(byte event_num, byte param) {
       // switch closed for encoders B
       enc = EVENT_ENCODER_NUM(event_num);
       var = Encoders[enc].var;
-      if (var != NULL && (var->flags & ENCODER_FLAG_ENABLED)) {  // enabled
+      if (var != NULL && (var->flags & ENCODER_FLAGS_ENABLED)) {  // enabled
         byte A_sw = Encoders[enc].A_sw;
         if (Switches[A_sw].current) {   // A closed
           // CW
@@ -90,7 +91,7 @@ void run_event(byte event_num, byte param) {
       // switch A opened for encoders
       enc = EVENT_ENCODER_NUM(event_num);
       var = Encoders[enc].var;
-      if (var != NULL && (var->flags & ENCODER_FLAG_ENABLED)) {  // enabled
+      if (var != NULL && (var->flags & ENCODER_FLAGS_ENABLED)) {  // enabled
         byte B_sw = Encoders[enc].A_sw + 1;
         if (Switches[B_sw].current) {   // B closed
           // CW
@@ -101,19 +102,18 @@ void run_event(byte event_num, byte param) {
           inc_encoder(enc);
         }
       } // end if (enabled)
-      Encoders[enc].state &= ~1;
       break;
     case ENC_B_OPENED(0): case ENC_B_OPENED(1): case ENC_B_OPENED(2):
     case ENC_B_OPENED(3): case ENC_B_OPENED(4): case ENC_B_OPENED(5):
       // switch B opened for encoders
       enc = EVENT_ENCODER_NUM(event_num);
       var = Encoders[enc].var;
-      if (var != NULL && (var->flags & ENCODER_FLAG_ENABLED)) {  // enabled
+      if (var != NULL && (var->flags & ENCODER_FLAGS_ENABLED)) {  // enabled
         byte A_sw = Encoders[enc].A_sw;
         if (!Switches[A_sw].current) {   // A open
           // CW, back at detent
           Encoders[enc].count += 1;
-          inc_encoder_value(enc);
+          inc_encoder(enc);
         } else {
           // CCW
           Encoders[enc].count -= 1;
@@ -157,6 +157,10 @@ void run_event(byte event_num, byte param) {
     case HARMONIC_OFF:
       harmonic_off(param);
       break;
+    default:
+      Errno = 30;
+      Err_data = event_num;
+      break;
     } // end switch (event_num)
   } // end if (0xFF)
 }
@@ -193,7 +197,9 @@ void encoder_changed(byte enc) {
     Serial.print(F("encoder "));
     Serial.print(enc);
     Serial.print(F(" changed, event "));
-    Serial.println(Encoder_event[enc]);
+    Serial.print(Encoder_event[enc]);
+    Serial.print(F(", new value "));
+    Serial.println(Encoders[enc].var->value);
   }
   run_event(Encoder_event[enc], enc);
 }

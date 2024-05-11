@@ -13,12 +13,14 @@ Error Codes:
    11    bytes_received     getResponse: Wire.requestFrom bytes_received > data_len
    12    Wire.available()   getResponse: bytes_received != Wire.available()
    13    i2c_addr           getResponse: bytes_received == 0
+   16    periodic_num       loop: invalid periodic num
    20    len_written        Wire.write returned wrong length
    21    i2c_addr           Wire.endTransmission status 1: data too long to fit in transmit buffer
    22    i2c_addr           Wire.endTransmission status 2: received NACK on transmit of i2c_addr
    23    i2c_addr           Wire.endTransmission status 3: received NACK on transmit of data
    24    i2c_addr           Wire.endTransmission status 4: other error
    25    i2c_addr           Wire.endTransmission status 5: timeout
+   30    event_num          run_event: invalid event number (for switches and encoders)
 
 
 Switches:
@@ -50,5 +52,14 @@ Encoders:
     3         27-29     Function Parm 3
     4         30-32     Function Parm 4
     5          5-7      Filename
+
+Button bounce:
+  Can hit and release button in 80 mSec.
+  Can hit, release and rehit button in 68 mSec.
+  Need at least 20 mSec debounce period, but still occationally get 1 sec delays (bounces).
+
+Encode bounce:
+  1 mSec debounce period handles most of it.
+  2.5 mSec between detents (A_on to A_on, turning CW) when turning encoder as fast as I can.
 
 // vim: sw=2

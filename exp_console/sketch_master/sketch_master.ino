@@ -41,6 +41,7 @@ byte get_EEPROM(byte EEPROM_addr) {
 
 #define NUM_PERIODICS           6
 
+// Periodic functions:
 #define PULSE_NOTES_ON          0
 #define PULSE_NOTES_OFF         1
 #define UPDATE_LEDS             2
@@ -111,6 +112,7 @@ void running_help(void) {
   Serial.println(F("T - toggle Trace_events"));
   Serial.println(F("R<row> - dump switches on row"));
   Serial.println(F("C - dump encoders"));
+  Serial.println(F("B - dump Debounce_delay_counts"));
   Serial.println(F("M<controller:(P|L|R)>,<len_expected>,<comma_sep_bytes> - send I2C message to <controller>"));
   Serial.println(F("G<first>,<last> - generate raw bytes in the range first-last (inclusive)"));
   Serial.println(F("V<first>,<last>\\n<raw_bytes> - verify that raw_bytes are in the range first-last"));
@@ -303,6 +305,10 @@ void loop() {
             } // end for (i)
           } // end if (Serial)
           break;
+        default:
+          Errno = 16;
+          Err_data = i;
+          break;
         } // end switch (i)
       } // end if (period)
     } // for (i)
@@ -411,7 +417,7 @@ void loop() {
           }
         }
         break;
-      case 'C':  //dump encoders
+      case 'C':  // dump encoders
         for (b1 = 0; b1 < NUM_ENCODERS; b1++) {
           b2 = Encoders[b1].A_sw;
           Serial.print(F("Encoder ")); Serial.print(b1);
@@ -433,7 +439,30 @@ void loop() {
           }
         } // end for (b1)
         break;
-      case 'M':  //send I2C message to controller
+      case 'B':  // dump debounce_delay_counts
+        for (b1 = 0; b1 < 2; b1 += 1) {
+          if (b1) {
+            Serial.println("Dumping Encoder debounce_delay_counts:");
+          } else {
+            Serial.println("Dumping Switch debounce_delay_counts:");
+          }
+          for (b2 = 0; b2 <= MAX_DEBOUNCE_COUNT; b2 += 1) {
+            byte count = Debounce_delay_counts[b1][b2];
+            if (count) {
+              Serial.print("  ");
+              if (b2 == MAX_DEBOUNCE_COUNT) {
+                Serial.print("overflow: ");
+              } else {
+                Serial.print(b2); Serial.print(" mSec: ");
+              }
+              Serial.println(count);
+              Debounce_delay_counts[b1][b2] = 0;
+            }
+          }
+          Serial.println();
+        }
+        break;
+      case 'M':  // send I2C message to controller
         // M<controller>,<len_expected>,<comma_seperated_bytes> - send I2C message to <controller>
         skip_ws();
         b1 = Serial.read();     // controller

@@ -31,6 +31,9 @@ extern byte setup_switches(byte EEPROM_offset);
 
 extern unsigned long Longest_scan;   // uSec
 
+#define MAX_DEBOUNCE_COUNT    30
+extern byte Debounce_delay_counts[2][MAX_DEBOUNCE_COUNT + 1];   // debounce_index, mSec
+
 extern byte Close_counts[NUM_SWITCHES];
 
 extern void scan_switches(byte trace=0);
