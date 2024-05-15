@@ -13,7 +13,7 @@
 #include "notes.h"
 #include "functions.h"
 
-#define PROGRAM_ID    "Master V8"
+#define PROGRAM_ID    "Master V10"
 
 #define ERR_LED      13   // built-in LED
 #define ERR_LED_2     1
@@ -110,6 +110,7 @@ void running_help(void) {
   Serial.println(F("S - show settings"));
   Serial.println(F("P<debounce_period_0>,<debounce_period_1> - set debounce_periods in EEPROM"));
   Serial.println(F("T - toggle Trace_events"));
+  Serial.println(F("U - toggle Trace_encoders"));
   Serial.println(F("R<row> - dump switches on row"));
   Serial.println(F("C - dump encoders"));
   Serial.println(F("B - dump Debounce_delay_counts"));
@@ -278,31 +279,33 @@ void loop() {
         case SWITCH_REPORT:
           if (Serial) {
             //Serial.println(F("still running..."));
-            for (i = 0; i < NUM_SWITCHES; i++) {
-              if (Close_counts[i]) {
-                Serial.print(F("Switch row "));
-                Serial.print(i / 9);
-                Serial.print(F(" col "));
-                Serial.print(i % 9);
-                Serial.print(F(" closed "));
-                Serial.print(Close_counts[i]);
-                Serial.println(F(" times"));
-                Close_counts[i] = 0;
-              } // end if (Close_counts)
-            } // end for (i)
-            for (i = 0; i < NUM_ENCODERS; i++) {
-              if (Encoders[i].var == NULL) {
-                Serial.print(F("Encoder "));
-                Serial.print(i);
-                Serial.println(F(": var is NULL"));
-              } else if (Encoders[i].var->changed) {
-                Serial.print(F("Encoder "));
-                Serial.print(i);
-                Serial.print(F(" changed to "));
-                Serial.println(Encoders[i].var->value);
-                Encoders[i].var->changed = 0;
-              } // end if (changed)
-            } // end for (i)
+            if (Trace_events) {
+              for (i = 0; i < NUM_SWITCHES; i++) {
+                if (Close_counts[i]) {
+                  Serial.print(F("Switch "));
+                  Serial.print(i);
+                  Serial.print(F(" closed "));
+                  Serial.print(Close_counts[i]);
+                  Serial.println(F(" times"));
+                  Close_counts[i] = 0;
+                } // end if (Close_counts)
+              } // end for (i)
+            } // end if (Trace_events)
+            if (Trace_encoders) {
+              for (i = 0; i < NUM_ENCODERS; i++) {
+                if (Encoders[i].var == NULL) {
+                  Serial.print(F("Encoder "));
+                  Serial.print(i);
+                  Serial.println(F(": var is NULL"));
+                } else if (Encoders[i].var->changed) {
+                  Serial.print(F("Encoder "));
+                  Serial.print(i);
+                  Serial.print(F(" changed to "));
+                  Serial.println(Encoders[i].var->value);
+                  Encoders[i].var->changed = 0;
+                } // end if (changed)
+              } // end for (i)
+            } // end if (Trace_events)
           } // end if (Serial)
           break;
         default:
@@ -374,7 +377,7 @@ void loop() {
       case 'S':  // show settings
         Serial.print(F("Switch debounce_period is ")); Serial.print(Debounce_period[0]);
         Serial.println(F(" uSec"));
-        Serial.print(F("Encoder debounce_period[1] is ")); Serial.print(Debounce_period[1]);
+        Serial.print(F("Encoder debounce_period is ")); Serial.print(Debounce_period[1]);
         Serial.println(F(" uSec"));
         break;
       case 'P':  // <debounce_period> - set debounce_period in EEPROM
@@ -398,6 +401,11 @@ void loop() {
         Trace_events = 1 - Trace_events;
         Serial.print(F("Trace_events set to "));
         Serial.println(Trace_events);
+        break;
+      case 'U': // toggle Trace_encoders
+        Trace_encoders = 1 - Trace_encoders;
+        Serial.print(F("Trace_encoders set to "));
+        Serial.println(Trace_encoders);
         break;
       case 'R':  // dump switches on row
         skip_ws();

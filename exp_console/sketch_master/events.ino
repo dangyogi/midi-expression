@@ -2,8 +2,15 @@
 
 byte EEPROM_events_offset;
 
+byte Trace_events = 0;
+byte Trace_encoders = 0;
+
 void inc_encoder(byte enc) {
   byte new_value;
+  if (Trace_encoders) {
+    Serial.print("inc_encoder "); Serial.print(enc);
+    Serial.print(", count "); Serial.println(Encoders[enc].count);
+  }
   if (Encoders[enc].count >= 2) {
     // inc encoder value
     encoder_var_t *var = Encoders[enc].var;
@@ -24,7 +31,7 @@ void inc_encoder(byte enc) {
       var->changed = 1;
       encoder_changed(enc);
     }
-  } else if (Encoders[enc].count <= 2) {
+  } else if (Encoders[enc].count <= -2) {
     // dec encoder value
     encoder_var_t *var = Encoders[enc].var;
     byte adj = var->bt_mul[Switches[Encoders[enc].A_sw + 2].current];
@@ -167,8 +174,6 @@ void run_event(byte event_num, byte param) {
 
 byte Switch_closed_event[NUM_SWITCHES]; // 0xFF is None
 byte Switch_opened_event[NUM_SWITCHES]; // 0xFF is None
-
-byte Trace_events = 0;
 
 void switch_closed(byte sw) {
   if (Trace_events) {

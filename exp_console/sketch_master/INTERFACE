@@ -60,6 +60,6 @@ Button bounce:
 
 Encode bounce:
   1 mSec debounce period handles most of it.
-  2.5 mSec between detents (A_on to A_on, turning CW) when turning encoder as fast as I can.
+  2.5 mSec between detents (A_on to A_on, turning CW) when turning encoder as fast as I can. (16 rps)
 
 // vim: sw=2

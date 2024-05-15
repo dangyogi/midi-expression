@@ -20,6 +20,7 @@
 #define NEXT_AVAIL_EVENT                   35
 
 extern byte Trace_events;
+extern byte Trace_encoders;
 
 extern byte setup_events(byte EEPROM_offset);
 
