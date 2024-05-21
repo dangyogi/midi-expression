@@ -8,7 +8,7 @@
 #define NUM_FUNCTIONS           (NUM_CH_FUNCTIONS + NUM_HM_FUNCTIONS)
 #define NUM_FUNCTION_ENCODERS   4
 
-extern encoder_var_t Functions[NUM_FUNCTIONS][NUM_FUNCTION_ENCODERS];
+extern variable_t Functions[NUM_FUNCTIONS][NUM_FUNCTION_ENCODERS];
 
 extern byte Lowest_harmonic;  // 0-9, 0xFF when all switches off
 extern byte Lowest_channel;   // 0-15, 0xFF when all switches off

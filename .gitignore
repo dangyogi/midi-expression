@@ -11,6 +11,7 @@ __pycache__/
 
 # C programs
 alsa_midi_dump
+exp_console/wrap_around
 
 # vim files
 .*.swp

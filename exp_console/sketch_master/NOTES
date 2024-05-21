@@ -1,0 +1,16 @@
+scan_switches (in switches.ino) calls:
+  switch_open (in events.ino) calls:
+    run_event(Switch_opened_event[sw], sw) -- in events.ino
+  switch_closed (in events.ino) calls:
+    run_event(Switch_closed_event[sw], sw) -- in events.ino
+
+Encoders use the following events on sw_A/B:
+  ENC_A/B_CLOSED
+  ENC_A/B_OPENED
+
+  These both call inc_encoder (in events.ino), which calls encoder_changed (in events.ino), which:
+    calls run_event(Encoder[enc].var->var_type->display_value, enc) in events.ino to update the display
+    and then run_event(Encoder[enc].encoder_event, enc) to process the change.
+
+
+// vim: sw=2

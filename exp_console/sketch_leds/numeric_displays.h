@@ -29,4 +29,6 @@ extern void load_sharp_flat(byte display_num, byte sharp_flat);
 // sharp_flat of 0 means natural, 1 means sharp, 2 means flat.
 extern void load_note(byte display_num, byte note, byte sharp_flat);
 
+extern void clear_display(byte display_num);
+
 // vim: sw=2

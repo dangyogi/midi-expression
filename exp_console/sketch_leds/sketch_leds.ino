@@ -11,8 +11,11 @@
 #include "step.h"
 #include "numeric_displays.h"
 #include "alpha_displays.h"
+#include "choices.h"
 
-#define PROGRAM_ID          "LEDs V25"
+#define PROGRAM_ID          "LEDs V29"
+
+#define I2C_MASTER          0x30
 
 #define NUM_EEPROM_USED     EEPROM_needed
 #define EEPROM_SIZE         (EEPROM.length())
@@ -37,6 +40,7 @@ void setup() {
   EEPROM_needed = setup_step();
   EEPROM_needed += setup_numeric_displays(EEPROM_needed);
   EEPROM_needed += setup_alpha_displays(EEPROM_needed);
+  EEPROM_needed += setup_choices(EEPROM_needed);
 
   Wire.begin(0x32);
   Wire.setClock(400000);
@@ -116,17 +120,22 @@ void receiveRequest(int how_many) {  // Errnos 1-39
   }
 }
 
+unsigned short Set_8_bits_time, Set_16_bits_time, Load_digit_time, Load_numeric_time, Load_note_time;
+unsigned short Load_sharp_flat_time, Clear_choices_time, Select_choices_time, Clear_display_time;
+unsigned short Receive_time;
+
 void step_receiveRequest(void) {
   // request from on high
   byte b0, b1, b2, b3;
   unsigned short us0;
   short ss0;
   char s[MAX_STRING_LEN + 1];
+  unsigned long start_time = micros();
   b0 = Wire.read();
-  if (b0 < 6) {
+  if (b0 < 7) {
     if (!check_eq(How_many, 1, 2)) Report = b0;
-  } else if (b0 < 7) {
-    // b0 == 6
+  } else if (b0 < 8) {
+    // b0 == 7
     if (!check_eq(How_many, 2, 3)) {
       b1 = Wire.read();
       if (!check_ls(b1, EEPROM[NUM_EEPROM_USED], 4)) {
@@ -135,22 +144,16 @@ void step_receiveRequest(void) {
       }
     }
   } else {
+    unsigned long start_time = micros();
+    unsigned short elapsed_time;
     Report = 0;
     switch (b0) {
-    case 8:  // set num rows
+    case 9:  // set num rows
       if (check_eq(How_many, 2, 5)) break;
       b1 = Wire.read();
       if (check_ls(b1, NUM_ROWS, 6)) break;
       Num_rows = b1;
       EEPROM[EEPROM_Num_rows] = b1;
-      break;
-    case 9:  // store EEPROM addr, value
-      if (check_eq(How_many, 3, 7)) break;
-      b1 = Wire.read();
-      if (check_ls(b1, EEPROM_AVAIL, 8)) break;
-      b2 = Wire.read();
-      if (b1 > EEPROM[NUM_EEPROM_USED]) EEPROM[NUM_EEPROM_USED] = b1;
-      EEPROM[EEPROM_storage_addr(b1)] = b2;
       break;
     case 10:  // set Num_numeric_displays
       if (check_eq(How_many, 2, 9)) break;
@@ -204,6 +207,8 @@ void step_receiveRequest(void) {
       if (check_eq(How_many, 3, 23)) break;
       b1 = Wire.read();
       load_8(Wire.read(), b1);
+      elapsed_time = micros() - start_time;
+      if (elapsed_time > Set_8_bits_time) Set_8_bits_time = elapsed_time;
       break;
     case 17:  // set 16 bits
       if (check_eq(How_many, 4, 24)) break;
@@ -211,6 +216,8 @@ void step_receiveRequest(void) {
       us0 = Wire.read();  // MSB first
       us0 = (us0 << 8) | Wire.read();
       load_16(us0, b1);
+      elapsed_time = micros() - start_time;
+      if (elapsed_time > Set_16_bits_time) Set_16_bits_time = elapsed_time;
       break;
     case 18:  // load digit
       if (check_eq(How_many, 5, 25)) break;
@@ -218,6 +225,8 @@ void step_receiveRequest(void) {
       b2 = Wire.read();
       b3 = Wire.read();
       load_digit(b1, b2, b3, Wire.read());
+      elapsed_time = micros() - start_time;
+      if (elapsed_time > Load_digit_time) Load_digit_time = elapsed_time;
       break;
     case 19:  // load numeric
       if (check_eq(How_many, 5, 26)) break;
@@ -225,17 +234,23 @@ void step_receiveRequest(void) {
       ss0 = Wire.read();
       ss0 = (ss0 << 8) | Wire.read();
       load_numeric(b1, ss0, Wire.read());
+      elapsed_time = micros() - start_time;
+      if (elapsed_time > Load_numeric_time) Load_numeric_time = elapsed_time;
       break;
     case 20:  // load note
       if (check_eq(How_many, 4, 27)) break;
       b1 = Wire.read();
       b2 = Wire.read();
       load_note(b1, b2, Wire.read());
+      elapsed_time = micros() - start_time;
+      if (elapsed_time > Load_note_time) Load_note_time = elapsed_time;
       break;
     case 21:  // load sharp_flat
       if (check_eq(How_many, 3, 28)) break;
       b1 = Wire.read();
       load_sharp_flat(b1, Wire.read());
+      elapsed_time = micros() - start_time;
+      if (elapsed_time > Load_sharp_flat_time) Load_sharp_flat_time = elapsed_time;
       break;
     case 22:  // load string
       if (How_many < 2) {
@@ -263,11 +278,81 @@ void step_receiveRequest(void) {
       Errno = Wire.read();
       Err_data = Wire.read();
       break;
+    case 27:  // set Num_choices
+      if (check_eq(How_many, 2, 121)) break;
+      b1 = Wire.read();
+      if (check_ls(b1, MAX_CHOICES + 1, 122)) break;
+      Num_choices = b1;
+      EEPROM[EEPROM_Num_choices()] = b1;
+      break;
+    case 28:  // set <choices_num>, start, length
+      if (check_eq(How_many, 4, 123)) break;
+      b1 = Wire.read();
+      if (check_ls(b1, Num_choices, 124)) break;
+      b2 = Wire.read();
+      if (check_ls(b2, Num_rows * NUM_COLS, 125)) break;
+      b3 = Wire.read();
+      if (check_ls(b3, MAX_CHOICES_LENGTH + 1, 126)) break;
+      Choices_start[b1] = b2;
+      EEPROM[EEPROM_Choices_start(b1)] = b2;
+      Choices_length[b1] = b3;
+      EEPROM[EEPROM_Choices_length(b1)] = b3;
+      break;
+    case 29:  // clear_choices <choices_num>
+      if (check_eq(How_many, 2, 127)) break;
+      b1 = Wire.read();
+      if (check_ls(b1, Num_choices, 128)) break;
+      clear_choices(b1);
+      elapsed_time = micros() - start_time;
+      if (elapsed_time > Clear_choices_time) Clear_choices_time = elapsed_time;
+      break;
+    case 30:  // select_choice <choices_num>, choice
+      if (check_eq(How_many, 3, 129)) break;
+      b1 = Wire.read();
+      if (check_ls(b1, Num_choices, 130)) break;
+      b2 = Wire.read();
+      if (check_ls(b2, Choices_length[b1], 131)) break;
+      select_choice(b1, b2);
+      elapsed_time = micros() - start_time;
+      if (elapsed_time > Select_choices_time) Select_choices_time = elapsed_time;
+      break;
+    case 31:  // clear_display <display_num>
+      if (check_eq(How_many, 2, 132)) break;
+      b1 = Wire.read();
+      if (check_ls(b1, Num_numeric_displays, 133)) break;
+      clear_display(b1);
+      elapsed_time = micros() - start_time;
+      if (elapsed_time > Clear_display_time) Clear_display_time = elapsed_time;
+      break;
+    case 32:  // store EEPROM addr, value
+      if (check_eq(How_many, 3, 7)) break;
+      b1 = Wire.read();
+      if (check_ls(b1, EEPROM_AVAIL, 8)) break;
+      b2 = Wire.read();
+      if (b1 > EEPROM[NUM_EEPROM_USED]) EEPROM[NUM_EEPROM_USED] = b1;
+      EEPROM[EEPROM_storage_addr(b1)] = b2;
+      break;
     default:
       Errno = 34;
       Err_data = b0;
       break;
     } // end switch (b0)
+  }
+  Wire.beginTransmission(I2C_MASTER);
+  b0 = Wire.write(Errno);
+  if (b0 != 1) {
+    Errno = 137;
+    Err_data = b0;
+  }
+  b0 = Wire.write(Err_data);
+  if (b0 != 1) {
+    Errno = 138;
+    Err_data = b0;
+  }
+  b0 = Wire.endTransmission();
+  if (b0) {
+    Errno = 139 + b0;        // 140 to 144
+    Err_data = I2C_MASTER;
   }
   ReceiveRequest_running = 0;
 }
@@ -275,6 +360,7 @@ void step_receiveRequest(void) {
 void sendReport(void) {  // Errnos 41-59
   // callback for reports requested from on high
   byte i, len_written;
+  unsigned long start_time = micros();
   switch (Report) {
   case 0:  // Errno, Err_data
     len_written = Wire.write(Errno);
@@ -294,8 +380,8 @@ void sendReport(void) {  // Errnos 41-59
     Errno = 0;
     Err_data = 0;
     break;
-  case 1:  // Num_rows, NUM_COLS, Num_numeric_displays, Num_alpha_displays, EEPROM_AVAIL,
-           // EEPROM USED (6 bytes total)
+  case 1:  // Num_rows, NUM_COLS, Num_numeric_displays, Num_alpha_displays, Num_choices,
+           // EEPROM_AVAIL, EEPROM USED (7 bytes total)
     len_written = Wire.write(Num_rows);
     if (len_written != 1) {
       Errno = 45;
@@ -320,6 +406,13 @@ void sendReport(void) {  // Errnos 41-59
     len_written = Wire.write(Num_alpha_strings);
     if (len_written != 1) {
       Errno = 48;
+      Err_data = len_written;
+      Report = 0;
+      break;
+    }
+    len_written = Wire.write(Num_choices);
+    if (len_written != 1) {
+      Errno = 57;
       Err_data = len_written;
       Report = 0;
       break;
@@ -388,7 +481,37 @@ void sendReport(void) {  // Errnos 41-59
       }
     }
     break;
-  case 6:  // next stored EEPROM byte (1 byte, EEPROM_addr auto-incremented)
+  case 6:  // choices_start, choices_length (2*Num_choices bytes)
+    for (i = 0; i < Num_choices; i++) {
+      len_written = Wire.write(Choices_start[i]);
+      if (len_written != 1) {
+        Errno = 135;
+        Err_data = len_written;
+        Report = 0;
+        break;
+      }
+      len_written = Wire.write(Choices_length[i]);
+      if (len_written != 1) {
+        Errno = 136;
+        Err_data = len_written;
+        Report = 0;
+        break;
+      }
+    }
+    break;
+  case 7:  // return times (20 bytes)
+    Wire.write((byte *)&Set_8_bits_time, 2);
+    Wire.write((byte *)&Set_16_bits_time, 2);
+    Wire.write((byte *)&Load_digit_time, 2);
+    Wire.write((byte *)&Load_numeric_time, 2);
+    Wire.write((byte *)&Load_note_time, 2);
+    Wire.write((byte *)&Load_sharp_flat_time, 2);
+    Wire.write((byte *)&Clear_choices_time, 2);
+    Wire.write((byte *)&Select_choices_time, 2);
+    Wire.write((byte *)&Clear_display_time, 2);
+    Wire.write((byte *)&Receive_time, 2);
+    break;
+  case 8:  // next stored EEPROM byte (1 byte, EEPROM_addr auto-incremented)
     if (Report_addr < EEPROM[NUM_EEPROM_USED]) {
       len_written = Wire.write(EEPROM[EEPROM_storage_addr(Report_addr)]);
       if (len_written != 1) {
@@ -408,6 +531,8 @@ void sendReport(void) {  // Errnos 41-59
     Err_data = Report;
     break;
   } // end switch (Report)
+  unsigned short elapsed_time = micros() - start_time;
+  if (elapsed_time > Receive_time) Receive_time = elapsed_time;
 }
 
 void help(void) {
@@ -424,6 +549,13 @@ void help(void) {
   Serial.println("Nn - set Num_numeric_displays to n");
   Serial.println(
     "U<disp>,size,offset - set Numeric_display_size, Numeric_display_offset for <disp>");
+
+  Serial.println(": - show Choices settings");
+  Serial.println("#n - set Num_choices to n");
+  Serial.println("/<choices_num>,start,length - set Choices_start, Choices_length for <choices_num>");
+  Serial.println("0<choices_num> - clear_choices");
+  Serial.println("1<choices_num>,choice - select_choice");
+
   Serial.println("T - show Timeout_cycle_time stats");
   Serial.println("Y - toggle trace mode");
   Serial.println("X<errno> - set Errno");
@@ -445,6 +577,7 @@ void help(void) {
   Serial.println("K - Enter testing mode");
   Serial.println();
   //--- avail letters: <none>
+  //--- special chars used: = # / 0 1 :
 }
 
 void print_hex2(byte b) {
@@ -688,6 +821,97 @@ void timeout(void) {
             Serial.print("  Numeric_display_offset set to ");
             Serial.println(b2);
           }
+        }
+      }
+      break;
+
+    case ':': // show Choices settings
+      Serial.print("Num_choices: ");
+      Serial.println(Num_choices);
+      for (b0 = 0; b0 < Num_choices; b0++) {
+        Serial.print("Choices "); Serial.print(b0);
+        Serial.print(": start "); Serial.print(Choices_start[b0]);
+        Serial.print(", length "); Serial.println(Choices_length[b0]);
+      }
+      Serial.println();
+      break;
+    case '#': // n - set Num_choices to n
+      b0 = Serial.parseInt(SKIP_WHITESPACE);
+      if (b0 > MAX_CHOICES) {
+        Serial.print("Invalid Num_choices ");
+        Serial.print(b0);
+        Serial.print(" must be <= ");
+        Serial.println(MAX_CHOICES);
+      } else {
+        Num_choices = b0;
+        EEPROM[EEPROM_Num_choices()] = b0;
+        Serial.print("Num_choices set to ");
+        Serial.println(b0);
+      }
+      break;
+    case '/': // <choices_num>,start,length - set Choices_start, Choices_length for <choices_num>
+      b0 = Serial.parseInt(SKIP_WHITESPACE);
+      if (b0 >= Num_choices) {
+        Serial.print("Invalid choices_num ");
+        Serial.print(b0);
+        Serial.print(" must be < ");
+        Serial.println(Num_choices);
+      } else if (read_comma()) {
+        b1 = Serial.parseInt(SKIP_WHITESPACE);
+        if (b1 >= Num_rows * NUM_COLS) {
+          Serial.print("Invalid start ");
+          Serial.print(b1);
+          Serial.print(" must be < ");
+          Serial.println(Num_rows * NUM_COLS);
+        } else if (read_comma()) {
+          b2 = Serial.parseInt(SKIP_WHITESPACE);
+          if (b2 > MAX_CHOICES_LENGTH) {
+            Serial.print("Invalid length ");
+            Serial.print(b2);
+            Serial.print(" must be <= ");
+            Serial.println(MAX_CHOICES_LENGTH);
+          } else {
+            Choices_start[b0] = b1;
+            EEPROM[EEPROM_Choices_start(b0)] = b1;
+            Choices_length[b0] = b2;
+            EEPROM[EEPROM_Choices_length(b0)] = b2;
+            Serial.print("Choices "); Serial.print(b0);
+            Serial.print(": Choices_start set to "); Serial.print(b1);
+            Serial.print(", Choices_length set to "); Serial.println(b2);
+          }
+        }
+      }
+      break;
+    case '0': // <choices_num> - clear_choices
+      b0 = Serial.parseInt(SKIP_WHITESPACE);
+      if (b0 >= Num_choices) {
+        Serial.print("Invalid choices_num ");
+        Serial.print(b0);
+        Serial.print(" must be < ");
+        Serial.println(Num_choices);
+      } else {
+        clear_choices(b0);
+        Serial.print("choices "); Serial.print(b0); Serial.println(" cleared");
+      }
+      break;
+    case '1': // <choices_num>,choice - select_choice
+      b0 = Serial.parseInt(SKIP_WHITESPACE);
+      if (b0 >= Num_choices) {
+        Serial.print("Invalid choices_num ");
+        Serial.print(b0);
+        Serial.print(" must be < ");
+        Serial.println(Num_choices);
+      } else if (read_comma()) {
+        b1 = Serial.parseInt(SKIP_WHITESPACE);
+        if (b1 >= Choices_length[b0]) {
+          Serial.print("Invalid choice ");
+          Serial.print(b1);
+          Serial.print(" must be < ");
+          Serial.println(Choices_length[b0]);
+        } else {
+          select_choice(b0, b1);
+          Serial.print("Choice "); Serial.print(b1);
+          Serial.print(" set on choices "); Serial.println(b0);
         }
       }
       break;
@@ -976,10 +1200,14 @@ void timeout(void) {
 
   errno();
   Timeout_runtime += micros() - now_micros;
-}
+} // end timeout()
 
-byte Next_step_fun = 0xFF;
-byte Step_fun_scheduled[NUM_STEP_FUNS];
+// Step functions are run during the 100uSec delay between lighting up the LED rows.  They need to
+// complete quickly!  The step() function checks on them and reports an error (sets Errno) if they took
+// too long.  The timeout() function is called (by scan()) while the LEDs are off to accommodate
+// longer running tasks.
+byte Next_step_fun = 0xFF;              // Lowest numbered Step fun currently scheduled.
+byte Step_fun_scheduled[NUM_STEP_FUNS]; // Each step fun has a position in this array.  1 if scheduled.
 
 void schedule_step_fun(byte step_fun) {
   if (step_fun >= NUM_STEP_FUNS) {
@@ -1206,7 +1434,7 @@ void loop() {
       switch (next_step_fun) {
       case STEP_RECEIVE_REQUEST: step_receiveRequest(); break;
       } // end switch (next_step_fun)
-      step(40*next_step_fun + 1);
+      step(200*next_step_fun + 1);
       if (Next_step_fun > next_step_fun) {
         byte end = Next_step_fun == 0xFF ? NUM_STEP_FUNS : Next_step_fun;
         for (byte i = next_step_fun; i < end; i++) {
@@ -1221,6 +1449,6 @@ void loop() {
       step(63);
     } // end if (Next_step_fun != 0xFF)
   }
-}
+} // end loop()
 
 // vim: sw=2

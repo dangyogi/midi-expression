@@ -21,6 +21,7 @@ Error Codes:
    24    i2c_addr           Wire.endTransmission status 4: other error
    25    i2c_addr           Wire.endTransmission status 5: timeout
    30    event_num          run_event: invalid event number (for switches and encoders)
+   41    LED_command        sendRequest: LED response timed out
 
 
 Switches:

@@ -4,9 +4,8 @@ I2C interface:
   I2C Addr: 0x32 (50)
 
   Requests from on high:
-    0-6: Set Report to send.  6 has EEPROM addr (1 byte), the rest have no data.
-    8<#rows>: Set num_rows
-    9<EEPROM_addr><byte>: Store <byte> at <EEPROM_addr>
+    0-8: Set Report to send.  8 has EEPROM addr (1 byte), the rest have no data.
+    9<#rows>: Set num_rows
     10<ndisp>: Set num_numeric_displays
     11<ndisp><size><offset>: Set size, offset for ndisp
     12<nalpha>: Set num_alpha_strings
@@ -24,37 +23,48 @@ I2C interface:
     24: test numeric decoder
     25: test alpha decoder
     26<Errno><Err_data>: set Errno, Err_data
+    27<Num_choices>: set Num_choices
+    28<choices_num><start><length>: set choices settings
+    29<choices_num>: clear_choices
+    30<choices_num><choice>: select_choice
+    31<display_num>: clear_display
+    32<EEPROM_addr><byte>: Store <byte> at <EEPROM_addr>
 
   Reports to on high:
     0: Errno, Err_data (2 bytes total)
-    1: num_rows, NUM_COLS, Num_numeric_displays, Num_alpha_displays, EEPROM_AVAIL,
-       EEPROM_USED (6 bytes total)
+    1: num_rows, NUM_COLS, Num_numeric_displays, Num_alpha_displays, Num_choices,
+       EEPROM_AVAIL, EEPROM_USED (7 bytes total)
     2: numeric_display_size for each numeric_display (Num_numeric_displays bytes total)
     3: numeric_display_offset for each numeric_display (Num_numeric_displays bytes total)
     4: Cycle_time (uSec, 4 bytes total)
     5: alpha_num_chars, alpha_index for each string (2 * Num_alpha_strings bytes total)
-    6: next stored EEPROM byte (1 byte, EEPROM addr auto increments)
+    6: choices_start, choices_length for each choices (2 * Num_choices bytes total)
+    7: Set_8_bits_time, Set_16_bits_time, Load_digit_time, Load_numeric_time, Load_note_time,
+       Load_sharp_flat_time, Clear_choices_time, Select_choices_time, Clear_display_time,
+       Receive_time (20 bytes)
+    8: next stored EEPROM byte (1 byte, EEPROM addr auto increments)
 
 
 Error Codes:
 
-  Range  Function
-  1-39   receiveRequest
-  41-59  sendReport
-  61-69  other sketch_led.ino
-  71-79  step.ino
-  81-89  alpha_displays.ino
+  Range   Function
+  1-39    receiveRequest
+  41-59   sendReport
+  61-69   other sketch_led.ino
+  71-79   step.ino
+  81-89   alpha_displays.ino
   91-109  numeric_displays.ino
+  110-119 choices.ino
 
   Errno, Err_data
      1      N/A       step_receiveRequest took too long after last step call
-     2   How_many     I2C request 0-5, invalid command length, must be 1
-     3   How_many     I2C request 6, invalid command length, must be 2
-     4  EEPROM_addr   I2C request 6, invalid EEPROM_addr, must be < NUM_EEPROM_USED
-     5   How_many     I2C request 8, invalid command length, must be 2
-     6   Num_rows     I2C request 8, invalid num_rows, must be < NUM_ROWS
-     7   How_many     I2C request 9, invalid command length, must be 3
-     8  EEPROM_addr   I2C request 9, invalid EEPROM_addr, must be < EEPROM_AVAIL
+     2   How_many     I2C request 0-6, invalid command length, must be 1
+     3   How_many     I2C request 7, invalid command length, must be 2
+     4  EEPROM_addr   I2C request 7, invalid EEPROM_addr, must be < NUM_EEPROM_USED
+     5   How_many     I2C request 9, invalid command length, must be 2
+     6   Num_rows     I2C request 9, invalid num_rows, must be < NUM_ROWS
+     7   How_many     I2C request 32, invalid command length, must be 3
+     8  EEPROM_addr   I2C request 32, invalid EEPROM_addr, must be < EEPROM_AVAIL
      9   How_many     I2C request 10, invalid command length, must be 2
     10     disp       I2C request 10, invalid numeric display#, must be < MAX_NUMERIC_DISPLAYS
     11   How_many     I2C request 11, invalid command length, must be 4
@@ -95,11 +105,12 @@ Error Codes:
     53 len_written    sendReport 4 (Timeout_cycle_time): Wire.write(EEPROM_USED) returned wrong length, expected 4
     54 len_written    sendReport 5 (alpha_num_chars, alpha_index): Wire.write(Alpha_num_chars) returned wrong length, expected 1
     55 len_written    sendReport 5 (alpha_num_chars, alpha_index): Wire.write(Alpha_index) returned wrong length, expected 1
-    56 len_written    sendReport 6 (next stored EEPROM byte): Wire.write(EEPROM) returned wrong length, expected 1
+    56 len_written    sendReport 7 (next stored EEPROM byte): Wire.write(EEPROM) returned wrong length, expected 1
+    57 len_written    sendReport 1 (settings): Wire.write(Num_choices) returned wrong length, expected 1
     58   Report       sendReport: invalid Report number
     61   step_fun     schedule_step_fun: invalid step_fun, >= NUM_STEP_FUNS
-    62     N/A        loop took too long to figure out Next_step_fun
-    63     N/A        loop took too long with no Next_Step_fun!! (how could this happen??)
+    62 excess_time    loop took too long to figure out Next_step_fun, excess_time in 0.01 mSec
+    63 excess_time    loop took too long with no Next_Step_fun!?? (how??), excess_time in 0.01 mSec
     71 EEPROM_#rows   setup_step, invalid Num_rows in EEPROM
     72   bit_num      led_on: invalid bit_num, must be < Num_rows * NUM_COLS
     73   bit_num      led_off: invalid bit_num, must be < Num_rows * NUM_COLS
@@ -122,6 +133,36 @@ Error Codes:
     102   disp        load_note: invalid display_num, must be < Num_numeric_displays
     103   note        load_note: invalid note, must be <= 6 (A-G)
     104 sharp_flat    load_note: invalid sharp_flat, must be <= 2
+    110 EEPROM_#choices   setup_choices: invalid Num_choices in EEPROM
+    111 EEPROM_start  setup_choices: invalid Choices_start in EEPROM
+    112 EEPROM_length setup_choices: invalid Choices_length in EEPROM
+    113  choices      select: invalid choices, must be < Num_choices
+    114  choice       select: invalid choice, must be < Choice_length
+    115  choices      clear_choices: invalid choices, must be < Num_choices
+    121   How_many     I2C request 27 (set Num_choices), invalid command length, must be 2
+    122  Num_choices   I2C request 27 (set Num_choices), invalid Num_choices, must be <= MAX_CHOICES
+    123   How_many     I2C request 28 (set Choices settings), invalid command length, must be 4
+    124  choices_num   I2C request 28 (set Choices settings), invalid choices_num, must be < Num_choices
+    125    start       I2C request 28 (set Choices settings), invalid start, must be < Num_rows*NUM_COLS
+    126   length       I2C request 28 (set Choices settings), invalid length, must be <= MAX_CHOICE_LENGTH
+    127   How_many     I2C request 29 (clear_choices), invalid command length, must be 2
+    128  choices_num   I2C request 29 (clear_choices), invalid choices_num, must be < Num_choices
+    129   How_many     I2C request 30 (select_choice), invalid command length, must be 3
+    130  choices_num   I2C request 30 (select_choice), invalid choices_num, must be < Num_choices
+    131    choice      I2C request 30 (select_choice), invalid choice, must be < Choice_length
+    132   How_many     I2C request 31 (clear_display), invalid command length, must be 2
+    133   display      I2C request 31 (clear_display), invalid display, must be < Num_numeric_displays
+    135 len_written    sendReport 6 (choices_start, choices_length): Wire.write(Choices_start) returned wrong length, expected 1
+    136 len_written    sendReport 6 (choices_start, choices_length): Wire.write(Choices_length) returned wrong length, expected 1
+    137 len_written    receiveRequest send_errno: Wire.write(Errno) returned wrong length, expected 1
+    138 len_written    receiveRequest send_errno: Wire.write(Err_data) returned wrong length, expected 1
+    141   i2c_addr     Wire.endTransmission status 1: data too long to fit in transmit buffer
+    142   i2c_addr     Wire.endTransmission status 2: received NACK on transmit of i2c_addr
+    143   i2c_addr     Wire.endTransmission status 3: received NACK on transmit of data
+    144   i2c_addr     Wire.endTransmission status 4: other error
+    145   i2c_addr     Wire.endTransmission status 5: timeout
+
+    20x excess_time    step function x took too long, excess_time in 0.01 mSec
 
 
 LEDs:

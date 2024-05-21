@@ -9,56 +9,73 @@
 
 byte EEPROM_functions_offset;
 
-byte Function_encoders[] = {1, 2, 3, 4};
+// Each variable_t.var_type has {min, max, flags, bt_mul[button_up], bt_mul[button_down], param_num}
+// 
+// flags are:
+//
+//    ENCODER_FLAGS_DISABLED      0b001
+//    ENCODER_FLAGS_CYCLE         0b010
+//    ENCODER_FLAGS_CHOICE_LEDS   0b100
 
-encoder_var_t Functions[NUM_FUNCTIONS][NUM_FUNCTION_ENCODERS] = {
+// byte _choices_num, byte _choices_length, byte _bt_mul_down = 1, byte _additional_flags = 0
+choices_t Major_minor(1, 2);
+choices_t Meantone(2, 2);
+choices_t Just_intonation(3, 14, 4);
+  
+// byte _min, byte _max, long _offset = 0, byte _bt_mul_down = 1, byte _dp = 0, long _scale = 1, byte _trim = 0, byte _flags = 0
+linear_number_t Flats_and_sharps(0, 14, -7, 4);
+linear_number_t Cents_per_semitone(0, 127, -42, 10, 2, 12, 1);
+
+
+// {&var_type}
+variable_t Functions[NUM_FUNCTIONS][NUM_FUNCTION_ENCODERS] = {
   {  // function 0: key_signature
-    {0, 14, 0b01, 1, 1}, {0, 0, 0b00}, {0, 0, 0b00}, {0, 1, 0b11, 1, 1},
+    {&Flats_and_sharps}, {&Disabled}, {&Disabled}, {&Major_minor},
   },
   {  // function 1: tune absolute
-    {0, 0, 0b00}, {0, 11, 0b11, 1, 1}, {0, 7, 0b01, 1, 1}, {0, 127, 0b01, 1, 10},
+    {&Disabled}, {&Flats_and_sharps/* 0, 11, 0b011, 1, 1 */}, {&Flats_and_sharps/* 0, 7, 0b001, 1, 1 */}, {&Flats_and_sharps/* 0, 127, 0b001, 1, 10 */},
   },
   {  // function 2: match tuning
-    {0, 0, 0b00}, {0, 11, 0b11, 1, 1}, {0, 15, 0b11, 1, 5}, {0, 0, 0b00},
+    {&Disabled}, {&Flats_and_sharps/* 0, 11, 0b011, 1, 1 */}, {&Flats_and_sharps/* 0, 15, 0b011, 1, 5 */}, {&Disabled},
   },
   {  // function 3: equal_temperament
-    {0, 0, 0b00}, {0, 0, 0b00}, {0, 127, 0b01, 1, 10}, {0, 0, 0b00},
+    {&Disabled}, {&Disabled}, {&Flats_and_sharps/* 0, 127, 0b001, 1, 10 */}, {&Disabled},
   },
   {  // function 4: well_tempered
-    {0, 11, 0b11, 1, 1}, {0, 11, 0b11, 1, 1}, {0, 0, 0b00}, {0, 0, 0b00},
+    {&Flats_and_sharps/* 0, 11, 0b011, 1, 1 */}, {&Flats_and_sharps/* 0, 11, 0b011, 1, 1 */}, {&Disabled}, {&Disabled},
   },
   {  // function 5: meantone
-    {0, 11, 0b11, 1, 1}, {0, 11, 0b11, 1, 1}, {0, 127, 0b01, 1, 10}, {0, 1, 0b11, 1, 1},
+    {&Flats_and_sharps/* 0, 11, 0b011, 1, 1 */}, {&Flats_and_sharps/* 0, 11, 0b011, 1, 1 */}, {&Flats_and_sharps/* 0, 127, 0b001, 1, 10 */}, {&Meantone},
   },
   {  // function 6: just_intonation
-    {0, 11, 0b11, 1, 1}, {0, 11, 0b11, 1, 1}, {0, 0, 0b00}, {0, 13, 0b11, 1, 3},
+    {&Flats_and_sharps/* 0, 11, 0b011, 1, 1 */}, {&Flats_and_sharps/* 0, 11, 0b011, 1, 1 */}, {&Disabled}, {&Just_intonation},
   },
   {  // function 7: pythagorean
-    {0, 11, 0b11, 1, 1}, {0, 0, 0b00}, {0, 127, 0b01, 1, 10}, {0, 0, 0b00},
+    {&Flats_and_sharps/* 0, 11, 0b011, 1, 1 */}, {&Disabled}, {&Flats_and_sharps/* 0, 127, 0b001, 1, 10 */}, {&Disabled},
   },
   {  // function 8: harmonic basics
-    {0, 127, 0b01, 1, 10}, {0, 127, 0b01, 1, 10}, {0, 127, 0b11, 1, 10}, {0, 0, 0b00},
+    {&Flats_and_sharps/* 0, 127, 0b001, 1, 10 */}, {&Flats_and_sharps/* 0, 127, 0b001, 1, 10 */}, {&Flats_and_sharps/* 0, 127, 0b011, 1, 10 */}, {&Disabled},
   },
   {  // function 9: freq env: ramp
-    {0, 127, 0b01, 1, 10}, {0, 127, 0b01, 1, 10}, {0, 127, 0b01, 1, 10},
-    {0, 127, 0b01, 1, 10},
+    {&Flats_and_sharps/* 0, 127, 0b001, 1, 10 */}, {&Flats_and_sharps/* 0, 127, 0b001, 1, 10 */}, {&Flats_and_sharps/* 0, 127, 0b001, 1, 10 */},
+    {&Flats_and_sharps/* 0, 127, 0b001, 1, 10 */},
   },
   {  // function 10: freq env: sine
-    {0, 127, 0b01, 1, 10}, {0, 127, 0b01, 1, 10}, {0, 127, 0b01, 1, 10}, {0, 0, 0b00},
+    {&Flats_and_sharps/* 0, 127, 0b001, 1, 10 */}, {&Flats_and_sharps/* 0, 127, 0b001, 1, 10 */}, {&Flats_and_sharps/* 0, 127, 0b001, 1, 10 */}, {&Disabled},
   },
   {  // function 11: attack
-    {0, 127, 0b01, 1, 10}, {0, 127, 0b01, 1, 10}, {0, 127, 0b01, 1, 10},
-    {0, 127, 0b01, 1, 10},
+    {&Flats_and_sharps/* 0, 127, 0b001, 1, 10 */}, {&Flats_and_sharps/* 0, 127, 0b001, 1, 10 */}, {&Flats_and_sharps/* 0, 127, 0b001, 1, 10 */},
+    {&Flats_and_sharps/* 0, 127, 0b001, 1, 10 */},
   },
   {  // function 12: decay
-    {0, 127, 0b01, 1, 10}, {0, 0, 0b00}, {0, 127, 0b01, 1, 10}, {0, 127, 0b01, 1, 10},
+    {&Flats_and_sharps/* 0, 127, 0b001, 1, 10 */}, {&Disabled}, {&Flats_and_sharps/* 0, 127, 0b001, 1, 10 */}, {&Flats_and_sharps/* 0, 127, 0b001, 1, 10 */},
   },
   {  // function 13: sustain
-    {0, 127, 0b01, 1, 10}, {0, 127, 0b01, 1, 10}, {0, 127, 0b01, 1, 10},
-    {0, 127, 0b01, 1, 10},
+    {&Flats_and_sharps/* 0, 127, 0b001, 1, 10 */}, {&Flats_and_sharps/* 0, 127, 0b001, 1, 10 */}, {&Flats_and_sharps/* 0, 127, 0b001, 1, 10 */},
+    {&Flats_and_sharps/* 0, 127, 0b001, 1, 10 */},
   },
   {  // function 14: release
-    {0, 127, 0b01, 1, 10}, {0, 0, 0b00}, {0, 127, 0b01, 1, 10}, {0, 127, 0b01, 1, 10},
+    {&Flats_and_sharps/* 0, 127, 0b001, 1, 10 */}, {&Disabled}, {&Flats_and_sharps/* 0, 127, 0b001, 1, 10 */}, {&Flats_and_sharps/* 0, 127, 0b001, 1, 10 */},
   },
 };
 
@@ -96,8 +113,8 @@ void load_function_encoder_values(void) {
       } else {
         byte i;
         for (i = 0; i < NUM_FUNCTION_ENCODERS; i++) {
-          encoder_var_t *var = Encoders[Function_encoders[i]].var;
-          if (var != NULL && (var->flags & 1)) {
+          variable_t *var = Encoders[i].var;
+          if (var != NULL && !(var->var_type->flags & ENCODER_FLAGS_DISABLED)) {
             var->value = Buffer[i];
           } // end if (encoder enabled)
         } // end for (i)
@@ -125,8 +142,8 @@ void load_function_encoder_values(void) {
       } else {
         byte i;
         for (i = 0; i < NUM_FUNCTION_ENCODERS; i++) {
-          encoder_var_t *var = Encoders[Function_encoders[i]].var;
-          if (var != NULL && (var->flags & 1)) {
+          variable_t *var = Encoders[i].var;
+          if (var != NULL && !(var->var_type->flags & ENCODER_FLAGS_DISABLED)) {
             var->value = Buffer[i];
           } // end if (encoder enabled)
         } // end for (i)
@@ -150,8 +167,8 @@ void save_function_encoder_values(void) {
     req[4] = (byte)Channel_bitmap;
     req[5] = fun;
     for (i = 0; i < NUM_FUNCTION_ENCODERS; i++) {
-      encoder_var_t *var = Encoders[Function_encoders[i]].var;
-      if (var != NULL && (var->flags & 1)) req[6 + i] = var->value;
+      variable_t *var = Encoders[i].var;
+      if (var != NULL && !(var->var_type->flags & ENCODER_FLAGS_DISABLED)) req[6 + i] = var->value;
       else req[6 + i] = 0;
     }
     bytes_sent = Serial.write(req, 6 + NUM_FUNCTION_ENCODERS);
@@ -171,8 +188,8 @@ void save_function_encoder_values(void) {
     req[6] = (byte)Harmonic_bitmap;
     req[7] = fun;
     for (i = 0; i < NUM_FUNCTION_ENCODERS; i++) {
-      encoder_var_t *var = Encoders[Function_encoders[i]].var;
-      if (var != NULL && (var->flags & 1)) req[8 + i] = var->value;
+      variable_t *var = Encoders[i].var;
+      if (var != NULL && !(var->var_type->flags & ENCODER_FLAGS_DISABLED)) req[8 + i] = var->value;
       else req[8 + i] = 0;
     }
     bytes_sent = Serial.write(req, 7 + NUM_FUNCTION_ENCODERS);
@@ -239,11 +256,15 @@ void channel_off(byte sw) {
 }
 
 void reset_function_encoders(void) {
-  // called with either SYNTH_OR_PROG or FUNCTION changes
-  Encoders[FUNCTION_ENCODER].var = &Function_var[SAVE_OR_SYNTH];
+  // called when FUNCTION changes
   byte i;
   for (i = 0; i < NUM_FUNCTION_ENCODERS; i++) {
-    Encoders[Function_encoders[i]].var = &Functions[FUNCTION][i];
+    if (Encoders[i].var && (Encoders[i].var->var_type->flags & ENCODER_FLAGS_CHOICE_LEDS)) {
+      turn_off_choices_leds(i);
+    } else {
+      clear_numeric_display(i);  // display_num == encoder number
+    }
+    Encoders[i].var = &Functions[FUNCTION][i];
   } // end for (i)
   load_function_encoder_values();
 }
@@ -253,20 +274,21 @@ byte setup_functions(byte EEPROM_offset) {
   EEPROM_functions_offset = EEPROM_offset;
 
   byte i;
+
   for (i = 0; i < NUM_CHANNELS; i++) {
     Switch_closed_event[FIRST_CHANNEL_SWITCH + i] = CHANNEL_ON;
     Switch_opened_event[FIRST_CHANNEL_SWITCH + i] = CHANNEL_OFF;
-    if (Switches[FIRST_CHANNEL_SWITCH + i].current) {
-      channel_on(FIRST_CHANNEL_SWITCH + i);
-    }
+    //if (Switches[FIRST_CHANNEL_SWITCH + i].current) {
+    //  channel_on(FIRST_CHANNEL_SWITCH + i);
+    //}
   } // end for (i)
 
   for (i = 0; i < NUM_HARMONICS; i++) {
     Switch_closed_event[FIRST_HARMONIC_SWITCH + i] = HARMONIC_ON;
     Switch_opened_event[FIRST_HARMONIC_SWITCH + i] = HARMONIC_OFF;
-    if (Switches[FIRST_HARMONIC_SWITCH + i].current) {
-      harmonic_on(FIRST_HARMONIC_SWITCH + i);
-    }
+    //if (Switches[FIRST_HARMONIC_SWITCH + i].current) {
+    //  harmonic_on(FIRST_HARMONIC_SWITCH + i);
+    //}
   } // end for (i)
 
   reset_function_encoders();

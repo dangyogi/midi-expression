@@ -81,7 +81,7 @@ const byte Numeric_7_segment_decode[] = {
 };
 
 void load_digit(byte display_num, byte digit_num, byte value, byte dp) {
-  // digit_nums go left to right.
+  // digit_nums go left to right, starting with 0 as the left-most digit.
   // value of 10 produces a '-', 11 turns all segments off
   if (display_num >= Num_numeric_displays) {
     Errno = 94;
@@ -194,6 +194,12 @@ void load_note(byte display_num, byte note, byte sharp_flat) {
     load_8(bits, addr);
     load_sharp_flat(display_num, sharp_flat);
   } // end ifs
+}
+
+void clear_display(byte display_num) {
+  load_digit(display_num, 0, 11, 0);
+  load_digit(display_num, 1, 11, 0);
+  load_digit(display_num, 2, 11, 0);
 }
 
 // vim: sw=2

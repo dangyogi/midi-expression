@@ -9,20 +9,33 @@ void inc_encoder(byte enc) {
   byte new_value;
   if (Trace_encoders) {
     Serial.print("inc_encoder "); Serial.print(enc);
-    Serial.print(", count "); Serial.println(Encoders[enc].count);
+    Serial.print(", count "); Serial.print(Encoders[enc].count);
+    Serial.print(", value "); Serial.print(Encoders[enc].var->value);
+    Serial.print(", max "); Serial.print(Encoders[enc].var->var_type->max);
+    Serial.print(", min "); Serial.print(Encoders[enc].var->var_type->min);
+    Serial.print(", flags 0b"); Serial.println(Encoders[enc].var->var_type->flags, BIN);
   }
   if (Encoders[enc].count >= 2) {
     // inc encoder value
-    encoder_var_t *var = Encoders[enc].var;
-    new_value = var->value + var->bt_mul[Switches[Encoders[enc].A_sw + 2].current];
-    if (new_value > var->max) {
-      if (var->flags & ENCODER_FLAGS_CYCLE) {
+    variable_t *var = Encoders[enc].var;
+    new_value = var->value + var->var_type->bt_mul[Switches[Encoders[enc].A_sw + 2].current];
+    if (new_value > var->var_type->max) {
+      if (Trace_encoders) {
+        Serial.print("  new_value ("); Serial.print(new_value); Serial.println(") > max");
+      }
+      if (var->var_type->flags & ENCODER_FLAGS_CYCLE) {
         // cycle
-        var->value = new_value - (var->max + 1);
+        if (Trace_encoders) {
+          Serial.println("  CYCLE on");
+        }
+        var->value = new_value - (var->var_type->max + 1 - var->var_type->min);
         var->changed = 1;
         encoder_changed(enc);
-      } else if (var->value != var->max) {
-        var->value = var->max;
+      } else if (var->value != var->var_type->max) {
+        if (Trace_encoders) {
+          Serial.println("  current value != max");
+        }
+        var->value = var->var_type->max;
         var->changed = 1;
         encoder_changed(enc);
       }
@@ -33,16 +46,25 @@ void inc_encoder(byte enc) {
     }
   } else if (Encoders[enc].count <= -2) {
     // dec encoder value
-    encoder_var_t *var = Encoders[enc].var;
-    byte adj = var->bt_mul[Switches[Encoders[enc].A_sw + 2].current];
-    if (var->value < adj) {
-      if (var->flags & ENCODER_FLAGS_CYCLE) {
+    variable_t *var = Encoders[enc].var;
+    byte adj = var->var_type->bt_mul[Switches[Encoders[enc].A_sw + 2].current];
+    if (var->value < var->var_type->min + adj) {
+      if (Trace_encoders) {
+        Serial.print("  value < min + adj ("); Serial.print(adj); Serial.println(")");
+      }
+      if (var->var_type->flags & ENCODER_FLAGS_CYCLE) {
         // cycle
-        var->value = (var->value + var->max + 1) - adj;
+        if (Trace_encoders) {
+          Serial.println("  CYCLE on");
+        }
+        var->value = (var->value + var->var_type->max + 1) - var->var_type->min - adj;
         var->changed = 1;
         encoder_changed(enc);
-      } else if (var->value != 0) {
-        var->value = 0;
+      } else if (var->value != var->var_type->min) {
+        if (Trace_encoders) {
+          Serial.println("  current value != min");
+        }
+        var->value = var->var_type->min;
         var->changed = 1;
         encoder_changed(enc);
       }
@@ -56,17 +78,17 @@ void inc_encoder(byte enc) {
 }
 
 void run_event(byte event_num, byte param) {
-  // This runs Switch_closed_events, Switch_opened_events and Encoder_event events.
+  // This runs Switch_closed_events, Switch_opened_events and Encoder display_value and encoder_events.
   if (event_num != 0xFF) {
     byte enc;
-    encoder_var_t *var;
+    variable_t *var;
     switch (event_num) {
     case ENC_A_CLOSED(0): case ENC_A_CLOSED(1): case ENC_A_CLOSED(2):
     case ENC_A_CLOSED(3): case ENC_A_CLOSED(4): case ENC_A_CLOSED(5):
       // switch A closed for encoders
       enc = EVENT_ENCODER_NUM(event_num);
       var = Encoders[enc].var;
-      if (var != NULL && (var->flags & ENCODER_FLAGS_ENABLED)) {  // enabled
+      if (var && !(var->var_type->flags & ENCODER_FLAGS_DISABLED)) {  // enabled
         byte B_sw = Encoders[enc].A_sw + 1;
         if (!Switches[B_sw].current) {  // B open
           // CW
@@ -82,7 +104,7 @@ void run_event(byte event_num, byte param) {
       // switch closed for encoders B
       enc = EVENT_ENCODER_NUM(event_num);
       var = Encoders[enc].var;
-      if (var != NULL && (var->flags & ENCODER_FLAGS_ENABLED)) {  // enabled
+      if (var && !(var->var_type->flags & ENCODER_FLAGS_DISABLED)) {  // enabled
         byte A_sw = Encoders[enc].A_sw;
         if (Switches[A_sw].current) {   // A closed
           // CW
@@ -98,7 +120,7 @@ void run_event(byte event_num, byte param) {
       // switch A opened for encoders
       enc = EVENT_ENCODER_NUM(event_num);
       var = Encoders[enc].var;
-      if (var != NULL && (var->flags & ENCODER_FLAGS_ENABLED)) {  // enabled
+      if (var && !(var->var_type->flags & ENCODER_FLAGS_DISABLED)) {  // enabled
         byte B_sw = Encoders[enc].A_sw + 1;
         if (Switches[B_sw].current) {   // B closed
           // CW
@@ -115,7 +137,7 @@ void run_event(byte event_num, byte param) {
       // switch B opened for encoders
       enc = EVENT_ENCODER_NUM(event_num);
       var = Encoders[enc].var;
-      if (var != NULL && (var->flags & ENCODER_FLAGS_ENABLED)) {  // enabled
+      if (var && !(var->var_type->flags & ENCODER_FLAGS_DISABLED)) {  // enabled
         byte A_sw = Encoders[enc].A_sw;
         if (!Switches[A_sw].current) {   // A open
           // CW, back at detent
@@ -127,7 +149,7 @@ void run_event(byte event_num, byte param) {
         }
       } // end if (enabled)
       break;
-    case SYNTH_PROGRAM_OR_FUNCTION_CHANGED: // Synth_or_program or Function changed
+    case FUNCTION_CHANGED: // Function changed
       reset_function_encoders();
       break;
     case NOTE_BT_ON:   // tagged to note buttons
@@ -164,6 +186,18 @@ void run_event(byte event_num, byte param) {
     case HARMONIC_OFF:
       harmonic_off(param);
       break;
+    case UPDATE_CHOICES:  // enc
+      select_led(param);
+      break;
+    case UPDATE_LINEAR_NUM:  // enc
+      display_linear_number(param);
+      break;
+    case UPDATE_GEOMETRIC_NUM:  // enc
+      display_geometric_number(param);
+      break;
+    case UPDATE_NOTE:  // enc
+      display_note(param);
+      break;
     default:
       Errno = 30;
       Err_data = event_num;
@@ -195,18 +229,19 @@ void switch_opened(byte sw) {
   run_event(Switch_opened_event[sw], sw);
 }
 
-byte Encoder_event[NUM_ENCODERS]; // 0xFF is None
-
 void encoder_changed(byte enc) {
-  if (Trace_events) {
+  if (Trace_encoders) {
     Serial.print(F("encoder "));
     Serial.print(enc);
-    Serial.print(F(" changed, event "));
-    Serial.print(Encoder_event[enc]);
+    Serial.print(F(" changed, display_value "));
+    Serial.print(Encoders[enc].var->var_type->display_value);
     Serial.print(F(", new value "));
-    Serial.println(Encoders[enc].var->value);
+    Serial.print(Encoders[enc].var->value);
+    Serial.print(F(", encoder_event "));
+    Serial.println(Encoders[enc].encoder_event);
   }
-  run_event(Encoder_event[enc], enc);
+  run_event(Encoders[enc].var->var_type->display_value, enc);
+  run_event(Encoders[enc].encoder_event, enc);
 }
 
 byte setup_events(byte EEPROM_offset) {
@@ -216,15 +251,6 @@ byte setup_events(byte EEPROM_offset) {
     Switch_closed_event[i] = 0xFF;
     Switch_opened_event[i] = 0xFF;
   }
-  Switch_closed_event[SAVE_PROGRAM_SWITCH] = SYNTH_PROGRAM_OR_FUNCTION_CHANGED;
-  Switch_opened_event[SAVE_PROGRAM_SWITCH] = SYNTH_PROGRAM_OR_FUNCTION_CHANGED;
-
-  for (i = 0; i < NUM_ENCODERS; i++) {
-    Encoder_event[i] = 0xFF;
-  }
-  Encoder_event[FUNCTION_ENCODER] = SYNTH_PROGRAM_OR_FUNCTION_CHANGED;
-
-  // reset_function_encoders();  Moved to setup_functions()...
 
   return 0;  // for now...
 }

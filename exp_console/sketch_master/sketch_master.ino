@@ -1,33 +1,39 @@
 // sketch_master.ino
 
 // Arduino IDE Tools settings:
-//   Board: Teensy LC
+//   Board: Teensy 4.1
 //   USB Type: Serial + MIDI*4
 
 #include <EEPROM.h>
 #include <Wire.h>
 #include "flash_errno.h"
 #include "switches.h"
-#include "encoders.h"
 #include "events.h"
+#include "encoders.h"
 #include "notes.h"
 #include "functions.h"
 
-#define PROGRAM_ID    "Master V10"
+#define PROGRAM_ID    "Master V29"
+
+// These are set to INPUT_PULLDOWN to prevent flickering on unused ports
+#define FIRST_PORT    0
+#define LAST_PORT    54
 
 #define ERR_LED      13   // built-in LED
-#define ERR_LED_2     1
+#define ERR_LED_2    32   // front panel Master Error LED
 
 // Indexed by I2C_addr - I2C_BASE
-#define NUM_REMOTES   3
+#define NUM_REMOTES   2
 byte Remote_Errno[NUM_REMOTES];
 byte Remote_Err_data[NUM_REMOTES];
-byte Remote_char[NUM_REMOTES] = {'P', 'L'};
+char Remote_char[NUM_REMOTES] = {'P', 'L'};
+TwoWire *Remote_wire[NUM_REMOTES] = {&Wire1, &Wire};
+
+#define I2C_MASTER            0x30
 
 #define I2C_BASE              0x31
 #define I2C_POT_CONTROLLER    0x31
 #define I2C_LED_CONTROLLER    0x32
-#define I2C_RAM_CONTROLLER    0x33
 
 byte EEPROM_used;
 
@@ -49,36 +55,35 @@ byte get_EEPROM(byte EEPROM_addr) {
 #define SEND_MIDI               4
 #define SWITCH_REPORT           5
 
-unsigned short Periodic_period[NUM_PERIODICS];  // 0 to disable
-unsigned short Period_offset[NUM_PERIODICS];
+unsigned short Periodic_period[NUM_PERIODICS];  // mSec, 0 to disable
+unsigned short Period_offset[NUM_PERIODICS];    // mSec offset from even Periodic_period boundary
 
-#define HUMAN_PERIOD     300
+#define HUMAN_PERIOD     1000
 
 byte Driver_up;
 
 void setup() {
   // put your setup code here, to run once:
-  err_led(ERR_LED, ERR_LED_2);
+  byte i;
 
-  digitalWrite(ERR_LED, HIGH);
-  digitalWrite(ERR_LED_2, HIGH);
-
-  /***
-  for (int i = 0; i < 100; i++) {
-    delay(500);
-    digitalWrite(ERR_LED, LOW);
-    digitalWrite(ERR_LED_2, LOW);
-    delay(500);
-    digitalWrite(ERR_LED, HIGH);
-    digitalWrite(ERR_LED_2, HIGH);
-  }
-  ***/
-  
   Serial.begin(230400);
+  
+  for (i = FIRST_PORT; i <= LAST_PORT; i++) {
+    pinMode(i, INPUT_PULLDOWN);
+  }
+  delay(2);
+  
   Serial.println(PROGRAM_ID);
+  Serial.println();
 
-  Wire.begin();
+  err_led(ERR_LED, ERR_LED_2);
+  delay(2);
+
+  Wire.begin(I2C_MASTER);       // to LED controller
   Wire.setClock(400000);
+  Wire.onReceive(receiveLEDErrno);
+  Wire1.begin(I2C_MASTER);      // to Pot controller
+  Wire1.setClock(400000);
 
   byte EEPROM_used = setup_switches(0);
   EEPROM_used += setup_events(EEPROM_used);
@@ -88,11 +93,53 @@ void setup() {
 
   Serial.print("EEPROM_used: "); Serial.println(EEPROM_used);
 
-  Periodic_period[SWITCH_REPORT] = HUMAN_PERIOD;
+  //Periodic_period[SWITCH_REPORT] = HUMAN_PERIOD;
+  Period_offset[SWITCH_REPORT] = 200;
 
-  digitalWrite(ERR_LED, LOW);
-  digitalWrite(ERR_LED_2, LOW);
+  /**
+  // test error LEDs
+  delay(2);
+  for (i = 0; i < 20; i++) {
+    digitalWrite(ERR_LED, HIGH);
+    digitalWrite(ERR_LED_2, HIGH);
+    delay(500);
+    digitalWrite(ERR_LED, LOW);
+    digitalWrite(ERR_LED_2, LOW);
+    delay(500);
+  }
+  **/
+  
+  delay(2);
+
+  // FIX: scan_switches();   // Runs events which could set Errno
+
 } // end setup()
+
+byte GotLEDResponse = 0;
+byte Display_errors = 0;
+
+void receiveLEDErrno(int how_many) {
+  if (how_many != 2) {
+    Serial.print("receiveLEDResponse got "); Serial.print(how_many);
+    Serial.println(" bytes, expected 2");
+  } else {
+    byte LED_errno = Wire.read();
+    byte LED_err_data = Wire.read();
+    if (LED_errno) {
+      if (Driver_up) {
+        report_remote_error(1, LED_errno, LED_err_data);
+      } else if (Serial && Display_errors) {
+        Serial.print("Remote "); Serial.print(Remote_char[1]);
+        Serial.print(" error: Errno "); Serial.print(LED_errno);
+        Serial.print(" Err_data "); Serial.println(LED_err_data);
+      } else {
+        Remote_Errno[1] = LED_errno;
+        Remote_Err_data[1] = LED_err_data;
+      }
+    }
+  }
+  GotLEDResponse = 1;
+}
 
 byte Debug = 0;
 
@@ -104,22 +151,28 @@ void running_help(void) {
   Serial.println(F("? - help"));
   Serial.println(F("I - initialize driver"));
   Serial.println(F("D - go into Debug mode"));
-  Serial.println(F("L - show Longest_scan"));
+  Serial.println(F("W - show switch stats"));
   Serial.println(F("X<errno> - set Errno"));
   Serial.println(F("E - show Errno, Err_data"));
   Serial.println(F("S - show settings"));
   Serial.println(F("P<debounce_period_0>,<debounce_period_1> - set debounce_periods in EEPROM"));
+  Serial.println(F("N - toggle Display_errors"));
   Serial.println(F("T - toggle Trace_events"));
+  Serial.println(F("O - toggle periodic switch_report"));
   Serial.println(F("U - toggle Trace_encoders"));
+  Serial.println(F("Q - toggle scan_switches trace"));
   Serial.println(F("R<row> - dump switches on row"));
   Serial.println(F("C - dump encoders"));
   Serial.println(F("B - dump Debounce_delay_counts"));
-  Serial.println(F("M<controller:(P|L|R)>,<len_expected>,<comma_sep_bytes> - send I2C message to <controller>"));
+  Serial.println(F("M<controller:(P|L)>,<len_expected>,<comma_sep_bytes> - send I2C message to <controller>"));
   Serial.println(F("G<first>,<last> - generate raw bytes in the range first-last (inclusive)"));
   Serial.println(F("V<first>,<last>\\n<raw_bytes> - verify that raw_bytes are in the range first-last"));
   Serial.println();
-  Serial.print(F("sizeof(encoder_var_t) is ")); Serial.println(sizeof(encoder_var_t));
+  Serial.print(F("sizeof(short) is ")); Serial.println(sizeof(short));
+  Serial.print(F("sizeof(int) is ")); Serial.println(sizeof(int));
+  Serial.print(F("sizeof(long) is ")); Serial.println(sizeof(long));
   Serial.println();
+  // Unused letters: A F H J K L Y Z
 }
 
 void debug_help(void) {
@@ -152,17 +205,29 @@ unsigned long I2C_send_time;    // uSec
 
 void sendRequest(byte i2c_addr, byte *data, byte data_len) {
   byte b0, status;
+  TwoWire *I2C_port = Remote_wire[i2c_addr - I2C_BASE];
   unsigned long start_time = micros();
-  Wire.beginTransmission(i2c_addr);
-  b0 = Wire.write(data, data_len);
+  I2C_port->beginTransmission(i2c_addr);
+  b0 = I2C_port->write(data, data_len);
   if (b0 != data_len) {
     Errno = 20;
     Err_data = b0;
   }
-  status = Wire.endTransmission();
+  status = I2C_port->endTransmission();
   if (status) {
     Errno = 20 + status;        // 21 to 25
     Err_data = i2c_addr;
+  }
+  if (i2c_addr == I2C_LED_CONTROLLER) {
+    for (b0 = 0; b0 < 100; b0++) {
+      if (GotLEDResponse) break;
+      delayMicroseconds(10);
+    }
+    if (GotLEDResponse) GotLEDResponse = 0;
+    else {
+      Errno = 41;
+      Err_data = data[0];
+    }
   }
   unsigned long elapsed_time = micros() - start_time;
   if (elapsed_time > I2C_send_time) I2C_send_time = elapsed_time;
@@ -177,13 +242,14 @@ byte getResponse(byte i2c_addr, byte data_len, byte check_errno) {
   // Returns bytes received.  (0 if error)
   // Data in ResponseData.
   byte i;
+  TwoWire *I2C_port = Remote_wire[i2c_addr - I2C_BASE];
   unsigned long start_time = micros();
   if (data_len > 32) {
     Errno = 10;
     Err_data = data_len;
     return 0;
   }
-  byte bytes_received = Wire.requestFrom(i2c_addr, data_len);
+  byte bytes_received = I2C_port->requestFrom(i2c_addr, data_len);
   unsigned long mid_time = micros();
   unsigned long elapsed_time = mid_time - start_time;
   if (elapsed_time > I2C_request_from_time) I2C_request_from_time = elapsed_time;
@@ -196,17 +262,17 @@ byte getResponse(byte i2c_addr, byte data_len, byte check_errno) {
     Err_data = bytes_received;
     return 0;
   }
-  if (bytes_received != Wire.available()) {
+  if (bytes_received != I2C_port->available()) {
     if (Serial) {
       Serial.print(F("I2C.requestFrom: bytes_received, ")); Serial.print(bytes_received);
-      Serial.print(F(", != available(), ")); Serial.println(Wire.available());
+      Serial.print(F(", != available(), ")); Serial.println(I2C_port->available());
     }
     Errno = 12;
-    Err_data = Wire.available();
+    Err_data = I2C_port->available();
     return 0;
   }
   for (i = 0; i < bytes_received; i++) {
-    ResponseData[i] = Wire.read();
+    ResponseData[i] = I2C_port->read();
   }
   unsigned long read_time = micros() - mid_time;
   if (read_time > I2C_read_time) I2C_read_time = read_time;
@@ -220,8 +286,11 @@ byte getResponse(byte i2c_addr, byte data_len, byte check_errno) {
         && ResponseData[0] != 0
     ) {
       if (Driver_up) {
-        report_remote_error(Remote_char[i2c_addr - I2C_BASE],
-                            ResponseData[0], ResponseData[1]);
+        report_remote_error(i2c_addr - I2C_BASE, ResponseData[0], ResponseData[1]);
+      } else if (Serial && Display_errors) {
+        Serial.print("Remote "); Serial.print(Remote_char[i2c_addr - I2C_BASE]);
+        Serial.print(" error: Errno "); Serial.print(ResponseData[0]);
+        Serial.print(" Err_data "); Serial.println(ResponseData[1]);
       } else {
         Remote_Errno[i2c_addr - I2C_BASE] = ResponseData[0];
         Remote_Err_data[i2c_addr - I2C_BASE] = ResponseData[1];
@@ -251,6 +320,8 @@ void report_remote_error(byte remote_index, byte errno, byte err_data) {
   Serial.write(err_data);
 }
 
+byte Scan_switches_trace = 0;
+
 void loop() {
   // put your main code here, to run repeatedly:
   byte b0, b1, b2, b3, b4, i;
@@ -258,7 +329,7 @@ void loop() {
   byte buffer[32];
 
   if (!Debug) {
-    scan_switches();   // takes optional trace param...
+    scan_switches(Scan_switches_trace);   // takes optional trace param...
 
     unsigned long now = millis();
     for (i = 0; i < NUM_PERIODICS; i++) {
@@ -346,17 +417,29 @@ void loop() {
           pinMode(Rows[b1], INPUT_PULLDOWN);
         } // end for (b1)
         Serial.println(F("Entering Debug mode"));
+        Serial.println();
         break;
-      case 'L':
-        Serial.print(F("Longest_scan: "));
-        Serial.println(Longest_scan);
+      case 'W': // show switch stats
+        Serial.println("Show switch stats (all times are uSec):");
+        Serial.print(F("  Longest_open_bounce (switch): ")); Serial.println(Longest_open_bounce[0]);
+        Longest_open_bounce[0] = 0;
+        Serial.print(F("  Longest_open_bounce (encoder): ")); Serial.println(Longest_open_bounce[1]);
+        Longest_open_bounce[1] = 0;
+        Serial.print(F("  Shortest_close_bounce (switch): ")); Serial.println(Shortest_close_bounce[0]);
+        Shortest_close_bounce[0] = 1000000ul;
+        Serial.print(F("  Shortest_close_bounce (encoder): ")); Serial.println(Shortest_close_bounce[1]);
+        Shortest_close_bounce[1] = 1000000ul;
+        Serial.print(F("  Longest_wire_clear: ")); Serial.println(Longest_wire_clear);
+        Longest_wire_clear = 0;
+        Serial.print(F("  Longest_scan: ")); Serial.println(Longest_scan);
         Longest_scan = 0;
+        Serial.println();
         break;
       case 'X': // set Errno
         skip_ws();
         Errno = Serial.parseInt();
-        Serial.print(F("Errno set to "));
-        Serial.println(Errno);
+        Serial.print(F("Errno set to ")); Serial.println(Errno);
+        Serial.println();
         break;
       case 'E': // show Errno, Err_data
         Serial.print(F("Errno: "));
@@ -373,12 +456,14 @@ void loop() {
           Remote_Errno[i] = 0;
           Remote_Err_data[i] = 0;
         }
+        Serial.println();
         break;
       case 'S':  // show settings
         Serial.print(F("Switch debounce_period is ")); Serial.print(Debounce_period[0]);
         Serial.println(F(" uSec"));
         Serial.print(F("Encoder debounce_period is ")); Serial.print(Debounce_period[1]);
         Serial.println(F(" uSec"));
+        Serial.println();
         break;
       case 'P':  // <debounce_period> - set debounce_period in EEPROM
         skip_ws();
@@ -387,32 +472,56 @@ void loop() {
         if (b3 != ',') {
           Serial.print("P: expected ',' after debounce_period[0], got ");
           Serial.println(b3);
-          break;
+        } else {
+          us1 = Serial.parseInt();
+          set_debounce_period(0, us0);
+          Serial.print(F("Switch debounce_period set to ")); Serial.print(us0);
+          Serial.println(F(" uSec in EEPROM"));
+          set_debounce_period(1, us1);
+          Serial.print(F("Encoder debounce_period set to ")); Serial.print(us1);
+          Serial.println(F(" uSec in EEPROM"));
         }
-        us1 = Serial.parseInt();
-        set_debounce_period(0, us0);
-        Serial.print(F("Switch debounce_period set to ")); Serial.print(us0);
-        Serial.println(F(" uSec in EEPROM"));
-        set_debounce_period(1, us1);
-        Serial.print(F("Encoder debounce_period set to ")); Serial.print(us1);
-        Serial.println(F(" uSec in EEPROM"));
+        Serial.println();
+        break;
+      case 'N': // toggle Display_errors
+        Display_errors = 1 - Display_errors;
+        Serial.print(F("Display_errors set to "));
+        Serial.println(Display_errors);
+        Serial.println();
         break;
       case 'T': // toggle Trace_events
         Trace_events = 1 - Trace_events;
         Serial.print(F("Trace_events set to "));
         Serial.println(Trace_events);
+        Serial.println();
+        break;
+      case 'O': // toggle periodic switch_report
+        if (Periodic_period[SWITCH_REPORT]) {
+          Periodic_period[SWITCH_REPORT] = 0;
+        } else {
+          Periodic_period[SWITCH_REPORT] = HUMAN_PERIOD;
+        }
+        Serial.print(F("Periodic_period[SWITCH_REPORT] set to "));
+        Serial.println(Periodic_period[SWITCH_REPORT]);
+        Serial.println();
         break;
       case 'U': // toggle Trace_encoders
         Trace_encoders = 1 - Trace_encoders;
         Serial.print(F("Trace_encoders set to "));
         Serial.println(Trace_encoders);
+        Serial.println();
+        break;
+      case 'Q': // toggle Scan_switches_trace
+        Scan_switches_trace = 1 - Scan_switches_trace;
+        Serial.print(F("Scan_switches_trace set to "));
+        Serial.println(Scan_switches_trace);
+        Serial.println();
         break;
       case 'R':  // dump switches on row
         skip_ws();
         b1 = Serial.parseInt();
         if (b1 >= NUM_ROWS) {
-          Serial.print(F("Invalid row, must be < "));
-          Serial.println(NUM_ROWS);
+          Serial.print(F("Invalid row, must be < ")); Serial.println(NUM_ROWS);
         } else {
           for (b2 = 0; b2 < NUM_COLS; b2++) {
             b3 = SWITCH_NUM(b1, b2);
@@ -424,6 +533,7 @@ void loop() {
             Serial.print(F(", opened_event ")); Serial.println(Switch_opened_event[b3]);
           }
         }
+        Serial.println();
         break;
       case 'C':  // dump encoders
         for (b1 = 0; b1 < NUM_ENCODERS; b1++) {
@@ -433,19 +543,25 @@ void loop() {
           Serial.print(F(", A closed_event ")); Serial.print(Switch_closed_event[b2]);
           Serial.print(F(", A opened_event ")); Serial.print(Switch_opened_event[b2]);
           Serial.print(F(", B closed_event ")); Serial.print(Switch_closed_event[b2 + 1]);
-          Serial.print(F(", B opened_event ")); Serial.println(Switch_opened_event[b2 + 1]);
-          Serial.print(F("           Encoder_event ")); Serial.print(Encoder_event[b1]);
-          if (Encoders[b1].var == NULL) {
+          Serial.print(F(", B opened_event ")); Serial.print(Switch_opened_event[b2 + 1]);
+          if (Encoders[b1].var == 0) {
             Serial.println(F(", var is NULL"));
           } else {
-            Serial.print(F(", var not NULL"));
-            if (Encoders[b1].var->flags & 0b1) Serial.print(F(", enabled"));
-            else  Serial.print(F(", not enabled"));
-            Serial.print(F(", value ")); Serial.print(Encoders[b1].var->value);
-            if (Encoders[b1].var->changed) Serial.println(F(", changed"));
-            else Serial.println(F(", not changed"));
+            if (!(Encoders[b1].var->var_type->flags & ENCODER_FLAGS_DISABLED)) {
+              Serial.println(F(", enabled"));
+              Serial.print(F("         flags 0b"));
+              Serial.print(Encoders[b1].var->var_type->flags, BIN);
+              Serial.print(F(", display_value "));
+              Serial.print(Encoders[b1].var->var_type->display_value);
+              Serial.print(F(", encoder_event "));
+              Serial.print(Encoders[b1].encoder_event);
+              Serial.print(F(", value ")); Serial.print(Encoders[b1].var->value);
+              if (Encoders[b1].var->changed) Serial.println(F(", changed"));
+              else Serial.println(F(", not changed"));
+            } else Serial.println(F(", not enabled"));
           }
         } // end for (b1)
+        Serial.println();
         break;
       case 'B':  // dump debounce_delay_counts
         for (b1 = 0; b1 < 2; b1 += 1) {
@@ -469,6 +585,7 @@ void loop() {
           }
           Serial.println();
         }
+        Serial.println();
         break;
       case 'M':  // send I2C message to controller
         // M<controller>,<len_expected>,<comma_seperated_bytes> - send I2C message to <controller>
@@ -482,10 +599,6 @@ void loop() {
         case 'l':
         case 'L':
           b1 = I2C_LED_CONTROLLER;
-          break;
-        case 'r':
-        case 'R':
-          b1 = I2C_RAM_CONTROLLER;
           break;
         default:
           Serial.print("M: unrecognized controller ");
@@ -547,6 +660,7 @@ void loop() {
           }
         }
        error:
+        Serial.println();
         break;
       case 'G': // G<first>,<last> - generate raw bytes in the range first-last (inclusive)
         b1 = Serial.parseInt(); // first
@@ -568,6 +682,7 @@ void loop() {
           Serial.write(i);
           if (i == 255) break;  // so i doesn't get incremented back to 0
         }
+        Serial.println();
         break;
       case 'V': // V<first>,<last>\n<raw_bytes> - verify that raw_bytes are in the range first-last
         b1 = Serial.parseInt(); // first
@@ -607,6 +722,7 @@ void loop() {
         } else {
           Serial.println();
         }
+        Serial.println();
         break;
       case ' ': case '\t': case '\n': case '\r': break;
       default: running_help(); break;
@@ -627,6 +743,7 @@ void loop() {
           digitalWrite(Rows[b1], LOW);
         } // end for (b1)
         Serial.println(F("Leaving Debug mode"));
+        Serial.println();
         break;
       case 'E': // show Errno, Err_data
         Serial.print(F("Errno: "));
@@ -643,6 +760,7 @@ void loop() {
           Remote_Errno[i] = 0;
           Remote_Err_data[i] = 0;
         }
+        Serial.println();
         break;
       case 'S': // scan for shorts
         turn_off_test_pin();     
@@ -701,6 +819,7 @@ void loop() {
           pinMode(Cols[b1], INPUT_PULLDOWN);
         } // end for (b1)
         Serial.println(F("Scan complete"));
+        Serial.println();
         break;
       case 'O': // turn on output n
         turn_off_test_pin();     
@@ -717,6 +836,7 @@ void loop() {
         Serial.print(F("O"));
         Serial.print(b1);
         Serial.println(F(" on"));
+        Serial.println();
         break;
       case 'I': // turn on input n
         turn_off_test_pin();     
@@ -733,10 +853,12 @@ void loop() {
         Serial.print(F("I"));
         Serial.print(b1);
         Serial.println(F(" on"));
+        Serial.println();
         break;
       case 'F': // turn off test pin
         turn_off_test_pin();
         Serial.println(F("test pin off"));
+        Serial.println();
         break;
       case 'P': // send I2C command to pot_controller
         skip_ws();
@@ -766,7 +888,7 @@ void loop() {
           skip_ws();
           buffer[b1] = Serial.parseInt();
         } // end for (b1)
-
+        Serial.println();
         break;
       case 'Q': // receive I2C report from pot_controller
         skip_ws();
@@ -792,6 +914,7 @@ void loop() {
             Serial.println();
           }
         }
+        Serial.println();
         break;
       case 'L': // send I2C command to led_controller
         skip_ws();
@@ -821,6 +944,7 @@ void loop() {
           skip_ws();
           buffer[b1] = Serial.parseInt();
         } // end for (b1)
+        Serial.println();
         break;
       case 'M': // receive I2C report from led_controller
         skip_ws();
@@ -846,6 +970,7 @@ void loop() {
             Serial.println();
           }
         }
+        Serial.println();
         break;
       case ' ': case '\t': case '\n': case '\r': break;
       default: debug_help(); break;
@@ -857,6 +982,11 @@ void loop() {
 
   // MIDI Controllers should discard incoming MIDI messages.
   while (usbMIDI.read()) ;  // read & ignore incoming messages
+
+  if (Display_errors && Errno) {
+    Serial.print("Errno "); Serial.print(Errno); Serial.print(", Err_data "); Serial.println(Err_data);
+    Errno = Err_data = 0;
+  }
 
   errno();
 }
