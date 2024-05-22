@@ -9,14 +9,19 @@ encoder_t Encoders[NUM_ENCODERS];
 var_type_t Disabled(0, 0xFF, ENCODER_FLAGS_DISABLED);
 
 
+void send_LED_request(byte *msg, byte length) {
+  sendRequest(I2C_LED_CONTROLLER, msg, length);
+  delayMicroseconds(200);
+  getResponse(I2C_LED_CONTROLLER, 2, 1);
+}
+
 void select_led(byte enc) {
   variable_t *var = Encoders[enc].var;
   if (Trace_encoders) {
     Serial.print("select_led "); Serial.println(var->value);
   }
   byte msg[3] = {30, ((choices_t *)var->var_type)->choices_num, var->value};
-  sendRequest(I2C_LED_CONTROLLER, msg, 3);
-  // getResponse(I2C_LED_CONTROLLER, 2, 1);
+  send_LED_request(msg, 3);
 }
 
 void turn_off_choices_leds(byte enc) {
@@ -25,19 +30,45 @@ void turn_off_choices_leds(byte enc) {
     Serial.print("turn_off_choices_leds "); Serial.println(((choices_t *)var->var_type)->choices_num);
   }
   byte msg[2] = {29, ((choices_t *)var->var_type)->choices_num};
-  sendRequest(I2C_LED_CONTROLLER, msg, 2);
-  // getResponse(I2C_LED_CONTROLLER, 2, 1);
+  send_LED_request(msg, 2);
 } 
 
-void display_number(byte display_num, unsigned short num, byte dp) {
+void display_digit(byte display_num, byte digit_num, byte num, byte dp) {
+  if (Trace_encoders) {
+    Serial.print("display_digit "); Serial.print(digit_num);
+    Serial.print(", num "); Serial.print(num); Serial.print(", dp "); Serial.println(dp);
+  }
+  // 18<disp><digit#><value><dp>
+  byte msg[5] = {18, display_num, digit_num, num, dp};
+  send_LED_request(msg, 5);
+}
+
+void display_sharp_flat(byte display_num, byte sharp_flat) {
+  // sharp_flat: 0 = nat (blank), 1 = SH, 2 = FL
+  if (Trace_encoders) {
+    Serial.print("display_sharp_flat "); Serial.println(sharp_flat);
+  }
+  // 21<disp><sharp_flat>: load sharp_flat
+  byte msg[3] = {21, display_num, sharp_flat};
+  send_LED_request(msg, 3);
+}
+
+void display_sharps_flats(byte enc) {
+  variable_t *var = Encoders[enc].var;
+  signed char n = var->value - 7;
+  display_digit(enc, 0, abs(n), 0);
+  if (n == 0) display_sharp_flat(enc, 0);     // natural
+  else if (n < 0) display_sharp_flat(enc, 2); // flat
+  else display_sharp_flat(enc, 1);            // sharp
+}
+
+void display_number(byte display_num, short num, byte dp) {
   if (Trace_encoders) {
     Serial.print("display_number "); Serial.print(num); Serial.print(", dp "); Serial.println(dp);
   }
   // 19<disp><value_s16><dec_place>
-  byte msg[5] = {19, display_num, byte(num << 8), byte(num & 0xFF), dp};
-  sendRequest(I2C_LED_CONTROLLER, msg, 5);
-  // getResponse(I2C_LED_CONTROLLER, 2, 1);
-
+  byte msg[5] = {19, display_num, byte(num >> 8), byte(num & 0xFF), dp};
+  send_LED_request(msg, 5);
 }
 
 void clear_numeric_display(byte display_num) {
@@ -45,11 +76,10 @@ void clear_numeric_display(byte display_num) {
     Serial.print("clear_numeric_display "); Serial.println(display_num);
   }
   byte msg[2] = {31, display_num};
-  sendRequest(I2C_LED_CONTROLLER, msg, 2);
-  // getResponse(I2C_LED_CONTROLLER, 2, 1);
+  send_LED_request(msg, 2);
 }
 
-const short Powers_of_ten[] = {0, 10, 100, 1000, 10000};
+const short Powers_of_ten[] = {1, 10, 100, 1000, 10000};
 
 void display_linear_number(byte enc) {
   variable_t *var = Encoders[enc].var;
@@ -62,18 +92,47 @@ void display_linear_number(byte enc) {
     if (n < -99) n = -(-n % 100);
     else if (n > 999) n = n % 1000;
   }
-  display_number(enc, (unsigned short)abs(n), var_type->dp);
+  display_number(enc, short(n), var_type->dp);
 }
 
 void display_geometric_number(byte enc) {
 }
 
+void display_a_note(byte display_num, byte note, byte sharp_flat) {
+  // note: 0-6 = A-G, sharp_flat: 0 = nat (blank), 1 = SH, 2 = FL
+  if (Trace_encoders) {
+    Serial.print("display_note "); Serial.print(note);
+    Serial.print(", sharp_flat "); Serial.println(sharp_flat);
+  }
+  // 20<disp><note><sharp_flat>: load note
+  byte msg[4] = {20, display_num, note, sharp_flat};
+  send_LED_request(msg, 4);
+}
+
 void display_note(byte enc) {
+  variable_t *var = Encoders[enc].var;
+  note_t *var_type = (note_t *)var->var_type;
+  byte value = var->value;
+  if (var_type->include_null && value == var_type->num_notes) { // NULL
+    clear_numeric_display(enc);
+  } else {
+    const char *note = var_type->notes[value];
+    if (note[1] == 0) {  // no sharp/flat
+      display_a_note(enc, note[0] - 'A', 0);
+    } else if (note[1] == '#') {
+      display_a_note(enc, note[0] - 'A', 1);
+    } else if (note[1] == 'b') {
+      display_a_note(enc, note[0] - 'A', 2);
+    } else {
+      Errno = 31;
+      Err_data = note[1];
+    }
+  }
 }
 
  
 // byte _choices_num, byte _choices_length, byte _bt_mul_down = 1, byte _additional_flags = 0
-choices_t Function_var_type(0, 15, 4, ENCODER_FLAGS_CYCLE);
+choices_t Function_var_type(0, 15, 4);
   // {0, 14, ENCODER_FLAGS_CYCLE | ENCODER_FLAGS_CHOICE_LEDS, 1, 4, UPDATE_CHOICES, 0};
 
 // static variables

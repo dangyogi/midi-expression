@@ -21,7 +21,8 @@
 #define UPDATE_LINEAR_NUM                  36
 #define UPDATE_GEOMETRIC_NUM               37
 #define UPDATE_NOTE                        38
-#define NEXT_AVAIL_EVENT                   39
+#define UPDATE_SHARPS_FLATS                39
+#define NEXT_AVAIL_EVENT                   40
 
 extern byte Trace_events;
 extern byte Trace_encoders;

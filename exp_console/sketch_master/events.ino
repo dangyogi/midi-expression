@@ -198,6 +198,9 @@ void run_event(byte event_num, byte param) {
     case UPDATE_NOTE:  // enc
       display_note(param);
       break;
+    case UPDATE_SHARPS_FLATS:  // enc
+      display_sharps_flats(param);
+      break;
     default:
       Errno = 30;
       Err_data = event_num;

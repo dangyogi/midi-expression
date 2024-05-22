@@ -52,7 +52,7 @@ byte setup_numeric_displays(byte my_EEPROM_offset) {
   return 1 + 2*MAX_NUMERIC_DISPLAYS;  // EEPROM needed
 } // end setup_numeric_displays()
 
-const short Powers_of_ten[] = {0, 10, 100, 1000, 10000};
+const short Powers_of_ten[] = {0, 10, 100, 1000, 10000};  // must be signed! (I think)
 
 const byte Numeric_7_segment_decode[] = {
   //ABCDEFGDP
@@ -112,10 +112,11 @@ void load_numeric(byte display_num, short value, byte decimal_place) {
   // value must fit in the number of digits (reduced by 1 for '-' sign if value < 0).
   // decimal_place of 0, means no DP.  Otherwise it's the number of digits to the
   // right of the decimal point.
+  byte display_size = Numeric_display_size[display_num];
   if (display_num >= Num_numeric_displays) {
     Errno = 97;
     Err_data = display_num;
-  } else if (decimal_place >= Numeric_display_size[display_num]) {
+  } else if (decimal_place >= display_size) {
     Errno = 98;
     Err_data = decimal_place;
   } else if (value >= Powers_of_ten[Numeric_display_size[display_num]] || 
@@ -124,31 +125,30 @@ void load_numeric(byte display_num, short value, byte decimal_place) {
     Err_data = value/10;
   } else {
     byte addr = Numeric_display_offset[display_num];
-    byte i;
-    // Turn off all segments on all digits
-    for (i = 0; i < Numeric_display_size[display_num]; i++) {
-      load_8(0, addr + 2*i);
-    }
     byte negative = value < 0;
     value = abs(value);
     byte bits;
-    i = 0;
-    while (i == 0 || value || i < decimal_place) {
-      bits = Numeric_7_segment_decode[value % 10];
+    byte i;
+    for (i = 0; i < display_size; i++) { // going from right to left
+      if (negative && i + 1 == display_size) {
+        // display a minus sign
+        bits = 0b10;   // G segment (middle horz)
+      } else if (!value && i && decimal_place <= i) {
+        // display a blank
+        bits = 0;
+      } else {
+        // display next digit
+        bits = Numeric_7_segment_decode[value % 10];
+        value /= 10;
+      }
       if (decimal_place && decimal_place == i) bits |= 1;
       load_8(bits, addr + 2*(2 - i));
-      value /= 10;
-      i++;
-    } // end while
-    bits = decimal_place == i ? 0b1 : 0;
-    if (negative) {
-      bits |= 0b10;  // G segment (middle horz)
-    }
-    load_8(bits, addr + 2*(2 - i));
+    } // end for (i)
   } // end ifs
 }
 
 void load_sharp_flat(byte display_num, byte sharp_flat) {
+  // sharp_flat: 0 = nat (blank), 1 = SH, 2 = FL
   if (display_num >= Num_numeric_displays) {
     Errno = 100;
     Err_data = display_num;

@@ -13,9 +13,9 @@
 #include "alpha_displays.h"
 #include "choices.h"
 
-#define PROGRAM_ID          "LEDs V29"
+#define PROGRAM_ID          "LEDs V33"
 
-#define I2C_MASTER          0x30
+#define I2C_MASTER          0x30   /* FIX: not needed */
 
 #define NUM_EEPROM_USED     EEPROM_needed
 #define EEPROM_SIZE         (EEPROM.length())
@@ -122,7 +122,7 @@ void receiveRequest(int how_many) {  // Errnos 1-39
 
 unsigned short Set_8_bits_time, Set_16_bits_time, Load_digit_time, Load_numeric_time, Load_note_time;
 unsigned short Load_sharp_flat_time, Clear_choices_time, Select_choices_time, Clear_display_time;
-unsigned short Receive_time;
+unsigned short Send_report_time;
 
 void step_receiveRequest(void) {
   // request from on high
@@ -132,10 +132,10 @@ void step_receiveRequest(void) {
   char s[MAX_STRING_LEN + 1];
   unsigned long start_time = micros();
   b0 = Wire.read();
-  if (b0 < 7) {
+  if (b0 < 8) {
     if (!check_eq(How_many, 1, 2)) Report = b0;
-  } else if (b0 < 8) {
-    // b0 == 7
+  } else if (b0 < 9) {
+    // b0 == 8
     if (!check_eq(How_many, 2, 3)) {
       b1 = Wire.read();
       if (!check_ls(b1, EEPROM[NUM_EEPROM_USED], 4)) {
@@ -338,6 +338,7 @@ void step_receiveRequest(void) {
       break;
     } // end switch (b0)
   }
+  /******* FIX: delete
   Wire.beginTransmission(I2C_MASTER);
   b0 = Wire.write(Errno);
   if (b0 != 1) {
@@ -354,12 +355,18 @@ void step_receiveRequest(void) {
     Errno = 139 + b0;        // 140 to 144
     Err_data = I2C_MASTER;
   }
+  **************/
   ReceiveRequest_running = 0;
 }
 
 void sendReport(void) {  // Errnos 41-59
   // callback for reports requested from on high
   byte i, len_written;
+  if (ReceiveRequest_running) {
+    Errno = 139;
+    Err_data = Report;
+    return;
+  }
   unsigned long start_time = micros();
   switch (Report) {
   case 0:  // Errno, Err_data
@@ -500,16 +507,16 @@ void sendReport(void) {  // Errnos 41-59
     }
     break;
   case 7:  // return times (20 bytes)
-    Wire.write((byte *)&Set_8_bits_time, 2);
-    Wire.write((byte *)&Set_16_bits_time, 2);
-    Wire.write((byte *)&Load_digit_time, 2);
-    Wire.write((byte *)&Load_numeric_time, 2);
-    Wire.write((byte *)&Load_note_time, 2);
-    Wire.write((byte *)&Load_sharp_flat_time, 2);
-    Wire.write((byte *)&Clear_choices_time, 2);
-    Wire.write((byte *)&Select_choices_time, 2);
-    Wire.write((byte *)&Clear_display_time, 2);
-    Wire.write((byte *)&Receive_time, 2);
+    Wire.write((byte *)&Set_8_bits_time, 2);      Set_8_bits_time = 0;
+    Wire.write((byte *)&Set_16_bits_time, 2);     Set_16_bits_time = 0;
+    Wire.write((byte *)&Load_digit_time, 2);      Load_digit_time = 0;
+    Wire.write((byte *)&Load_numeric_time, 2);    Load_numeric_time = 0;
+    Wire.write((byte *)&Load_note_time, 2);       Load_note_time = 0;
+    Wire.write((byte *)&Load_sharp_flat_time, 2); Load_sharp_flat_time = 0;
+    Wire.write((byte *)&Clear_choices_time, 2);   Clear_choices_time = 0;
+    Wire.write((byte *)&Select_choices_time, 2);  Select_choices_time = 0;
+    Wire.write((byte *)&Clear_display_time, 2);   Clear_display_time = 0;
+    Wire.write((byte *)&Send_report_time, 2);     Send_report_time = 0;
     break;
   case 8:  // next stored EEPROM byte (1 byte, EEPROM_addr auto-incremented)
     if (Report_addr < EEPROM[NUM_EEPROM_USED]) {
@@ -532,7 +539,7 @@ void sendReport(void) {  // Errnos 41-59
     break;
   } // end switch (Report)
   unsigned short elapsed_time = micros() - start_time;
-  if (elapsed_time > Receive_time) Receive_time = elapsed_time;
+  if (elapsed_time > Send_report_time) Send_report_time = elapsed_time;
 }
 
 void help(void) {
@@ -1074,7 +1081,7 @@ void timeout(void) {
         if (read_comma()) {
           b1 = Serial.parseInt(SKIP_WHITESPACE);
           if (b1 >= Numeric_display_size[b0]) {
-            Serial.print("Invalid digit ");  
+            Serial.print("Invalid decimal point ");  
             Serial.print(b1);
             Serial.print(" must be < ");
             Serial.println(Numeric_display_size[b0]);    
@@ -1434,7 +1441,7 @@ void loop() {
       switch (next_step_fun) {
       case STEP_RECEIVE_REQUEST: step_receiveRequest(); break;
       } // end switch (next_step_fun)
-      step(200*next_step_fun + 1);
+      step(200 + next_step_fun);
       if (Next_step_fun > next_step_fun) {
         byte end = Next_step_fun == 0xFF ? NUM_STEP_FUNS : Next_step_fun;
         for (byte i = next_step_fun; i < end; i++) {

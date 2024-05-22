@@ -278,7 +278,7 @@ void step(byte who_dunnit_errno) {
   
   unsigned short now = (unsigned short)micros();
   if (On_end > On_start) {
-    if (now >= On_end || now < On_start) {
+    if (now > On_end || now < On_start) {
       // naughty!!!
       Errno = who_dunnit_errno;
     } else {
@@ -287,7 +287,8 @@ void step(byte who_dunnit_errno) {
       while (!(now >= On_end || now < On_start)) now = (unsigned short)micros();
     }
   } else {
-    if (now >= On_end && now < On_start) {
+    // On_end <= On_start
+    if (now > On_end && now < On_start) {
       // naughty!!!
       Errno = who_dunnit_errno;
     } else {

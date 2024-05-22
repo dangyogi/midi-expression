@@ -17,7 +17,7 @@ I2C interface:
     18<disp><digit#><value><dp>: load digit
     19<disp><value_s16><dec_place>: load numeric
     20<disp><note><sharp_flat>: load note
-    21<disp><sharp_flat>: load sharp_flat
+    21<disp><sharp_flat>: load sharp_flat, sharp_flat: 0 = nat (blank), 1 = SH, 2 = FL
     22<str><string>: load string
     23: test led order
     24: test numeric decoder
@@ -41,7 +41,7 @@ I2C interface:
     6: choices_start, choices_length for each choices (2 * Num_choices bytes total)
     7: Set_8_bits_time, Set_16_bits_time, Load_digit_time, Load_numeric_time, Load_note_time,
        Load_sharp_flat_time, Clear_choices_time, Select_choices_time, Clear_display_time,
-       Receive_time (20 bytes)
+       Send_report_time (20 bytes)
     8: next stored EEPROM byte (1 byte, EEPROM addr auto increments)
 
 
@@ -57,7 +57,7 @@ Error Codes:
   110-119 choices.ino
 
   Errno, Err_data
-     1      N/A       step_receiveRequest took too long after last step call
+     1   time_over    step_receiveRequest took too long after last step call, time_over is in 0.01 mSec
      2   How_many     I2C request 0-6, invalid command length, must be 1
      3   How_many     I2C request 7, invalid command length, must be 2
      4  EEPROM_addr   I2C request 7, invalid EEPROM_addr, must be < NUM_EEPROM_USED
@@ -156,6 +156,7 @@ Error Codes:
     136 len_written    sendReport 6 (choices_start, choices_length): Wire.write(Choices_length) returned wrong length, expected 1
     137 len_written    receiveRequest send_errno: Wire.write(Errno) returned wrong length, expected 1
     138 len_written    receiveRequest send_errno: Wire.write(Err_data) returned wrong length, expected 1
+    139    Report      sendReport: receiveRequest still running
     141   i2c_addr     Wire.endTransmission status 1: data too long to fit in transmit buffer
     142   i2c_addr     Wire.endTransmission status 2: received NACK on transmit of i2c_addr
     143   i2c_addr     Wire.endTransmission status 3: received NACK on transmit of data

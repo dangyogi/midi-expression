@@ -6,7 +6,8 @@
 
 // Every parameter type has one of these:
 typedef struct var_type_s {
-  var_type_s(byte _max, byte _display_value = 0xFF, byte _flags = 0, byte _bt_mul_down = 1, byte _min = 0, byte _bt_mul_up = 1) {
+  var_type_s(byte _max, byte _display_value = 0xFF, byte _flags = 0, byte _bt_mul_down = 1,
+             byte _min = 0, byte _bt_mul_up = 1) {
     min = _min;
     max = _max;
     display_value = _display_value;
@@ -45,9 +46,16 @@ typedef struct choices_s: var_type_s {
   byte choices_num;
 } choices_t;
 
+typedef struct sharps_flats_s: var_type_s {
+  sharps_flats_s(void)
+    : var_type_s(14, UPDATE_SHARPS_FLATS, 0, 4)
+  {
+  }
+} sharps_flats_t;
+
 typedef struct linear_number_s: var_type_s {
-  linear_number_s(byte _min, byte _max, long _offset = 0, byte _bt_mul_down = 1, byte _dp = 0, long _scale = 1, byte _trim = 0, 
-                  byte _flags = 0)
+  linear_number_s(byte _min, byte _max, long _offset = 0, byte _bt_mul_down = 1, byte _dp = 0,
+                  long _scale = 1, byte _trim = 0, byte _flags = 0)
     : var_type_s(_max, UPDATE_LINEAR_NUM, _flags, _bt_mul_down, _min)
   {
     scale = _scale;
@@ -69,9 +77,19 @@ typedef struct geometric_number_s: var_type_s {
 } geometric_number_t;
 
 typedef struct note_s: var_type_s {
-  // C, "C#", D, Eb, E, F, "F#", G, Ab, A, Bb, B
+  // C, "C#", D, Eb, E, F, "F#", G, Ab, A, Bb, B, [NULL]
   // Eb, Ab
+  note_s(byte _num_notes, const char **_notes, byte _include_null = 0, byte _flags = 0, byte _min = 0)
+    : var_type_s(_min + _num_notes - 1 + _include_null, UPDATE_NOTE, _flags, 1, _min, 1)
+  {
+    num_notes = _num_notes;
+    include_null = _include_null;
+    notes = _notes;
+    if (num_notes > 7) bt_mul[1] = 3;
+  }
+  byte num_notes;
   byte include_null;
+  const char **notes; // e.g., "C#"
 } note_t;
 
 #define NUM_ENCODERS    6
@@ -91,6 +109,7 @@ extern void clear_numeric_display(byte display_num);
 extern void display_linear_number(byte enc);
 extern void display_geometric_number(byte enc);
 extern void display_note(byte enc);
+extern void display_sharps_flats(byte enc);
 
 extern byte setup_encoders(byte EEPROM_offset);
 

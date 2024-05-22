@@ -18,13 +18,23 @@ byte EEPROM_functions_offset;
 //    ENCODER_FLAGS_CHOICE_LEDS   0b100
 
 // byte _choices_num, byte _choices_length, byte _bt_mul_down = 1, byte _additional_flags = 0
-choices_t Major_minor(1, 2);
-choices_t Meantone(2, 2);
+choices_t Major_minor(1, 2, 1, ENCODER_FLAGS_CYCLE);
+choices_t Meantone(2, 2, 1, ENCODER_FLAGS_CYCLE);
 choices_t Just_intonation(3, 14, 4);
-  
-// byte _min, byte _max, long _offset = 0, byte _bt_mul_down = 1, byte _dp = 0, long _scale = 1, byte _trim = 0, byte _flags = 0
-linear_number_t Flats_and_sharps(0, 14, -7, 4);
-linear_number_t Cents_per_semitone(0, 127, -42, 10, 2, 12, 1);
+
+sharps_flats_t Flats_and_sharps;
+ 
+// byte _min, byte _max, long _offset = 0, byte _bt_mul_down = 1, byte _dp = 0, long _scale = 1,
+// byte _trim = 0, byte _flags = 0
+linear_number_t Cents_per_semitone(0, 20, 99858, 10, 2, 12, 1);
+linear_number_t Max_octave_fudge(0, 127, 0, 10);  // What does "steps_per_value = 3" mean??
+
+// byte _num_notes, char **_notes, byte _include_null = 0, byte _flags = 0, byte _min = 0
+const char *Note_list_12[] = {"C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"};
+note_t Notes_12(12, Note_list_12);
+note_t Notes_12_null(12, Note_list_12, 1);
+const char *Note_list_2[] = {"Eb", "Ab"};
+note_t Notes_Eb_Ab_null(2, Note_list_2, 1, ENCODER_FLAGS_CYCLE);
 
 
 // {&var_type}
@@ -39,19 +49,19 @@ variable_t Functions[NUM_FUNCTIONS][NUM_FUNCTION_ENCODERS] = {
     {&Disabled}, {&Flats_and_sharps/* 0, 11, 0b011, 1, 1 */}, {&Flats_and_sharps/* 0, 15, 0b011, 1, 5 */}, {&Disabled},
   },
   {  // function 3: equal_temperament
-    {&Disabled}, {&Disabled}, {&Flats_and_sharps/* 0, 127, 0b001, 1, 10 */}, {&Disabled},
+    {&Disabled}, {&Disabled}, {&Cents_per_semitone}, {&Disabled},
   },
   {  // function 4: well_tempered
-    {&Flats_and_sharps/* 0, 11, 0b011, 1, 1 */}, {&Flats_and_sharps/* 0, 11, 0b011, 1, 1 */}, {&Disabled}, {&Disabled},
+    {&Notes_12}, {&Notes_12_null}, {&Disabled}, {&Disabled},
   },
   {  // function 5: meantone
-    {&Flats_and_sharps/* 0, 11, 0b011, 1, 1 */}, {&Flats_and_sharps/* 0, 11, 0b011, 1, 1 */}, {&Flats_and_sharps/* 0, 127, 0b001, 1, 10 */}, {&Meantone},
+    {&Notes_12}, {&Notes_Eb_Ab_null}, {&Max_octave_fudge}, {&Meantone},
   },
   {  // function 6: just_intonation
-    {&Flats_and_sharps/* 0, 11, 0b011, 1, 1 */}, {&Flats_and_sharps/* 0, 11, 0b011, 1, 1 */}, {&Disabled}, {&Just_intonation},
+    {&Notes_12}, {&Notes_12_null}, {&Disabled}, {&Just_intonation},
   },
   {  // function 7: pythagorean
-    {&Flats_and_sharps/* 0, 11, 0b011, 1, 1 */}, {&Disabled}, {&Flats_and_sharps/* 0, 127, 0b001, 1, 10 */}, {&Disabled},
+    {&Notes_12}, {&Disabled}, {&Max_octave_fudge}, {&Disabled},
   },
   {  // function 8: harmonic basics
     {&Flats_and_sharps/* 0, 127, 0b001, 1, 10 */}, {&Flats_and_sharps/* 0, 127, 0b001, 1, 10 */}, {&Flats_and_sharps/* 0, 127, 0b011, 1, 10 */}, {&Disabled},

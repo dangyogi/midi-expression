@@ -13,7 +13,7 @@
 #include "notes.h"
 #include "functions.h"
 
-#define PROGRAM_ID    "Master V29"
+#define PROGRAM_ID    "Master V34"
 
 // These are set to INPUT_PULLDOWN to prevent flickering on unused ports
 #define FIRST_PORT    0
@@ -29,11 +29,11 @@ byte Remote_Err_data[NUM_REMOTES];
 char Remote_char[NUM_REMOTES] = {'P', 'L'};
 TwoWire *Remote_wire[NUM_REMOTES] = {&Wire1, &Wire};
 
-#define I2C_MASTER            0x30
-
 #define I2C_BASE              0x31
 #define I2C_POT_CONTROLLER    0x31
 #define I2C_LED_CONTROLLER    0x32
+
+#define I2C_MASTER            0x30    /* FIX: not needed */
 
 byte EEPROM_used;
 
@@ -79,10 +79,12 @@ void setup() {
   err_led(ERR_LED, ERR_LED_2);
   delay(2);
 
-  Wire.begin(I2C_MASTER);       // to LED controller
+  //Wire.begin(I2C_MASTER);       // to LED controller, FIX: I2C_MASTER not needed
+  Wire.begin();                 // to LED controller
   Wire.setClock(400000);
-  Wire.onReceive(receiveLEDErrno);
-  Wire1.begin(I2C_MASTER);      // to Pot controller
+  // Wire.onReceive(receiveLEDErrno);  // FIX: not needed
+  //Wire1.begin(I2C_MASTER);      // to Pot controller, FIX: I2C_MASTER not needed
+  Wire1.begin();                // to Pot controller
   Wire1.setClock(400000);
 
   byte EEPROM_used = setup_switches(0);
@@ -218,6 +220,7 @@ void sendRequest(byte i2c_addr, byte *data, byte data_len) {
     Errno = 20 + status;        // 21 to 25
     Err_data = i2c_addr;
   }
+  /***** FIX: delete
   if (i2c_addr == I2C_LED_CONTROLLER) {
     for (b0 = 0; b0 < 100; b0++) {
       if (GotLEDResponse) break;
@@ -229,6 +232,7 @@ void sendRequest(byte i2c_addr, byte *data, byte data_len) {
       Err_data = data[0];
     }
   }
+  **********/
   unsigned long elapsed_time = micros() - start_time;
   if (elapsed_time > I2C_send_time) I2C_send_time = elapsed_time;
 }
@@ -646,6 +650,7 @@ void loop() {
           Serial.println("Message sent");
         } else {
           skip_ws();
+          delayMicroseconds(200);   // give remote time to respond.
           b3 = getResponse(b1, b2, 0);
           I2C_request_from_time = 0;
           I2C_read_time = 0;
