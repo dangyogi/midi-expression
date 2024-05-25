@@ -6,6 +6,8 @@ byte Trace_events = 0;
 byte Trace_encoders = 0;
 
 void inc_encoder(byte enc) {
+  // Called each time both encoders switches become open (detent position reached).
+  // Only called if encoder is enabled.
   byte new_value;
   if (Trace_encoders) {
     Serial.print("inc_encoder "); Serial.print(enc);
@@ -207,7 +209,7 @@ void run_event(byte event_num, byte param) {
       break;
     } // end switch (event_num)
   } // end if (0xFF)
-}
+} // end run_event()
 
 byte Switch_closed_event[NUM_SWITCHES]; // 0xFF is None
 byte Switch_opened_event[NUM_SWITCHES]; // 0xFF is None

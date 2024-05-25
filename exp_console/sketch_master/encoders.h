@@ -24,7 +24,7 @@ typedef struct var_type_s {
 // Every parameter has one of these:
 typedef struct {
   var_type_t *var_type;
-  byte value;
+  byte value;           // initially set to default value, copied to memory in setup_functions.
   byte changed;         // set to 1 each time value changes.  Used by triggers, which resets it.
 } variable_t;
 
@@ -55,25 +55,33 @@ typedef struct sharps_flats_s: var_type_s {
 
 typedef struct linear_number_s: var_type_s {
   linear_number_s(byte _min, byte _max, long _offset = 0, byte _bt_mul_down = 1, byte _dp = 0,
-                  long _scale = 1, byte _trim = 0, byte _flags = 0)
+                  long _scale = 1, byte _extra_10s = 0, byte _trim = 0, byte _flags = 0)
     : var_type_s(_max, UPDATE_LINEAR_NUM, _flags, _bt_mul_down, _min)
   {
     scale = _scale;
     offset = _offset;
     dp = _dp;
+    extra_10s = _extra_10s;
     trim = _trim;
   }
-  long scale;  // encoder value multiplied by 10^dp, then divided by scale (rounded)
+  long scale;      // encoder value multiplied by 10^abs(dp), then divided by scale (rounded)
   long offset;
-  byte dp;     // decimal point position
-  byte trim;   // true/false, if true leading digits are trimmed.
+  byte dp;         // decimal point position. Negative shifts left and is ignored on display.
+  byte extra_10s;  // extra powers of ten to multiply by before applying scale.
+  byte trim;       // true/false, if true leading digits are trimmed.
 } linear_number_t;
 
 typedef struct geometric_number_s: var_type_s {
-  long scale;  // encoder value multiplied by 10^dp, then divided by scale (rounded)
-  long offset;
-  byte dp;     // decimal point position
-  byte trim;   // true/false, if true leading digits are trimmed.
+  geometric_number_s(byte _max, float _limit, float _b, float _start = 0.0, byte _bt_mul_down = 1)
+    : var_type_s(_max, UPDATE_GEOMETRIC_NUM, 0, _bt_mul_down)
+  {
+    b = _b;
+    m = log((_limit - _start) / exp(_b) + 1) / _max;
+    c = _start - exp(_b);
+  }
+  float m;  // display value is: e**(m*value + b) + c
+  float b;
+  float c;
 } geometric_number_t;
 
 typedef struct note_s: var_type_s {
@@ -104,7 +112,7 @@ extern encoder_t Encoders[NUM_ENCODERS];
 extern var_type_t Disabled;
 extern void select_led(byte enc);
 extern void turn_off_choices_leds(byte enc);
-extern void display_number(byte display_num, unsigned short num, byte dp);
+extern void display_number(byte display_num, short num, byte dp);
 extern void clear_numeric_display(byte display_num);
 extern void display_linear_number(byte enc);
 extern void display_geometric_number(byte enc);

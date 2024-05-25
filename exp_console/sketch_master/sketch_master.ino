@@ -13,7 +13,7 @@
 #include "notes.h"
 #include "functions.h"
 
-#define PROGRAM_ID    "Master V34"
+#define PROGRAM_ID    "Master V37"
 
 // These are set to INPUT_PULLDOWN to prevent flickering on unused ports
 #define FIRST_PORT    0

@@ -10,11 +10,21 @@
 
 extern variable_t Functions[NUM_FUNCTIONS][NUM_FUNCTION_ENCODERS];
 
+// 512 bytes
+extern byte Channel_memory[NUM_CHANNELS][NUM_CH_FUNCTIONS][NUM_FUNCTION_ENCODERS];
+
+// 4480 bytes
+extern byte Harmonic_memory[NUM_CHANNELS][NUM_HARMONICS][NUM_HM_FUNCTIONS][NUM_FUNCTION_ENCODERS];
+
 extern byte Lowest_harmonic;  // 0-9, 0xFF when all switches off
 extern byte Lowest_channel;   // 0-15, 0xFF when all switches off
 
-extern void load_function_encoder_values(void);
-extern void save_function_encoder_values(void);
+extern void load_functions(byte skip_ch_functions=0);
+extern void truncate_function(byte do_update_displays);
+extern void load_encoders(void);
+extern void clear_displays(void);
+extern void update_displays(void);
+extern void send_functions_to_synth(void);
 extern void harmonic_on(byte sw);
 extern void harmonic_off(byte sw);
 extern void channel_on(byte sw);

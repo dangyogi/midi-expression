@@ -3,12 +3,6 @@ Master Controller
 Error Codes:
 
   Errno, Err_data
-    1    bytes_sent         load_function_encoder_values -> get_ch_values: Serial.write, expected 5 bytes_sent
-    2    bytes_received     load_function_encoder_values -> get_ch_values: Serial.readBytes, expected 4 bytes_received
-    3    bytes_sent         load_function_encoder_values -> get_hm_values: Serial.write, expected 6 bytes_sent
-    4    bytes_received     load_function_encoder_values -> get_hm_values: Serial.readBytes, expected 4 bytes_received
-    5    bytes_sent         save_function_encoder_values -> set_ch_values: Serial.write, expected 10 bytes_sent
-    6    bytes_sent         save_function_encoder_values -> set_hm_values: Serial.write, expected 11 bytes_sent
    10    data_len           getResponse: data_len > 32
    11    bytes_received     getResponse: Wire.requestFrom bytes_received > data_len
    12    Wire.available()   getResponse: bytes_received != Wire.available()

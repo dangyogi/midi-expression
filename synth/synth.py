@@ -412,7 +412,7 @@ class Harmonic(Var):
         self.freq_offset = value + self.freq_offset_fine
 
     @Cross_setter
-    def freq_offset_find(self, value):
+    def freq_offset_fine(self, value):
         self.freq_offset = self.freq_offset_course + value
 
     attack_env = Notify_actors()

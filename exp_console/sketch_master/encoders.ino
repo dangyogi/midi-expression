@@ -82,20 +82,49 @@ void clear_numeric_display(byte display_num) {
 const short Powers_of_ten[] = {1, 10, 100, 1000, 10000};
 
 void display_linear_number(byte enc) {
+  // number displayed is value*10^dp / scale + offset
   variable_t *var = Encoders[enc].var;
   linear_number_t *var_type = (linear_number_t *)var->var_type;
   long n = var->value;
-  n *= Powers_of_ten[var_type->dp];
+  n *= Powers_of_ten[var_type->dp + var_type->extra_10s];
   n = (n + var_type->scale / 2) / var_type->scale;  // divide rounded
   n += var_type->offset;
+  signed char dp = var_type->dp;
   if (var_type->trim) {
     if (n < -99) n = -(-n % 100);
     else if (n > 999) n = n % 1000;
+  } else while (n < -99 || n > 999) {
+    n /= 10;
+    dp -= 1;
   }
-  display_number(enc, short(n), var_type->dp);
+  display_number(enc, short(n), max(0, dp));
 }
 
 void display_geometric_number(byte enc) {
+  variable_t *var = Encoders[enc].var;
+  geometric_number_t *var_type = (geometric_number_t *)var->var_type;
+  float n = exp(var_type->m * var->value + var_type->b) + var_type->c;
+  if (abs(n) < 0.005) display_number(enc, 0, 0);   // display as 0
+  short s;
+  if (n < -9.95) {
+    s = (short)(n - 0.5);
+    display_number(enc, s, 0);
+  } else if (n < -0.995) {
+    s = (short)(n * 10.0 - 0.5);
+    display_number(enc, s, 1);
+  } else if (n < -0.005) {
+    s = (short)(n * 100.0 - 0.5);
+    display_number(enc, s, 2);
+  } else if (n > 99.95) {
+    s = (short)(n + 0.5);
+    display_number(enc, s, 0);
+  } else if (n > 9.995) {
+    s = (short)(n * 10.0 + 0.05);
+    display_number(enc, s, 1);
+  } else {
+    s = (short)(n * 100.0 + 0.005);
+    display_number(enc, s, 2);
+  }
 }
 
 void display_a_note(byte display_num, byte note, byte sharp_flat) {
@@ -131,9 +160,9 @@ void display_note(byte enc) {
 }
 
  
+// starts disabled until a ch sw turned on
 // byte _choices_num, byte _choices_length, byte _bt_mul_down = 1, byte _additional_flags = 0
-choices_t Function_var_type(0, 15, 4);
-  // {0, 14, ENCODER_FLAGS_CYCLE | ENCODER_FLAGS_CHOICE_LEDS, 1, 4, UPDATE_CHOICES, 0};
+choices_t Function_var_type(0, NUM_FUNCTIONS, 4, ENCODER_FLAGS_DISABLED);
 
 // static variables
 variable_t Filename_var = {&Disabled};
