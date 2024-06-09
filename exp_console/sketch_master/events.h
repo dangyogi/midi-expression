@@ -22,7 +22,13 @@
 #define UPDATE_GEOMETRIC_NUM               37
 #define UPDATE_NOTE                        38
 #define UPDATE_SHARPS_FLATS                39
-#define NEXT_AVAIL_EVENT                   40
+#define TRIGGER_SW_ON                      40
+#define TRIGGER_SW_OFF                     41
+#define TRIGGER_BT_PRESSED                 42
+#define TRIGGER_BT_RELEASED                43
+#define CHECK_POTS                         44
+#define CHECK_FUNCTIONS                    45
+#define NEXT_AVAIL_EVENT                   46
 
 extern byte Trace_events;
 extern byte Trace_encoders;

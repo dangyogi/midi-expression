@@ -9,6 +9,8 @@
 
 byte EEPROM_functions_offset;
 
+byte Function_changed;
+
 // 512 bytes
 byte Channel_memory[NUM_CHANNELS][NUM_CH_FUNCTIONS][NUM_FUNCTION_ENCODERS];
 
@@ -129,11 +131,23 @@ void load_functions(byte skip_ch_functions) {
 
   if (Lowest_channel != 0xFF) {
     byte fun, enc;
+    byte fun_changed = 0;
     if (!skip_ch_functions) {
       for (fun = 0; fun < NUM_CH_FUNCTIONS; fun++) {
         for (enc = 0; enc < NUM_FUNCTION_ENCODERS; enc++) {
           Functions[fun][enc].value = Channel_memory[Lowest_channel][fun][enc];
           Functions[fun][enc].changed = 0;
+        }
+      } // end for (fun)
+    } else {
+      // Harmonic functions going away (no longer in changed state).
+      // If no ch functions have changed, we need to reset Function_changed...
+      for (fun = 0; fun < NUM_CH_FUNCTIONS; fun++) {
+        for (enc = 0; enc < NUM_FUNCTION_ENCODERS; enc++) {
+          if (Functions[fun][enc].changed) {
+            fun_changed = 1;
+            break;
+          }
         }
       } // end for (fun)
     } // end if (!skip_ch_functions)
@@ -149,6 +163,7 @@ void load_functions(byte skip_ch_functions) {
     if (!skip_ch_functions || FUNCTION >= NUM_CH_FUNCTIONS) {
       update_displays();
     }
+    if (!fun_changed) Function_changed = 0;
   } // end if (Lowest_channel set)
 }
 
@@ -231,6 +246,7 @@ void send_functions_to_synth(void) {
         Functions[fun][enc].changed = 0;
       }
     }
+    Function_changed = 0;
   } // end if (Lowest_channel set)
 } // end send_functions_to_synth
 

@@ -16,6 +16,8 @@ extern byte Channel_memory[NUM_CHANNELS][NUM_CH_FUNCTIONS][NUM_FUNCTION_ENCODERS
 // 4480 bytes
 extern byte Harmonic_memory[NUM_CHANNELS][NUM_HARMONICS][NUM_HM_FUNCTIONS][NUM_FUNCTION_ENCODERS];
 
+extern byte Function_changed; // Some function somewhere has changed.
+
 extern byte Lowest_harmonic;  // 0-9, 0xFF when all switches off
 extern byte Lowest_channel;   // 0-15, 0xFF when all switches off
 

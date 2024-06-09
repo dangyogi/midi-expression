@@ -3,17 +3,18 @@ Master Controller
 Error Codes:
 
   Errno, Err_data
-   10    data_len           getResponse: data_len > 32
-   11    bytes_received     getResponse: Wire.requestFrom bytes_received > data_len
-   12    Wire.available()   getResponse: bytes_received != Wire.available()
-   13    i2c_addr           getResponse: bytes_received == 0
+   10    100*ri + data_len           getResponse: data_len > 32
+   11    100*ri + bytes_received     getResponse: Wire.requestFrom bytes_received > data_len
+   12    100*ri + Wire.available()   getResponse: bytes_received != Wire.available()
+   13    remote_index                getResponse: bytes_received == 0
+   15    num_bytes          loop: invalid num_bytes received getting pot values from Pot controller
    16    periodic_num       loop: invalid periodic num
-   20    len_written        Wire.write returned wrong length
-   21    i2c_addr           Wire.endTransmission status 1: data too long to fit in transmit buffer
-   22    i2c_addr           Wire.endTransmission status 2: received NACK on transmit of i2c_addr
-   23    i2c_addr           Wire.endTransmission status 3: received NACK on transmit of data
-   24    i2c_addr           Wire.endTransmission status 4: other error
-   25    i2c_addr           Wire.endTransmission status 5: timeout
+   20    100*ri + len_written        Wire.write returned wrong length
+   21    remote_index       Wire.endTransmission status 1: data too long to fit in transmit buffer
+   22    remote_index       Wire.endTransmission status 2: received NACK on transmit of i2c_addr
+   23    remote_index       Wire.endTransmission status 3: received NACK on transmit of data
+   24    remote_index       Wire.endTransmission status 4: other error
+   25    remote_index       Wire.endTransmission status 5: timeout
    30    event_num          run_event: invalid event number (for switches and encoders)
    31     note[1]           display_note: invalid sharp/flat
    41    LED_command        sendRequest: LED response timed out

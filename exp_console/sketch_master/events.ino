@@ -32,6 +32,7 @@ void inc_encoder(byte enc) {
         }
         var->value = new_value - (var->var_type->max + 1 - var->var_type->min);
         var->changed = 1;
+        Function_changed = 1;
         encoder_changed(enc);
       } else if (var->value != var->var_type->max) {
         if (Trace_encoders) {
@@ -39,11 +40,13 @@ void inc_encoder(byte enc) {
         }
         var->value = var->var_type->max;
         var->changed = 1;
+        Function_changed = 1;
         encoder_changed(enc);
       }
     } else {
       var->value = new_value;
       var->changed = 1;
+      Function_changed = 1;
       encoder_changed(enc);
     }
   } else if (Encoders[enc].count <= -2) {
@@ -61,6 +64,7 @@ void inc_encoder(byte enc) {
         }
         var->value = (var->value + var->var_type->max + 1) - var->var_type->min - adj;
         var->changed = 1;
+        Function_changed = 1;
         encoder_changed(enc);
       } else if (var->value != var->var_type->min) {
         if (Trace_encoders) {
@@ -68,11 +72,13 @@ void inc_encoder(byte enc) {
         }
         var->value = var->var_type->min;
         var->changed = 1;
+        Function_changed = 1;
         encoder_changed(enc);
       }
     } else {
       var->value -= adj;
       var->changed = 1;
+      Function_changed = 1;
       encoder_changed(enc);
     }
   }
@@ -82,7 +88,8 @@ void inc_encoder(byte enc) {
 void run_event(byte event_num, byte param) {
   // This runs Switch_closed_events, Switch_opened_events and Encoder display_value and encoder_events.
   if (event_num != 0xFF) {
-    byte enc;
+    byte enc, pots_index, pot;
+    trigger_t *trig;
     variable_t *var;
     switch (event_num) {
     case ENC_A_CLOSED(0): case ENC_A_CLOSED(1): case ENC_A_CLOSED(2):
@@ -178,15 +185,19 @@ void run_event(byte event_num, byte param) {
       break;
     case CHANNEL_ON:
       channel_on(param);
+      disable_triggers();
       break;
     case CHANNEL_OFF:
       channel_off(param);
+      disable_triggers();
       break;
     case HARMONIC_ON:
       harmonic_on(param);
+      disable_triggers();
       break;
     case HARMONIC_OFF:
       harmonic_off(param);
+      disable_triggers();
       break;
     case UPDATE_CHOICES:  // enc
       select_led(param);
@@ -202,6 +213,45 @@ void run_event(byte event_num, byte param) {
       break;
     case UPDATE_SHARPS_FLATS:  // enc
       display_sharps_flats(param);
+      break;
+    case TRIGGER_SW_ON:   // trigger switch
+      trig = &Triggers[Switches[param].tag];
+      if (Lowest_channel != 0xFF) {
+        trig->continuous = 1;
+        led_on(trig->led);
+      }
+      break;
+    case TRIGGER_SW_OFF:  // trigger switch
+      trig = &Triggers[Switches[param].tag];
+      trig->continuous = 0;
+      led_off(trig->led);
+      break;
+    case TRIGGER_BT_PRESSED:  // trigger button
+      trig = &Triggers[Switches[param].tag];
+      if (!trig->continuous && Lowest_channel != 0xFF) {
+        led_on(trig->led);
+        check_trigger(Switches[param].tag);
+      }
+      break;
+    case TRIGGER_BT_RELEASED: // trigger button
+      trig = &Triggers[Switches[param].tag];
+      if (!trig->continuous) {
+        led_off(trig->led);
+      }
+      break;
+    case CHECK_POTS: // trigger_num
+      for (pots_index = 0; pots_index < Num_pots[param]; pots_index++) {
+        pot = Pots[param][pots_index];
+        if (Synced_pot_value[pot] != Current_pot_value[pot]) {
+          changed(param);
+          break;
+        }
+      }
+      break;
+    case CHECK_FUNCTIONS: // trigger_num
+      if (Function_changed) {
+        changed(param);
+      }
       break;
     default:
       Errno = 30;

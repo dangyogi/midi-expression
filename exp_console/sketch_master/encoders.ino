@@ -15,6 +15,16 @@ void send_LED_request(byte *msg, byte length) {
   getResponse(I2C_LED_CONTROLLER, 2, 1);
 }
 
+void led_on(byte led) {
+  byte msg[2] = {14, led};
+  send_LED_request(msg, 2);
+}
+
+void led_off(byte led) {
+  byte msg[2] = {15, led};
+  send_LED_request(msg, 2);
+}
+
 void select_led(byte enc) {
   variable_t *var = Encoders[enc].var;
   if (Trace_encoders) {

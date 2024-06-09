@@ -109,6 +109,10 @@ extern encoder_t Encoders[NUM_ENCODERS];
 
 #define FUNCTION   (Encoders[FUNCTION_ENCODER].var->value)
 
+extern void send_LED_request(byte *msg, byte length);
+extern void led_on(byte led);
+extern void led_off(byte led);
+
 extern var_type_t Disabled;
 extern void select_led(byte enc);
 extern void turn_off_choices_leds(byte enc);

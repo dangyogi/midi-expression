@@ -8,7 +8,7 @@
 #include <Wire.h>
 #include "flash_errno.h"
 
-#define PROGRAM_ID          "Pots V11"
+#define PROGRAM_ID          "Pots V19"
 
 #define MUX_A      9
 #define MUX_B     10
@@ -29,6 +29,7 @@
 
 byte A_pins[] = {A0, A1, A2, A3};
 byte Num_pots[NUM_A_PINS];    // number of pots on each A_pin
+byte Total_num_pots;
 
 #define EEPROM_num_pots_addr(a_pin)    (a_pin)
 
@@ -100,6 +101,7 @@ void setup() {
   byte a_pin, pot_addr;
   byte num_pots_msg_seen = 0;
   byte cal_msg_seen = 0;
+  Total_num_pots = 0;
   for (a_pin = 0; a_pin < NUM_A_PINS; a_pin++) {
     byte num_pots = EEPROM[EEPROM_num_pots_addr(a_pin)];
     if (num_pots == 0xFF) {
@@ -115,6 +117,7 @@ void setup() {
       Errno = 100;
       Err_data = a_pin;
     } else Num_pots[a_pin] = num_pots;
+    Total_num_pots += Num_pots[a_pin];
     for (pot_addr = 0; pot_addr < 8; pot_addr++) {
       // Go ahead and initialize all 8, in case the number of pots changes...
       Pot_info[a_pin][pot_addr].a_low = 10000;
@@ -199,7 +202,7 @@ void setup() {
   Wire.onRequest(sendReport);      // callback for reports to on high
 } // end setup()
 
-// 0 = errno, err_data, all pot values
+// 0 = errno, err_data, all pot values (default)
 // 1 = num_pots, num_a_pins, num_EEPROMS_avail, num_EEPROMS_used
 // 2 = errno, err_data
 // 3 = num_pots for each a_pin
@@ -207,7 +210,7 @@ void setup() {
 // 5 = calibration values <a_pin> (8 2-bytes values, auto increments)
 // 6 = EEPROM <addr> (one byte at a time, auto increments)
 // 0xFF = report nothing (no data returned)
-byte Report = 0xFF;
+volatile byte Report = 0;
 byte Report_addr = 0;
 unsigned long Cycle_time;  // uSec
 
@@ -353,31 +356,40 @@ void write_calibrations(void) {  // errnos 61-69
   } // end for (a_pin)
 }
 
+byte I2C_trace = 0;
+volatile byte Request_received = 0;
+volatile int Received_how_many = 0xFF;
+volatile byte Request_command = 0xFF;
+
 void receiveRequest(int how_many) {
   // callback for requests from on high
   byte b0, b1, b2;
+  Request_received = 1;
+  Received_how_many = how_many;
   b0 = Wire.read();
+  Request_command = b0;
   if (b0 < 5) {
     Report = b0;
     check_eq(how_many, 1, 1);
     return;
   }
   if (b0 < 7) {
+    // b0 == 6
     Report = b0;
     if (check_eq(how_many, 2, 2)) {
-      Report = 0xFF;
+      Report = 2;
       return;
     }
     b1 = Wire.read();
     if (b0 == 5) {
       if (check_ls(b1, NUM_A_PINS, 3)) {
-        Report = 0xFF;
+        Report = 2;
         return;
       }
     } else {
       // b0 == 6
       if (check_ls(b1, EEPROM[NUM_EEPROM_USED], 4)) {
-        Report = 0xFF;
+        Report = 2;
         return;
       }
     }
@@ -431,18 +443,29 @@ void receiveRequest(int how_many) {
   } // end switch (b0)
 }
 
+volatile byte SendReport_called = 0;
+volatile byte SendReport_Report = 0xFF;
+volatile byte SendReport_Errno = 0xFF;
+volatile byte SendReport_Err_data = 0xFF;
+volatile byte SendReport_msg_len = 0xFF;
+
 void sendReport(void) {
   // callback for reports from on high
-  byte len_written, a_pin, pot_addr;
+  byte len_written, msg_len, a_pin, pot_addr;
+  SendReport_called = 1;
+  SendReport_Report = Report;
+  msg_len = 0;
   switch (Report) {
   case 0:  // Errno, Err_data + pot.value * num_pots (2 + num_pots total)
     len_written = Wire.write(Errno);
+    msg_len += len_written;
     if (len_written != 1) {
       Errno = 70;
       Err_data = len_written;
       break;
     }
     len_written = Wire.write(Err_data);
+    msg_len += len_written;
     if (len_written != 1) {
       Errno = 71;
       Err_data = len_written;
@@ -451,12 +474,13 @@ void sendReport(void) {
     for (a_pin = 0; a_pin < NUM_A_PINS; a_pin++) {
       for (pot_addr = 0; pot_addr < Num_pots[a_pin]; pot_addr++) {
         len_written = Wire.write(Pot_info[a_pin][pot_addr].value);
-        if (len_written != 1) {
-          Errno = 72;
-          Err_data = len_written;
-          break;
-        }
+        msg_len += len_written;
       }
+    }
+    if (msg_len != 2 + Total_num_pots) {
+      Errno = 72;
+      Err_data = msg_len;
+      break;
     }
     Errno = 0;
     Err_data = 0;
@@ -467,24 +491,28 @@ void sendReport(void) {
       num_pots += Num_pots[a_pin];
     }
     len_written = Wire.write(num_pots);
+    msg_len += len_written;
     if (len_written != 1) {
       Errno = 73;
       Err_data = len_written;
       break;
     }
     len_written = Wire.write(byte(NUM_A_PINS));
+    msg_len += len_written;
     if (len_written != 1) {
       Errno = 74;
       Err_data = len_written;
       break;
     }
     len_written = Wire.write(byte(EEPROM_AVAIL));
+    msg_len += len_written;
     if (len_written != 1) {
       Errno = 75;
       Err_data = len_written;
       break;
     }
     len_written = Wire.write(EEPROM[NUM_EEPROM_USED]);
+    msg_len += len_written;
     if (len_written != 1) {
       Errno = 76;
       Err_data = len_written;
@@ -493,12 +521,14 @@ void sendReport(void) {
     break;
   case 2:  // Errno, Err_data (2 bytes total)
     len_written = Wire.write(Errno);
+    msg_len += len_written;
     if (len_written != 1) {
       Errno = 77;
       Err_data = len_written;
       break;
     }
     len_written = Wire.write(Err_data);
+    msg_len += len_written;
     if (len_written != 1) {
       Errno = 78;
       Err_data = len_written;
@@ -510,6 +540,7 @@ void sendReport(void) {
   case 3:  // Num_pots for each a_pin (NUM_A_PINS bytes total)
     for (a_pin = 0; a_pin < NUM_A_PINS; a_pin++) {
       len_written = Wire.write(Num_pots[a_pin]);
+      msg_len += len_written;
       if (len_written != 1) {
         Errno = 79;
         Err_data = len_written;
@@ -519,6 +550,7 @@ void sendReport(void) {
     break;
   case 4:  // Cycle_time (uSec, 4 bytes total)
     len_written = Wire.write(Cycle_time);  // unsigned long
+    msg_len += len_written;
     if (len_written != 4) {
       Errno = 80;
       Err_data = len_written;
@@ -530,18 +562,21 @@ void sendReport(void) {
       a_pin = Report_addr;
       for (pot_addr = 0; pot_addr < Num_pots[a_pin]; pot_addr++) {
         len_written = Wire.write(Pot_info[a_pin][pot_addr].cal_low);
+        msg_len += len_written;
         if (len_written != 2) {
           Errno = 81;
           Err_data = len_written;
           break;
         }
         len_written = Wire.write(Pot_info[a_pin][pot_addr].cal_center);
+        msg_len += len_written;
         if (len_written != 2) {
           Errno = 82;
           Err_data = len_written;
           break;
         }
         len_written = Wire.write(Pot_info[a_pin][pot_addr].cal_high);
+        msg_len += len_written;
         if (len_written != 2) {
           Errno = 83;
           Err_data = len_written;
@@ -557,6 +592,7 @@ void sendReport(void) {
   case 6:  // next stored EEPROM byte (1 byte, EEPROM_addr auto-incremented)
     if (Report_addr < EEPROM[NUM_EEPROM_USED]) {
       len_written = Wire.write(EEPROM[EEPROM_storage_addr(Report_addr)]);
+      msg_len += len_written;
       if (len_written != 1) {
         Errno = 84;
         Err_data = len_written;
@@ -573,7 +609,10 @@ void sendReport(void) {
     Err_data = Report;
     break;
   } // end switch (Report)
-}
+  SendReport_Errno = Errno;
+  SendReport_Err_data = Err_data;
+  SendReport_msg_len = msg_len;
+} // end sendReport()
 
 unsigned int Num_reads = 0;
 unsigned int Read_threshold = 10;
@@ -675,7 +714,10 @@ void help(void) {
   Serial.println("W - write_calibrations");
   Serial.println("N - trace oN");
   Serial.println("F - trace ofF");
+  Serial.println("O - I2C_trace On");
+  Serial.println("Q - I2C_trace off");
   Serial.println("An - set MUX addr to n, and disable activity, trace ofF re-enables");
+  // availale letters: U Y Z
   Serial.println();
 }
 
@@ -773,18 +815,40 @@ void loop() {
 
     if (Num_reads >= Read_threshold) Num_reads = 0;
   } // end if (!Disable)
-  
+
+  if (I2C_trace) {
+    if (Request_received) {
+      Serial.print("receiveRequest called: command "); Serial.print(Request_command);
+      Serial.print(", how_many "); Serial.println(Received_how_many);
+      Request_received = 0;
+      Received_how_many = 0xFF;
+      Request_command = 0xFF;
+    }
+    if (SendReport_called) {
+      Serial.print("sendReport called: Report "); Serial.print(SendReport_Report);
+      Serial.print(", Errno "); Serial.print(SendReport_Errno);
+      Serial.print(", Err_data "); Serial.print(SendReport_Err_data);
+      Serial.print(", msg_len "); Serial.println(SendReport_msg_len);
+      SendReport_called = 0;
+      SendReport_Report = 0xFF;
+      SendReport_Errno = 0xFF;
+      SendReport_Err_data = 0xFF;
+      SendReport_msg_len = 0xFF;
+    }
+  }
+
   if (Serial.available()) {
     char c = toupper(Serial.read());
     byte n;
     switch (c) {
     case '?': help(); break;
     case 'P':
-      for (a_pin = 0; a_pin < NUM_A_PINS - 1; a_pin++) {
+      for (a_pin = 0; a_pin < NUM_A_PINS; a_pin++) {
         Serial.print(Num_pots[a_pin]);
         Serial.print(", ");
       }
-      Serial.println(Num_pots[NUM_A_PINS - 1]);
+      Serial.print(", Total_num_pots ");
+      Serial.println(Total_num_pots);
       break;
     case 'R': view_pot_values(); break;
     case 'S':
@@ -872,6 +936,22 @@ void loop() {
       Disable = 0;
       Serial.println("Trace ofF");
       break;
+    case 'O':
+      I2C_trace = 1;
+      Request_received = 0;
+      Received_how_many = 0xFF;
+      Request_command = 0xFF;
+      SendReport_called = 0;
+      SendReport_Report = 0xFF;
+      SendReport_Errno = 0xFF;
+      SendReport_Err_data = 0xFF;
+      SendReport_msg_len = 0xFF;
+      Serial.println("I2C_trace On");
+      break;
+    case 'Q':
+      I2C_trace = 0;
+      Serial.println("I2C_trace Off");
+      break;
     case 'A':
       n = Serial.parseInt(SKIP_WHITESPACE);
       if (n >= 8) {
@@ -895,6 +975,6 @@ void loop() {
   errno();   // Flash pin D13 and D12
   
   Cycle_time = micros() - start_time;
-}
+} // end loop()
 
 // vim: sw=2

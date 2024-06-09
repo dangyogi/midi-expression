@@ -12,8 +12,9 @@
 #include "encoders.h"
 #include "notes.h"
 #include "functions.h"
+#include "triggers.h"
 
-#define PROGRAM_ID    "Master V37"
+#define PROGRAM_ID    "Master V46"
 
 // These are set to INPUT_PULLDOWN to prevent flickering on unused ports
 #define FIRST_PORT    0
@@ -22,10 +23,14 @@
 #define ERR_LED      13   // built-in LED
 #define ERR_LED_2    32   // front panel Master Error LED
 
+#define MIN_ERROR_DISPLAY_INTERVAL      1000ul  /* mSec */
+
 // Indexed by I2C_addr - I2C_BASE
 #define NUM_REMOTES   2
 byte Remote_Errno[NUM_REMOTES];
 byte Remote_Err_data[NUM_REMOTES];
+byte Remote_last_errno[NUM_REMOTES];
+unsigned long Remote_last_display_time[NUM_REMOTES];
 char Remote_char[NUM_REMOTES] = {'P', 'L'};
 TwoWire *Remote_wire[NUM_REMOTES] = {&Wire1, &Wire};
 
@@ -58,7 +63,11 @@ byte get_EEPROM(byte EEPROM_addr) {
 unsigned short Periodic_period[NUM_PERIODICS];  // mSec, 0 to disable
 unsigned short Period_offset[NUM_PERIODICS];    // mSec offset from even Periodic_period boundary
 
-#define HUMAN_PERIOD     1000
+// mSec:
+#define GET_POTS_PERIOD            10
+#define GET_POTS_OFFSET             1
+#define SWITCH_REPORT_PERIOD     1000
+#define SWITCH_REPORT_OFFSET      200
 
 byte Driver_up;
 
@@ -92,11 +101,14 @@ void setup() {
   EEPROM_used += setup_encoders(EEPROM_used);
   EEPROM_used += setup_functions(EEPROM_used);
   EEPROM_used += setup_notes(EEPROM_used);
+  EEPROM_used += setup_triggers(EEPROM_used);
 
   Serial.print("EEPROM_used: "); Serial.println(EEPROM_used);
 
-  //Periodic_period[SWITCH_REPORT] = HUMAN_PERIOD;
-  Period_offset[SWITCH_REPORT] = 200;
+  //Periodic_period[GET_POTS] = GET_POTS_PERIOD;  // mSec
+  Period_offset[GET_POTS] = GET_POTS_OFFSET;
+  //Periodic_period[SWITCH_REPORT] = SWITCH_REPORT_PERIOD;
+  Period_offset[SWITCH_REPORT] = SWITCH_REPORT_OFFSET;
 
   /**
   // test error LEDs
@@ -117,9 +129,12 @@ void setup() {
 
 } // end setup()
 
-byte GotLEDResponse = 0;
-byte Display_errors = 0;
+byte Got_LED_response = 0;
+byte Display_errors = 1;
+byte Master_last_errno;
+unsigned long Last_display_time;
 
+// FIX: not needed
 void receiveLEDErrno(int how_many) {
   if (how_many != 2) {
     Serial.print("receiveLEDResponse got "); Serial.print(how_many);
@@ -128,19 +143,11 @@ void receiveLEDErrno(int how_many) {
     byte LED_errno = Wire.read();
     byte LED_err_data = Wire.read();
     if (LED_errno) {
-      if (Driver_up) {
-        report_remote_error(1, LED_errno, LED_err_data);
-      } else if (Serial && Display_errors) {
-        Serial.print("Remote "); Serial.print(Remote_char[1]);
-        Serial.print(" error: Errno "); Serial.print(LED_errno);
-        Serial.print(" Err_data "); Serial.println(LED_err_data);
-      } else {
-        Remote_Errno[1] = LED_errno;
-        Remote_Err_data[1] = LED_err_data;
-      }
+      Remote_Errno[1] = LED_errno;
+      Remote_Err_data[1] = LED_err_data;
     }
   }
-  GotLEDResponse = 1;
+  Got_LED_response = 1;
 }
 
 byte Debug = 0;
@@ -157,24 +164,28 @@ void running_help(void) {
   Serial.println(F("X<errno> - set Errno"));
   Serial.println(F("E - show Errno, Err_data"));
   Serial.println(F("S - show settings"));
-  Serial.println(F("P<debounce_period_0>,<debounce_period_1> - set debounce_periods in EEPROM"));
+  Serial.println(F("P<sw_debounce_period>,<enc_debounce_period> - set debounce_periods in EEPROM"));
   Serial.println(F("N - toggle Display_errors"));
   Serial.println(F("T - toggle Trace_events"));
   Serial.println(F("O - toggle periodic switch_report"));
+  Serial.println(F("L - toggle periodic get_pots"));
   Serial.println(F("U - toggle Trace_encoders"));
   Serial.println(F("Q - toggle scan_switches trace"));
   Serial.println(F("R<row> - dump switches on row"));
+  Serial.println(F("A - dump triggers"));
   Serial.println(F("C - dump encoders"));
+  Serial.println(F("F - dump pots"));
   Serial.println(F("B - dump Debounce_delay_counts"));
   Serial.println(F("M<controller:(P|L)>,<len_expected>,<comma_sep_bytes> - send I2C message to <controller>"));
-  Serial.println(F("G<first>,<last> - generate raw bytes in the range first-last (inclusive)"));
+  Serial.println(F("K<len_expected> - receive I2C report from pot_controller"));
+  Serial.println(F("G<first>,<last> - Serial.write raw bytes in the range first-last (inclusive)"));
   Serial.println(F("V<first>,<last>\\n<raw_bytes> - verify that raw_bytes are in the range first-last"));
   Serial.println();
   Serial.print(F("sizeof(short) is ")); Serial.println(sizeof(short));
   Serial.print(F("sizeof(int) is ")); Serial.println(sizeof(int));
   Serial.print(F("sizeof(long) is ")); Serial.println(sizeof(long));
   Serial.println();
-  // Unused letters: A F H J K L Y Z
+  // Unused letters: H J Y Z
 }
 
 void debug_help(void) {
@@ -182,8 +193,10 @@ void debug_help(void) {
   Serial.println(F("debug:"));
   Serial.println(F("? - help"));
   Serial.println(F("D - leave Debug mode"));
+  Serial.println(F("X<errno> - set Errno"));
   Serial.println(F("E - show Errno, Err_data"));
   Serial.println(F("S - scan for shorts"));
+  Serial.println(F("N - toggle Display_errors"));
   Serial.println(F("On - turn on output n"));
   Serial.println(F("In - turn on input n"));
   Serial.println(F("F - turn off test pin"));
@@ -207,26 +220,27 @@ unsigned long I2C_send_time;    // uSec
 
 void sendRequest(byte i2c_addr, byte *data, byte data_len) {
   byte b0, status;
-  TwoWire *I2C_port = Remote_wire[i2c_addr - I2C_BASE];
+  byte remote_index = i2c_addr - I2C_BASE;
+  TwoWire *I2C_port = Remote_wire[remote_index];
   unsigned long start_time = micros();
   I2C_port->beginTransmission(i2c_addr);
   b0 = I2C_port->write(data, data_len);
   if (b0 != data_len) {
     Errno = 20;
-    Err_data = b0;
+    Err_data = 100 * remote_index + b0;
   }
   status = I2C_port->endTransmission();
   if (status) {
     Errno = 20 + status;        // 21 to 25
-    Err_data = i2c_addr;
+    Err_data = remote_index;
   }
   /***** FIX: delete
   if (i2c_addr == I2C_LED_CONTROLLER) {
     for (b0 = 0; b0 < 100; b0++) {
-      if (GotLEDResponse) break;
+      if (Got_LED_response) break;
       delayMicroseconds(10);
     }
-    if (GotLEDResponse) GotLEDResponse = 0;
+    if (Got_LED_response) Got_LED_response = 0;
     else {
       Errno = 41;
       Err_data = data[0];
@@ -240,17 +254,18 @@ void sendRequest(byte i2c_addr, byte *data, byte data_len) {
 unsigned long I2C_request_from_time;    // uSec
 unsigned long I2C_read_time;            // uSec
 
-byte ResponseData[32];
+byte Response_data[32];
 
 byte getResponse(byte i2c_addr, byte data_len, byte check_errno) {
   // Returns bytes received.  (0 if error)
-  // Data in ResponseData.
+  // Data in Response_data.
   byte i;
-  TwoWire *I2C_port = Remote_wire[i2c_addr - I2C_BASE];
+  byte remote_index = i2c_addr - I2C_BASE;
+  TwoWire *I2C_port = Remote_wire[remote_index];
   unsigned long start_time = micros();
   if (data_len > 32) {
     Errno = 10;
-    Err_data = data_len;
+    Err_data = 100 * remote_index + data_len;
     return 0;
   }
   byte bytes_received = I2C_port->requestFrom(i2c_addr, data_len);
@@ -258,47 +273,41 @@ byte getResponse(byte i2c_addr, byte data_len, byte check_errno) {
   unsigned long elapsed_time = mid_time - start_time;
   if (elapsed_time > I2C_request_from_time) I2C_request_from_time = elapsed_time;
   if (bytes_received > data_len) {
-    if (Serial) {
-      Serial.print("Bytes_received too long, got "); Serial.print(bytes_received);
-      Serial.print("expected "); Serial.println(data_len);
-    }
+    //if (Serial) {
+    //  Serial.print("Remote "); Serial.print(Remote_char[remote_index]);
+    //  Serial.print(": Bytes_received too long, got "); Serial.print(bytes_received);
+    //  Serial.print("expected "); Serial.println(data_len);
+    //}
     Errno = 11;
-    Err_data = bytes_received;
+    Err_data = 100 * remote_index + bytes_received;
     return 0;
   }
   if (bytes_received != I2C_port->available()) {
-    if (Serial) {
-      Serial.print(F("I2C.requestFrom: bytes_received, ")); Serial.print(bytes_received);
-      Serial.print(F(", != available(), ")); Serial.println(I2C_port->available());
-    }
+    //if (Serial) {
+    //  Serial.print("Remote "); Serial.print(Remote_char[remote_index]);
+    //  Serial.print(F(": I2C.requestFrom: bytes_received, ")); Serial.print(bytes_received);
+    //  Serial.print(F(", != available(), ")); Serial.println(I2C_port->available());
+    //}
     Errno = 12;
-    Err_data = I2C_port->available();
+    Err_data = 100 * remote_index + I2C_port->available();
     return 0;
   }
   for (i = 0; i < bytes_received; i++) {
-    ResponseData[i] = I2C_port->read();
+    Response_data[i] = I2C_port->read();
   }
   unsigned long read_time = micros() - mid_time;
   if (read_time > I2C_read_time) I2C_read_time = read_time;
   if (bytes_received == 0) {
     Errno = 13;
-    Err_data = i2c_addr;
+    Err_data = remote_index;
     return bytes_received;
   }
   if (bytes_received >= 2) {
     if ((check_errno || (bytes_received < data_len && bytes_received == 2))
-        && ResponseData[0] != 0
+        && Response_data[0] != 0
     ) {
-      if (Driver_up) {
-        report_remote_error(i2c_addr - I2C_BASE, ResponseData[0], ResponseData[1]);
-      } else if (Serial && Display_errors) {
-        Serial.print("Remote "); Serial.print(Remote_char[i2c_addr - I2C_BASE]);
-        Serial.print(" error: Errno "); Serial.print(ResponseData[0]);
-        Serial.print(" Err_data "); Serial.println(ResponseData[1]);
-      } else {
-        Remote_Errno[i2c_addr - I2C_BASE] = ResponseData[0];
-        Remote_Err_data[i2c_addr - I2C_BASE] = ResponseData[1];
-      }
+      Remote_Errno[remote_index] = Response_data[0];
+      Remote_Err_data[remote_index] = Response_data[1];
     } // end error check
   } // end if received at least 2 bytes
   return bytes_received;
@@ -317,14 +326,21 @@ void report_error() {
   Errno = Err_data = 0;
 }
 
-void report_remote_error(byte remote_index, byte errno, byte err_data) {
+void report_remote_error(byte remote_index) {
   Serial.print("$E");
   Serial.write(Remote_char[remote_index]);
-  Serial.write(errno);
-  Serial.write(err_data);
+  Serial.write(Remote_Errno[remote_index]);
+  Serial.write(Remote_Err_data[remote_index]);
+  Remote_Errno[remote_index] = 0;
+  Remote_Err_data[remote_index] = 0;
 }
 
 byte Scan_switches_trace = 0;
+
+#define NUM_POTS                20
+
+byte Current_pot_value[NUM_POTS];
+byte Synced_pot_value[NUM_POTS];
 
 void loop() {
   // put your main code here, to run repeatedly:
@@ -348,6 +364,18 @@ void loop() {
         case UPDATE_LEDS:
           break;
         case GET_POTS:
+          delayMicroseconds(20);
+          b0 = getResponse(I2C_POT_CONTROLLER, 2 + NUM_POTS, 1);
+          if (b0 != 2 + NUM_POTS) {
+            if (Errno == 0) {
+              Errno = 15;
+              Err_data = b0;
+            }
+          } else {
+            for (b1 = 0; b1 < NUM_POTS; b1++) {
+              Current_pot_value[b1] = Response_data[2 + b1];
+            }
+          }
           break;
         case SEND_MIDI:
           break;
@@ -403,24 +431,26 @@ void loop() {
         Serial.write(NUM_HARMONICS);
         Serial.write(NUM_HM_FUNCTIONS);
         Driver_up = 1;
+        Display_errors = 0;
         if (Errno) {
           report_error();
-          Errno = Err_data = 0;
         }
         for (i = 0; i < NUM_REMOTES; i++) {
           if (Remote_Errno[i]) {
-            report_remote_error(i, Remote_Errno[i], Remote_Err_data[i]);
-            Remote_Errno[i] = 0;
-            Remote_Err_data[i] = 0;
+            report_remote_error(i);
           }
         }
         break;
       case 'D':
-        Debug = 1;
         for (b1 = 0; b1 < NUM_ROWS; b1++) {
           pinMode(Rows[b1], INPUT_PULLDOWN);
         } // end for (b1)
         Serial.println(F("Entering Debug mode"));
+        Debug = 1;
+        if (!Driver_up) {
+          Serial.println("Turning Display_errors on");
+          Display_errors = 1;
+        }
         Serial.println();
         break;
       case 'W': // show switch stats
@@ -453,10 +483,9 @@ void loop() {
         Errno = 0;
         Err_data = 0;
         for (i = 0; i < NUM_REMOTES; i++) {
-          Serial.print(F("Remote_Errno[")); Serial.print(i); Serial.print("]: ");
-          Serial.print(Remote_Errno[i]);
-          Serial.print(F(", Remote_Err_data: "));
-          Serial.println(Remote_Err_data[i]);
+          Serial.print("Remote "); Serial.print(Remote_char[i]);
+          Serial.print(": Errno "); Serial.print(Remote_Errno[i]);
+          Serial.print(", Err_data "); Serial.println(Remote_Err_data[i]);
           Remote_Errno[i] = 0;
           Remote_Err_data[i] = 0;
         }
@@ -503,10 +532,20 @@ void loop() {
         if (Periodic_period[SWITCH_REPORT]) {
           Periodic_period[SWITCH_REPORT] = 0;
         } else {
-          Periodic_period[SWITCH_REPORT] = HUMAN_PERIOD;
+          Periodic_period[SWITCH_REPORT] = SWITCH_REPORT_PERIOD;
         }
         Serial.print(F("Periodic_period[SWITCH_REPORT] set to "));
         Serial.println(Periodic_period[SWITCH_REPORT]);
+        Serial.println();
+        break;
+      case 'L': // toggle periodic get_pots
+        if (Periodic_period[GET_POTS]) {
+          Periodic_period[GET_POTS] = 0;
+        } else {
+          Periodic_period[GET_POTS] = GET_POTS_PERIOD;
+        }
+        Serial.print(F("Periodic_period[GET_POTS] set to "));
+        Serial.println(Periodic_period[GET_POTS]);
         Serial.println();
         break;
       case 'U': // toggle Trace_encoders
@@ -533,10 +572,31 @@ void loop() {
             Serial.print(F(", row ")); Serial.print(b1);
             Serial.print(F(", col ")); Serial.print(b2);
             Serial.print(F(": current ")); Serial.print(Switches[b3].current);
+            Serial.print(F(": debounce_index ")); Serial.print(Switches[b3].debounce_index);
+            Serial.print(F(": tag ")); Serial.print(Switches[b3].tag);
             Serial.print(F(", closed_event ")); Serial.print(Switch_closed_event[b3]);
             Serial.print(F(", opened_event ")); Serial.println(Switch_opened_event[b3]);
           }
         }
+        Serial.println();
+        break;
+      case 'A':  // dump triggers
+        for (b1 = 0; b1 < NUM_TRIGGERS; b1++) {
+          Serial.print(F("Trigger ")); Serial.print(b1);
+          Serial.print(F(": switch_ ")); Serial.print(Triggers[b1].switch_);
+          Serial.print(F(": button ")); Serial.print(Triggers[b1].button);
+          Serial.print(F(": led ")); Serial.print(Triggers[b1].led);
+          Serial.print(F(": check_event ")); Serial.print(Triggers[b1].check_event);
+          Serial.print(F(": continuous ")); Serial.print(Triggers[b1].continuous);
+          if (Triggers[b1].check_event == CHECK_POTS) {
+            Serial.print(F(", pots: "));
+            for (b2 = 0; b2 < Num_pots[b1]; b2++) {
+              if (b2) Serial.print(F(", "));
+              Serial.print(Pots[b1][b2]);
+            }
+          } // end if (CHECK_POTS)
+          Serial.println();
+        } // end for (b1)
         Serial.println();
         break;
       case 'C':  // dump encoders
@@ -564,6 +624,14 @@ void loop() {
               else Serial.println(F(", not changed"));
             } else Serial.println(F(", not enabled"));
           }
+        } // end for (b1)
+        Serial.println();
+        break;
+      case 'F':  // dump pots
+        for (b1 = 0; b1 < NUM_POTS; b1++) {
+          Serial.print(F("Pot ")); Serial.print(b1);
+          Serial.print(F(": current ")); Serial.print(Current_pot_value[b1]);
+          Serial.print(F(", synched ")); Serial.println(Synced_pot_value[b1]);
         } // end for (b1)
         Serial.println();
         break;
@@ -657,14 +725,40 @@ void loop() {
           if (b3 == 0) {
             Serial.println("no response");
           } else {
-            Serial.print(ResponseData[0]);
+            Serial.print(Response_data[0]);
             for (i = 1; i < b3; i++) {
-              Serial.print(", "); Serial.print(ResponseData[i]);
+              Serial.print(", "); Serial.print(Response_data[i]);
             }
             Serial.println();
           }
         }
        error:
+        Serial.println();
+        break;
+      case 'K': // receive I2C report from pot_controller
+        skip_ws();
+        b1 = Serial.parseInt();
+        if (b1 > 32) {
+          Serial.println(F("ERROR: len_expected > 32"));
+        } else {
+          b2 = getResponse(I2C_POT_CONTROLLER, b1, 0);
+          Serial.print(F("I2C_request_from_time ")); Serial.print(I2C_request_from_time);
+          Serial.println(F(" uSec"));
+          I2C_request_from_time = 0;
+          Serial.print(F("I2C_read_time ")); Serial.print(I2C_read_time);
+          Serial.println(F(" uSec"));
+          I2C_read_time = 0;
+          if (b2 == 0) {
+            Serial.print("got Errno "); Serial.print(Errno);
+            Serial.print(", Err_data "); Serial.println(Err_data);
+          } else {
+            Serial.print(Response_data[0]);
+            for (i = 1; i < b2; i++) {
+              Serial.print(", "); Serial.print(Response_data[i]);
+            }
+            Serial.println();
+          }
+        }
         Serial.println();
         break;
       case 'G': // G<first>,<last> - generate raw bytes in the range first-last (inclusive)
@@ -750,6 +844,12 @@ void loop() {
         Serial.println(F("Leaving Debug mode"));
         Serial.println();
         break;
+      case 'X': // set Errno
+        skip_ws();
+        Errno = Serial.parseInt();
+        Serial.print(F("Errno set to ")); Serial.println(Errno);
+        Serial.println();
+        break;
       case 'E': // show Errno, Err_data
         Serial.print(F("Errno: "));
         Serial.print(Errno);
@@ -758,10 +858,9 @@ void loop() {
         Errno = 0;
         Err_data = 0;
         for (i = 0; i < NUM_REMOTES; i++) {
-          Serial.print(F("Remote_Errno[")); Serial.print(i); Serial.print("]: ");
-          Serial.print(Remote_Errno[i]);
-          Serial.print(F(", Remote_Err_data: "));
-          Serial.println(Remote_Err_data[i]);
+          Serial.print("Remote "); Serial.print(Remote_char[i]);
+          Serial.print(": Errno "); Serial.print(Remote_Errno[i]);
+          Serial.print(", Err_data "); Serial.println(Remote_Err_data[i]);
           Remote_Errno[i] = 0;
           Remote_Err_data[i] = 0;
         }
@@ -824,6 +923,12 @@ void loop() {
           pinMode(Cols[b1], INPUT_PULLDOWN);
         } // end for (b1)
         Serial.println(F("Scan complete"));
+        Serial.println();
+        break;
+      case 'N': // toggle Display_errors
+        Display_errors = 1 - Display_errors;
+        Serial.print(F("Display_errors set to "));
+        Serial.println(Display_errors);
         Serial.println();
         break;
       case 'O': // turn on output n
@@ -912,9 +1017,9 @@ void loop() {
             Serial.print("got Errno "); Serial.print(Errno);
             Serial.print(", Err_data "); Serial.println(Err_data);
           } else {
-            Serial.print(ResponseData[0]);
+            Serial.print(Response_data[0]);
             for (i = 1; i < b2; i++) {
-              Serial.print(", "); Serial.print(ResponseData[i]);
+              Serial.print(", "); Serial.print(Response_data[i]);
             }
             Serial.println();
           }
@@ -968,9 +1073,9 @@ void loop() {
             Serial.print("got Errno "); Serial.print(Errno);
             Serial.print(", Err_data "); Serial.println(Err_data);
           } else {
-            Serial.print(ResponseData[0]);
+            Serial.print(Response_data[0]);
             for (i = 1; i < b2; i++) {
-              Serial.print(", "); Serial.print(ResponseData[i]);
+              Serial.print(", "); Serial.print(Response_data[i]);
             }
             Serial.println();
           }
@@ -988,10 +1093,40 @@ void loop() {
   // MIDI Controllers should discard incoming MIDI messages.
   while (usbMIDI.read()) ;  // read & ignore incoming messages
 
-  if (Display_errors && Errno) {
-    Serial.print("Errno "); Serial.print(Errno); Serial.print(", Err_data "); Serial.println(Err_data);
-    Errno = Err_data = 0;
+  if (Errno) {
+    if (Display_errors &&
+        (Errno != Master_last_errno || millis() - Last_display_time > MIN_ERROR_DISPLAY_INTERVAL)
+    ) {
+      Serial.print("Errno "); Serial.print(Errno); Serial.print(", Err_data "); Serial.println(Err_data);
+      Master_last_errno = Errno;
+      Last_display_time = millis();
+      if (!Driver_up) {
+        Errno = Err_data = 0;
+      }
+    }
+    if (Driver_up) {
+      report_error();
+    }
   }
+
+  for (i = 0; i < NUM_REMOTES; i++) {
+    if (Remote_Errno[i]) {
+      if (Driver_up) {
+        report_remote_error(i);
+      } else if (Serial && Display_errors &&
+                 (Remote_Errno[i] != Remote_last_errno[i] ||
+                  millis() - Remote_last_display_time[i] > MIN_ERROR_DISPLAY_INTERVAL)
+      ) {
+        Serial.print("Remote "); Serial.print(Remote_char[i]);
+        Serial.print(": Errno "); Serial.print(Remote_Errno[i]);
+        Serial.print(", Err_data "); Serial.println(Remote_Err_data[i]);
+        Remote_last_errno[i] = Remote_Errno[i];
+        Remote_last_display_time[i] = millis();
+        Remote_Errno[i] = 0;
+        Remote_Err_data[i] = 0;
+      }
+    } // end if (Remote_Errno)
+  } // end for (i)
 
   errno();
 }

@@ -2,6 +2,13 @@
 
 #define MAX_DELAYS   42
 
+// All of these are in mSec:
+#define SHORT_ON     150
+#define SHORT_OFF    150
+#define LONG_ON      750
+#define OFF_BETWEEN_DIGITS     600
+#define OFF_BETWEEN_REPEATS   1800
+
 unsigned short Delays[MAX_DELAYS];
 byte Num_delays;
 
@@ -51,7 +58,7 @@ void errno(void) {
       byte current_errno = Errno;
       Last_errno = Errno;
       byte i;
-      byte divisor = 100;
+      byte divisor;
       byte seen_first = 0;
       Num_delays = 0;  // just to be sure...
       for (divisor = 100; divisor; divisor /= 10) {
@@ -61,22 +68,22 @@ void errno(void) {
         current_errno = remainder;
         if (digit == 0) {
           if (seen_first || divisor == 1) {
-            push(750);  // LONG on
-            push(400);  // off between digits
+            push(LONG_ON);  // LONG on
+            push(OFF_BETWEEN_DIGITS);  // off between digits
           }
         } else {
           for (i = 0; i < digit - 1; i++) {
-            push(150);  // on
-            push(150);   // off
+            push(SHORT_ON);  // on
+            push(SHORT_OFF);   // off
           }
-          push(150);    // last on
-          push(600);      // off between digits
+          push(SHORT_ON);    // last on
+          push(OFF_BETWEEN_DIGITS);      // off between digits
           seen_first = 1;
         }
       } // end for (divisor)
 
       // Change final delay to seperate repetitions
-      Delays[Num_delays - 1] = 1200;
+      Delays[Num_delays - 1] = OFF_BETWEEN_REPEATS;
 
       Start_time = millis();
       Current_delay = 0;
@@ -86,7 +93,7 @@ void errno(void) {
       }
       Level = 0;
     } // end if (Last_errno == 0)
-  } // end else if (current_errno == 0)
+  } // end else if (Errno == 0)
   if (Current_delay < Num_delays) {
     unsigned long current_time = millis();
     if (current_time - Start_time >= Delays[Current_delay]) {
