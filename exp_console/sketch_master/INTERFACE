@@ -9,6 +9,7 @@ Error Codes:
    13    remote_index                getResponse: bytes_received == 0
    15    num_bytes          loop: invalid num_bytes received getting pot values from Pot controller
    16    periodic_num       loop: invalid periodic num
+   17    interval_time      loop: invalid GET_POTS interval
    20    100*ri + len_written        Wire.write returned wrong length
    21    remote_index       Wire.endTransmission status 1: data too long to fit in transmit buffer
    22    remote_index       Wire.endTransmission status 2: received NACK on transmit of i2c_addr

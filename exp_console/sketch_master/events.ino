@@ -175,12 +175,12 @@ void run_event(byte event_num, byte param) {
       break;
     case CONTINUOUS:
       // changing from pulse to continuous, notes may be off right now!
-      Periodic_period[PULSE_NOTES_ON] = 0;
-      Periodic_period[PULSE_NOTES_OFF] = 0;
+      turn_off_periodic_fun(PULSE_NOTES_ON);
+      turn_off_periodic_fun(PULSE_NOTES_OFF);
       notes_on();
       break;
     case PULSE:
-      // changing from continuous to pulse, no notes may be switched on now...
+      // changing from continuous to pulse, but no notes may be switched on now...
       check_pulse_on();
       break;
     case CHANNEL_ON:

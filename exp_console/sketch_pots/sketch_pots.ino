@@ -8,7 +8,7 @@
 #include <Wire.h>
 #include "flash_errno.h"
 
-#define PROGRAM_ID          "Pots V19"
+#define PROGRAM_ID          "Pots V22"
 
 #define MUX_A      9
 #define MUX_B     10
@@ -90,7 +90,7 @@ void setup() {
   pinMode(MUX_C, OUTPUT);
 
   Wire.begin(0x31);
-  Wire.setClock(400000);
+  //Wire.setClock(400000);
   Serial.begin(230400);
 
   Serial.println(PROGRAM_ID);
@@ -213,6 +213,7 @@ void setup() {
 volatile byte Report = 0;
 byte Report_addr = 0;
 unsigned long Cycle_time;  // uSec
+unsigned long Max_cycle_time;
 
 byte check_eq(byte b, byte n, byte errno) {
   if (b != n) {
@@ -448,10 +449,12 @@ volatile byte SendReport_Report = 0xFF;
 volatile byte SendReport_Errno = 0xFF;
 volatile byte SendReport_Err_data = 0xFF;
 volatile byte SendReport_msg_len = 0xFF;
+volatile unsigned long SendReport_elapsed_time = 0;   // uSec
 
 void sendReport(void) {
   // callback for reports from on high
   byte len_written, msg_len, a_pin, pot_addr;
+  unsigned long start = micros();
   SendReport_called = 1;
   SendReport_Report = Report;
   msg_len = 0;
@@ -612,6 +615,7 @@ void sendReport(void) {
   SendReport_Errno = Errno;
   SendReport_Err_data = Err_data;
   SendReport_msg_len = msg_len;
+  SendReport_elapsed_time = micros() - start;
 } // end sendReport()
 
 unsigned int Num_reads = 0;
@@ -694,7 +698,7 @@ void read(byte a_pin, byte pot_addr, byte pot_num) {
       pi->last_reported = new_raw_value;
     } // end if (new_raw_value changed)
   } // end if (Num_reads...)
-}
+} // end read()
 
 void help(void) {
   Serial.println();
@@ -828,12 +832,16 @@ void loop() {
       Serial.print("sendReport called: Report "); Serial.print(SendReport_Report);
       Serial.print(", Errno "); Serial.print(SendReport_Errno);
       Serial.print(", Err_data "); Serial.print(SendReport_Err_data);
-      Serial.print(", msg_len "); Serial.println(SendReport_msg_len);
+      Serial.print(", msg_len "); Serial.print(SendReport_msg_len);
+      Serial.print(", elapsed uSec "); Serial.println(SendReport_elapsed_time);
+      Serial.print("Max_cycle_time (uSec) "); Serial.println(Max_cycle_time);
       SendReport_called = 0;
       SendReport_Report = 0xFF;
       SendReport_Errno = 0xFF;
       SendReport_Err_data = 0xFF;
       SendReport_msg_len = 0xFF;
+      SendReport_elapsed_time = 0;
+      Max_cycle_time = 0;
     }
   }
 
@@ -879,7 +887,9 @@ void loop() {
     case 'T':
       Serial.print("Cycle_time is ");
       Serial.print(Cycle_time);
-      Serial.println(" uSec");
+      Serial.print(" uSec, Max_cycle_time is ");
+      Serial.println(Max_cycle_time);
+      Max_cycle_time = 0;
       break;
     case 'X':
       Errno = Serial.parseInt(SKIP_WHITESPACE);
@@ -975,6 +985,7 @@ void loop() {
   errno();   // Flash pin D13 and D12
   
   Cycle_time = micros() - start_time;
+  if (Cycle_time > Max_cycle_time) Max_cycle_time = Cycle_time;
 } // end loop()
 
 // vim: sw=2

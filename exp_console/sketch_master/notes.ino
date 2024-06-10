@@ -4,6 +4,7 @@
 
 byte EEPROM_notes_offset;
 
+// indexed by SW_TO_NOTE_NUM
 byte MIDI_note[] = {57, 60, 64, 67, 70, 72};  // A3, C4, E4, G4, Bb4, C5
 
 byte Notes_currently_on;  // Set/Reset during pulsing
@@ -26,10 +27,8 @@ void note_on_by_sw(byte sw) {
     if (!Switches[NOTE_BUTTON(note)].current) note_on(note);
   } else {
     // Pulse mode!  Make sure pulsing is on...
-    Periodic_period[PULSE_NOTES_ON] = PULSE_NOTES_PERIOD;
-    Period_offset[PULSE_NOTES_ON] = 0;
-    Periodic_period[PULSE_NOTES_OFF] = PULSE_NOTES_PERIOD;
-    Period_offset[PULSE_NOTES_OFF] = PULSE_NOTES_ON_PERIOD;
+    turn_on_periodic_fun(PULSE_NOTES_ON, PULSE_NOTES_PERIOD);
+    turn_on_periodic_fun(PULSE_NOTES_OFF, PULSE_NOTES_PERIOD);
     if (Notes_currently_on) note_on(note);
   }
 }
@@ -44,16 +43,24 @@ void note_off_by_sw(byte sw) {
 
 void check_pulse_on(void) {
   // If any note switches are on, turn on pulsing!
+  //
+  // Called when Continuous changed to Pulse, so any note switches that are on are currently playing.
   byte i;
+  byte pulse_enabled = 0;
   for (i = 0; i < NUM_NOTES; i++) {
     if (Switches[NOTE_SWITCH(i)].current) {
       // Some note switch is on, make sure pulsing is on
-      Periodic_period[PULSE_NOTES_ON] = PULSE_NOTES_PERIOD;
-      Period_offset[PULSE_NOTES_ON] = 0;
-      Periodic_period[PULSE_NOTES_OFF] = PULSE_NOTES_PERIOD;
-      Period_offset[PULSE_NOTES_OFF] = PULSE_NOTES_ON_PERIOD;
-      break;
-    }
+      if (!pulse_enabled) {
+        turn_on_periodic_fun(PULSE_NOTES_ON, PULSE_NOTES_PERIOD);
+        turn_on_periodic_fun(PULSE_NOTES_OFF, PULSE_NOTES_PERIOD);
+        if (Periodic_next[PULSE_NOTES_ON] - Periodic_next[PULSE_NOTES_OFF] < 35000) {
+          // Next periodic is PULSE_NOTES_OFF.  Leave notes on!
+          break;
+        }
+        pulse_enabled = 1;
+      }
+      note_off(i);
+    } // end if (note sw on)
   } // end for (i)
 }
 
@@ -67,16 +74,17 @@ void check_pulse_off(void) {
     }
   } // end for (i)
   // No note switch is on, turn off pulsing
-  Periodic_period[PULSE_NOTES_ON] = 0;
-  Periodic_period[PULSE_NOTES_OFF] = 0;
+  turn_off_periodic_fun(PULSE_NOTES_ON);
+  turn_off_periodic_fun(PULSE_NOTES_OFF);
 }
 
 void note_on(byte note) {
-  usbMIDI.send(usbMIDI.NoteOn, MIDI_note[note], 50, 1, 0);
+  usbMIDI.sendNoteOn(MIDI_note[note], 50, 1, SYNTH_CABLE);        // note, velocity, channel, cable
 }
 
 void note_off(byte note) {
-  usbMIDI.send(usbMIDI.NoteOff, MIDI_note[note], 0, 1, 0);
+  //usbMIDI.sendNoteOff(MIDI_note[note], 0, 1, SYNTH_CABLE);      // note, velocity, channel, cable
+  usbMIDI.sendNoteOn(MIDI_note[note], 0, 1, SYNTH_CABLE);
 }
 
 void notes_on(void) {
@@ -104,7 +112,7 @@ void notes_off(void) {
 }
 
 void control_change(byte channel, byte control, byte value, byte cable) {
-  usbMIDI.send(usbMIDI.ControlChange, control, value, channel, cable);
+  usbMIDI.sendControlChange(control, value, channel, cable);
 }
 
 /***** Not needed any more, now that we have multiple virtual MIDI cables!

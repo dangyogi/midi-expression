@@ -14,7 +14,7 @@
 #include "functions.h"
 #include "triggers.h"
 
-#define PROGRAM_ID    "Master V46"
+#define PROGRAM_ID    "Master V57"
 
 // These are set to INPUT_PULLDOWN to prevent flickering on unused ports
 #define FIRST_PORT    0
@@ -55,21 +55,89 @@ byte get_EEPROM(byte EEPROM_addr) {
 // Periodic functions:
 #define PULSE_NOTES_ON          0
 #define PULSE_NOTES_OFF         1
-#define UPDATE_LEDS             2
+#define UPDATE_LEDS             2   /* not used */
 #define GET_POTS                3
-#define SEND_MIDI               4
+#define SEND_MIDI               4   /* not used */
 #define SWITCH_REPORT           5
 
 unsigned short Periodic_period[NUM_PERIODICS];  // mSec, 0 to disable
-unsigned short Period_offset[NUM_PERIODICS];    // mSec offset from even Periodic_period boundary
+unsigned short Periodic_offset[NUM_PERIODICS];  // mSec offset from even Periodic_period boundary
+unsigned long  Periodic_next[NUM_PERIODICS];    // next time to run Periodic function
 
 // mSec:
-#define GET_POTS_PERIOD            10
+#define PULSE_NOTES_PERIOD        500
+#define PULSE_NOTES_ON_OFFSET       6
+#define PULSE_NOTES_OFF_OFFSET   (PULSE_NOTES_ON_OFFSET + 405)
+#define GET_POTS_PERIOD            20
 #define GET_POTS_OFFSET             1
 #define SWITCH_REPORT_PERIOD     1000
-#define SWITCH_REPORT_OFFSET      200
+#define SWITCH_REPORT_OFFSET       16
+
+// Subtracts two times (millis or micros) giving a signed result, so you can tell which came first
+#define TIME_A_MINUS_B(a, b)        (long(a) - long(b))
+
+// True if time A >= time B
+#define TIME_A_GEQ_B(a, b)          (TIME_A_MINUS_B(a, b) >= 0)
+
+void turn_off_periodic_fun(byte fun) {
+  Periodic_period[fun] = 0;
+}
+
+void turn_on_periodic_fun(byte fun, unsigned short period) {
+  if (Periodic_period[fun] == 0) {
+    unsigned long now = millis();
+    Periodic_period[fun] = period;
+    Periodic_next[fun] = now - now % period + Periodic_offset[fun];
+    Serial.print("turn_on_periodic_fun "); Serial.print(fun);
+    Serial.print(", now "); Serial.print(now);
+    Serial.print(", period "); Serial.print(period);
+    Serial.print(", first attempt at next "); Serial.println(Periodic_next[fun]);
+    if (TIME_A_GEQ_B(now, Periodic_next[fun])) {
+      Serial.print("next < now, adding period "); Serial.println(period);
+      Periodic_next[fun] += period;
+    }
+    if (TIME_A_MINUS_B(Periodic_next[fun], now) <= 20) {
+      Serial.print("Small start interval, adding period "); Serial.println(period);
+      Periodic_next[fun] += period;  // a little extra won't hurt here...
+    }
+    Serial.print("Final Periodic_next: "); Serial.println(Periodic_next[fun]);
+  }
+}
+
+void toggle_periodic_fun(byte fun, unsigned short period) {
+  if (Periodic_period[fun] == 0) {
+    turn_on_periodic_fun(fun, period);
+  } else {
+    turn_off_periodic_fun(fun);
+  }
+}
 
 byte Driver_up;
+
+void test2(const char *a_str, unsigned long a, const char *b_str, unsigned long b, long expect) {
+  if (TIME_A_MINUS_B(a, b) != expect) {
+    Serial.print("test2, "); Serial.print(a_str); Serial.print(" = 0x"); Serial.print(a, HEX);
+    Serial.print(" - "); Serial.print(b_str); Serial.print(" = 0x"); Serial.print(b, HEX);
+    Serial.print(" is "); Serial.println(TIME_A_MINUS_B(a, b));
+  }
+}
+
+void test_a(unsigned long a) {
+  test2("a", a, "a - 16", a - 16, 16);
+  test2("a", a, "a", a, 0);
+  test2("a", a, "a + 16", a + 16, -16);
+}
+
+void test_b(unsigned long b) {
+  test2("b - 16", b - 16, "b", b, -16);
+  test2("b", b, "b", b, 0);
+  test2("b + 16", b + 16, "b", b, 16);
+}
+
+void test(unsigned long x) {
+  test_a(x);
+  test_b(x);
+}
 
 void setup() {
   // put your setup code here, to run once:
@@ -105,10 +173,13 @@ void setup() {
 
   Serial.print("EEPROM_used: "); Serial.println(EEPROM_used);
 
+  Periodic_offset[PULSE_NOTES_ON] = PULSE_NOTES_ON_OFFSET;
+  Periodic_offset[PULSE_NOTES_OFF] = PULSE_NOTES_OFF_OFFSET;
+
   //Periodic_period[GET_POTS] = GET_POTS_PERIOD;  // mSec
-  Period_offset[GET_POTS] = GET_POTS_OFFSET;
+  Periodic_offset[GET_POTS] = GET_POTS_OFFSET;
   //Periodic_period[SWITCH_REPORT] = SWITCH_REPORT_PERIOD;
-  Period_offset[SWITCH_REPORT] = SWITCH_REPORT_OFFSET;
+  Periodic_offset[SWITCH_REPORT] = SWITCH_REPORT_OFFSET;
 
   /**
   // test error LEDs
@@ -124,6 +195,16 @@ void setup() {
   **/
   
   delay(2);
+
+  /**
+  Serial.print("sizeof(short) "); Serial.print(sizeof(short));
+  Serial.print(", sizeof(int) "); Serial.print(sizeof(int));
+  Serial.print(", sizeof(long) "); Serial.println(sizeof(long));
+  **/
+
+  test(0xfffffff8ul);
+  test(0x0ul);
+  test(0x7ffffff8ul);
 
   // FIX: scan_switches();   // Runs events which could set Errno
 
@@ -170,6 +251,7 @@ void running_help(void) {
   Serial.println(F("O - toggle periodic switch_report"));
   Serial.println(F("L - toggle periodic get_pots"));
   Serial.println(F("U - toggle Trace_encoders"));
+  Serial.println(F("Z - toggle scan_switches_on"));
   Serial.println(F("Q - toggle scan_switches trace"));
   Serial.println(F("R<row> - dump switches on row"));
   Serial.println(F("A - dump triggers"));
@@ -185,7 +267,7 @@ void running_help(void) {
   Serial.print(F("sizeof(int) is ")); Serial.println(sizeof(int));
   Serial.print(F("sizeof(long) is ")); Serial.println(sizeof(long));
   Serial.println();
-  // Unused letters: H J Y Z
+  // Unused letters: H J Y
 }
 
 void debug_help(void) {
@@ -335,12 +417,15 @@ void report_remote_error(byte remote_index) {
   Remote_Err_data[remote_index] = 0;
 }
 
+byte Scan_switches_on = 1;
 byte Scan_switches_trace = 0;
 
 #define NUM_POTS                20
 
 byte Current_pot_value[NUM_POTS];
 byte Synced_pot_value[NUM_POTS];
+
+unsigned long Last_get_pots_time;
 
 void loop() {
   // put your main code here, to run repeatedly:
@@ -349,11 +434,16 @@ void loop() {
   byte buffer[32];
 
   if (!Debug) {
-    scan_switches(Scan_switches_trace);   // takes optional trace param...
-
+    if (Scan_switches_on) {
+      scan_switches(Scan_switches_trace);   // takes optional trace param...
+    }
     unsigned long now = millis();
+    long interval_time;
     for (i = 0; i < NUM_PERIODICS; i++) {
-      if (Periodic_period[i] && (now % Periodic_period[i]) == Period_offset[i]) {
+      if (Periodic_period[i] && TIME_A_GEQ_B(now, Periodic_next[i])) {
+        do {
+          Periodic_next[i] += Periodic_period[i];
+        } while (TIME_A_MINUS_B(Periodic_next[i], now) < Periodic_period[i]);
         switch (i) {
         case PULSE_NOTES_ON:
           notes_on();
@@ -364,6 +454,18 @@ void loop() {
         case UPDATE_LEDS:
           break;
         case GET_POTS:
+          if (Last_get_pots_time) {
+            interval_time = TIME_A_MINUS_B(now, Last_get_pots_time);
+            if (interval_time < Periodic_period[GET_POTS] || interval_time > Periodic_period[GET_POTS] + 2) {
+              Serial.print("GET_POTS missed interval, interval_time "); Serial.print(interval_time);
+              Serial.print(", now "); Serial.print(now);
+              Serial.print(", next "); Serial.print(Periodic_next[i]);
+              Serial.print(", Last_get_pots_time "); Serial.println(Last_get_pots_time);
+              Errno = 17;
+              Err_data = interval_time;
+            }
+          }
+          Last_get_pots_time = now;
           delayMicroseconds(20);
           b0 = getResponse(I2C_POT_CONTROLLER, 2 + NUM_POTS, 1);
           if (b0 != 2 + NUM_POTS) {
@@ -529,29 +631,36 @@ void loop() {
         Serial.println();
         break;
       case 'O': // toggle periodic switch_report
-        if (Periodic_period[SWITCH_REPORT]) {
-          Periodic_period[SWITCH_REPORT] = 0;
-        } else {
-          Periodic_period[SWITCH_REPORT] = SWITCH_REPORT_PERIOD;
-        }
+        toggle_periodic_fun(SWITCH_REPORT, SWITCH_REPORT_PERIOD);
         Serial.print(F("Periodic_period[SWITCH_REPORT] set to "));
-        Serial.println(Periodic_period[SWITCH_REPORT]);
+        Serial.print(Periodic_period[SWITCH_REPORT]);
+        if (Periodic_period[SWITCH_REPORT]) {
+          Serial.print(", in "); Serial.print(TIME_A_MINUS_B(Periodic_next[SWITCH_REPORT], now)); Serial.print(" mSec");
+        }
+        Serial.println();
         Serial.println();
         break;
       case 'L': // toggle periodic get_pots
-        if (Periodic_period[GET_POTS]) {
-          Periodic_period[GET_POTS] = 0;
-        } else {
-          Periodic_period[GET_POTS] = GET_POTS_PERIOD;
-        }
+        toggle_periodic_fun(GET_POTS, GET_POTS_PERIOD);
         Serial.print(F("Periodic_period[GET_POTS] set to "));
-        Serial.println(Periodic_period[GET_POTS]);
+        Serial.print(Periodic_period[GET_POTS]);
+        if (Periodic_period[GET_POTS]) {
+          Serial.print(", in "); Serial.print(TIME_A_MINUS_B(Periodic_next[GET_POTS], now)); Serial.print(" mSec");
+          Last_get_pots_time = 0;
+        }
+        Serial.println();
         Serial.println();
         break;
       case 'U': // toggle Trace_encoders
         Trace_encoders = 1 - Trace_encoders;
         Serial.print(F("Trace_encoders set to "));
         Serial.println(Trace_encoders);
+        Serial.println();
+        break;
+      case 'Z': // toggle Scan_switches_on
+        Scan_switches_on = 1 - Scan_switches_on;
+        Serial.print(F("Scan_switches_on set to "));
+        Serial.println(Scan_switches_on);
         Serial.println();
         break;
       case 'Q': // toggle Scan_switches_trace

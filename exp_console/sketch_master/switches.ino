@@ -215,10 +215,8 @@ void scan_switches(byte trace, byte trace_col) {
     delay(500);
   }
   unsigned long end_scan_time = micros();
-  if (end_scan_time > start_scan_time) {
-    end_scan_time -= start_scan_time;
-    if (end_scan_time > Longest_scan) Longest_scan = end_scan_time;
-  }
+  end_scan_time -= start_scan_time;
+  if (end_scan_time > Longest_scan) Longest_scan = end_scan_time;
 }
 
 // vim: sw=2
