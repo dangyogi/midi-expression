@@ -13,8 +13,9 @@
 #include "notes.h"
 #include "functions.h"
 #include "triggers.h"
+#include "midi_control.h"
 
-#define PROGRAM_ID    "Master V57"
+#define PROGRAM_ID    "Master V58"
 
 // These are set to INPUT_PULLDOWN to prevent flickering on unused ports
 #define FIRST_PORT    0
@@ -170,6 +171,7 @@ void setup() {
   EEPROM_used += setup_functions(EEPROM_used);
   EEPROM_used += setup_notes(EEPROM_used);
   EEPROM_used += setup_triggers(EEPROM_used);
+  EEPROM_used += setup_midi_control(EEPROM_used);
 
   Serial.print("EEPROM_used: "); Serial.println(EEPROM_used);
 
@@ -456,7 +458,9 @@ void loop() {
         case GET_POTS:
           if (Last_get_pots_time) {
             interval_time = TIME_A_MINUS_B(now, Last_get_pots_time);
-            if (interval_time < Periodic_period[GET_POTS] || interval_time > Periodic_period[GET_POTS] + 2) {
+            if (interval_time < Periodic_period[GET_POTS] ||
+                interval_time > Periodic_period[GET_POTS] + 2
+            ) {
               Serial.print("GET_POTS missed interval, interval_time "); Serial.print(interval_time);
               Serial.print(", now "); Serial.print(now);
               Serial.print(", next "); Serial.print(Periodic_next[i]);
@@ -476,6 +480,9 @@ void loop() {
           } else {
             for (b1 = 0; b1 < NUM_POTS; b1++) {
               Current_pot_value[b1] = Response_data[2 + b1];
+              if (Current_pot_value[b1] != Synced_pot_value[b1]) {
+                pot_changed(b1);
+              }
             }
           }
           break;

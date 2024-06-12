@@ -23,6 +23,9 @@ byte Pots[NUM_POT_TRIGGERS][MAX_TRIGGER_POTS] = {
   {18, 19, 20},  // vol note_on/off
 };
 
+byte Pot_trigger[NUM_POTS];   // initialized from Triggers/Pots in setup_triggers
+
+// Called when Channel or Harmonic switches change.
 void disable_triggers(void) {
   byte i;
   for (i = 0; i < NUM_TRIGGERS; i++) {
@@ -33,7 +36,16 @@ void disable_triggers(void) {
   }
 }
 
-void changed(byte trigger) {
+// Called when one of the monitored pot values for the trigger changes.
+void pot_changed(byte pot) {
+  if (Triggers[Pot_trigger[pot]].continuous) {
+  }
+}
+
+// Called when one of the monitored values for the trigger changes value.
+void fun_changed(byte trigger) {
+  if (Triggers[trigger].continuous) {
+  }
 }
 
 void check_triggers(void) {
@@ -43,6 +55,7 @@ void check_triggers(void) {
   }
 }
 
+// Called when trigger button pressed.  Value may, or may not have, changed.
 void check_trigger(byte trigger) {
   run_event(Triggers[trigger].check_event, trigger);
 }
@@ -58,6 +71,13 @@ byte setup_triggers(byte EEPROM_offset) {
     Switches[Triggers[i].button].tag = i;
     Switch_closed_event[Triggers[i].button] = TRIGGER_BT_PRESSED;
     Switch_opened_event[Triggers[i].button] = TRIGGER_BT_RELEASED;
+
+    if (Triggers[i].check_event == CHECK_POTS) {
+      byte pot;
+      for (pot = 0; pot < Num_pots[i]; pot++) {
+        Pot_trigger[pot] = i;
+      }
+    }
   }
   return 0;
 }

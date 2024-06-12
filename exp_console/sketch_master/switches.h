@@ -10,7 +10,11 @@
 #define SAVE_OR_SYNTH           (Switches[SAVE_PROGRAM_SWITCH].current)
 
 #define FIRST_HARMONIC_SWITCH   SWITCH_NUM(4, 0)
+#define SWITCH_TO_HARMONIC(sw)  ((sw) - FIRST_HARMONIC_SWITCH)
+#define HARMONIC_TO_SWITCH(hm)  (FIRST_HARMONIC_SWITCH + (hm))
 #define FIRST_CHANNEL_SWITCH    SWITCH_NUM(6, 0)
+#define SWITCH_TO_CHANNEL(sw)   ((sw) - FIRST_CHANNEL_SWITCH)
+#define CHANNEL_TO_SWITCH(ch)   (FIRST_CHANNEL_SWITCH + (ch))
 
 typedef struct {
   byte current;                 // 0 == open, 1 == closed

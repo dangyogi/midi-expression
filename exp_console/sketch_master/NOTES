@@ -12,5 +12,13 @@ Encoders use the following events on sw_A/B:
     calls run_event(Encoder[enc].var->var_type->display_value, enc) in events.ino to update the display
     and then run_event(Encoder[enc].encoder_event, enc) to process the change.
 
+Triggers use the following events:
+  -- on the sw/bt:
+       TRIGGER_SW_ON/OFF            -- turns trigger.continuous and led on/off
+       TRIGGER_BT_PRESSED/RELEASED  -- turns led on/off and calls check_trigger,
+                                       which runs the trigger's check_event.
+  -- for check_event:
+       CHECK_POTS                   -- calls pot_changed for each new pot value.
+       CHECK_FUNCTIONS              -- calls fun_changed if any function value has changed.
 
 // vim: sw=2

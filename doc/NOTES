@@ -4,7 +4,8 @@ MIDI:
     - MUSIC-N programming language (1950's)
     - MIDI transmitted at 31.25 kbit/s, 1 stop bit
       - first bit identifies whether the byte is a status (command) byte (1) or 
-        data byte (0).
+        data byte (0).  Status bytes are remembered, so that they don't need to be retransmitted when
+        they haven't changed.
         - command bytes are split in half.  The most significant hex digit (minus the
           command bit) is the command code (0-7), the least significant hex digit is
           the MIDI channel (0-15).
@@ -34,7 +35,7 @@ MIDI:
                 - 0x02 breath control (vibrato)
                 - 0x04 foot controller
                 - 0x05 portamento time
-                - 0x06 data entry (course) used with registered parameter numbers
+                - 0x06 data entry (course) used with (non-)registered parameter numbers
                 - 0x07 *channel volume  # gain in dB = 40*log10(value/127)
                                         # multiplied by note_on velocity
                 - 0x08 balance
@@ -47,7 +48,7 @@ MIDI:
                 - 0x12 general purpose controller #3
                 - 0x13 general purpose controller #4
                 - 0x20 to 0x3F (LSB) seems to be a repeat of 0x00 to 0x1F (MSB)
-                - 0x26 data entry (fine) used with registered parameter numbers
+                - 0x26 data entry (fine) used with (non-)registered parameter numbers
                   - not needed if value is 0
                 - 0x40 *sustain pedal on/off, <=63 off; >= 64 on
                 - 0x41 portamento on/off, <=63 off; >= 64 on
@@ -69,10 +70,12 @@ MIDI:
                 - 0x5D chorus
                 - 0x60 data entry +1, N/A; data byte ignored
                 - 0x61 data entry -1, N/A; data byte ignored
-                - 0x62 non-registered parameter number LSB, lsb
-                - 0x63 non-registered parameter number MSB, msb
-                - 0x64 *registered parameter number LSB, lsb; end of sequence marked by 0x7F
-                - 0x65 *registered parameter number MSB, msb; end of sequence marked by 0x7F
+                - 0x62 non-registered parameter number (NRPN) LSB, lsb
+                - 0x63 non-registered parameter number (NRPN) MSB, msb
+                  - each channel has one active (saved) parameter number (shared by NRPN and RPN)
+                  - data MSB value set by 0x06, LSB value set by 0x26, for 14 bits total
+                - 0x64 *registered parameter number (RPN) LSB, lsb; end of sequence marked by 0x7F
+                - 0x65 *registered parameter number (RPN) MSB, msb; end of sequence marked by 0x7F
                   - 14 bit parameter numbers are registered with International MIDI
                     Association (IMA)
                   - 0x0000 - Pitch bend range (course is semitones, fine is cents)
@@ -81,6 +84,7 @@ MIDI:
                   - 0x0003 - Tuning program change; e.g., to change tuning system
                   - 0x0004 - Tuning bank select; used with Tuning program change
                   - 0x0005 - Modulation depth range; depth of vibrato
+                  - 0x7F7F - Null saved parameter number
                 - 0x78 all sound off (value always 0)
                 - 0x79 *reset all controllers (value always 0)
                 - 0x7A local control on/off, 0=off, 127=on

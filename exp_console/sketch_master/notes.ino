@@ -79,12 +79,14 @@ void check_pulse_off(void) {
 }
 
 void note_on(byte note) {
+  // Always channel 1
   usbMIDI.sendNoteOn(MIDI_note[note], 50, 1, SYNTH_CABLE);        // note, velocity, channel, cable
 }
 
 void note_off(byte note) {
-  //usbMIDI.sendNoteOff(MIDI_note[note], 0, 1, SYNTH_CABLE);      // note, velocity, channel, cable
-  usbMIDI.sendNoteOn(MIDI_note[note], 0, 1, SYNTH_CABLE);
+  // Always channel 1
+  usbMIDI.sendNoteOff(MIDI_note[note], 0, 1, SYNTH_CABLE);      // note, velocity, channel, cable
+  //usbMIDI.sendNoteOn(MIDI_note[note], 0, 1, SYNTH_CABLE);
 }
 
 void notes_on(void) {
@@ -112,7 +114,18 @@ void notes_off(void) {
 }
 
 void control_change(byte channel, byte control, byte value, byte cable) {
-  usbMIDI.sendControlChange(control, value, channel, cable);
+  usbMIDI.sendControlChange(control, value, channel + 1, cable);
+}
+
+unsigned short Last_nrpn[NUM_CHANNELS][2];
+
+void nrpn_change(byte channel, unsigned short control, unsigned short value, byte cable) {
+  if (control != Last_nrpn[channel][cable]) {
+    usbMIDI.beginNrpn(control, channel + 1, cable);
+    Last_nrpn[channel][cable] = control;
+  }
+  usbMIDI.sendNrpnValue(value, channel + 1, cable);
+  // usbMIDI.endNrpn(channel + 1, cable);
 }
 
 /***** Not needed any more, now that we have multiple virtual MIDI cables!

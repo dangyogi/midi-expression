@@ -251,7 +251,7 @@ void send_functions_to_synth(void) {
 } // end send_functions_to_synth
 
 void harmonic_on(byte sw) {
-  byte hm = sw - FIRST_HARMONIC_SWITCH;
+  byte hm = SWITCH_TO_HARMONIC(sw);
   Harmonic_bitmap |= 1 << hm;
   if (hm < Lowest_harmonic) {
     if (Lowest_harmonic == 0xFF) {
@@ -279,13 +279,13 @@ void truncate_function() {
 }
 
 void harmonic_off(byte sw) {
-  byte hm = sw - FIRST_HARMONIC_SWITCH;
+  byte hm = SWITCH_TO_HARMONIC(sw);
   Harmonic_bitmap &= ~(1 << hm);
   if (hm == Lowest_harmonic) {
     Lowest_harmonic = 0xFF;
     byte i;
     for (i = hm + 1; i < NUM_HARMONICS; i++) {
-      if (Switches[FIRST_HARMONIC_SWITCH + i].current) {
+      if (Switches[HARMONIC_TO_SWITCH(i)].current) {
         Lowest_harmonic = i;
         break;
       }
@@ -300,7 +300,7 @@ void harmonic_off(byte sw) {
 }
 
 void channel_on(byte sw) {
-  byte ch = sw - FIRST_CHANNEL_SWITCH;
+  byte ch = SWITCH_TO_CHANNEL(sw);
   Channel_bitmap |= 1 << ch;
   if (ch < Lowest_channel) {
     byte old_ch = Lowest_channel;
@@ -321,13 +321,13 @@ void channel_on(byte sw) {
 }
 
 void channel_off(byte sw) {
-  byte ch = sw - FIRST_CHANNEL_SWITCH;
+  byte ch = SWITCH_TO_CHANNEL(sw);
   Channel_bitmap &= ~(1 << ch);
   if (ch == Lowest_channel) {
     Lowest_channel = 0xFF;
     byte i;
     for (i = ch + 1; i < NUM_CHANNELS; i++) {
-      if (Switches[FIRST_CHANNEL_SWITCH + i].current) {
+      if (Switches[CHANNEL_TO_SWITCH(i)].current) {
         Lowest_channel = i;
         break;
       }
@@ -370,18 +370,18 @@ byte setup_functions(byte EEPROM_offset) {
   } // end for (ch)
 
   for (ch = 0; ch < NUM_CHANNELS; ch++) {
-    Switch_closed_event[FIRST_CHANNEL_SWITCH + ch] = CHANNEL_ON;
-    Switch_opened_event[FIRST_CHANNEL_SWITCH + ch] = CHANNEL_OFF;
-    //if (Switches[FIRST_CHANNEL_SWITCH + ch].current) {
-    //  channel_on(FIRST_CHANNEL_SWITCH + ch);
+    Switch_closed_event[CHANNEL_TO_SWITCH(ch)] = CHANNEL_ON;
+    Switch_opened_event[CHANNEL_TO_SWITCH(ch)] = CHANNEL_OFF;
+    //if (Switches[CHANNEL_TO_SWITCH(ch)].current) {
+    //  channel_on(CHANNEL_TO_SWITCH(ch));
     //}
   } // end for (ch)
 
   for (hm = 0; hm < NUM_HARMONICS; hm++) {
-    Switch_closed_event[FIRST_HARMONIC_SWITCH + hm] = HARMONIC_ON;
-    Switch_opened_event[FIRST_HARMONIC_SWITCH + hm] = HARMONIC_OFF;
-    //if (Switches[FIRST_HARMONIC_SWITCH + hm].current) {
-    //  harmonic_on(FIRST_HARMONIC_SWITCH + hm);
+    Switch_closed_event[HARMONIC_TO_SWITCH(hm)] = HARMONIC_ON;
+    Switch_opened_event[HARMONIC_TO_SWITCH(hm)] = HARMONIC_OFF;
+    //if (Switches[HARMONIC_TO_SWITCH(hm)].current) {
+    //  harmonic_on(HARMONIC_TO_SWITCH(hm));
     //}
   } // end for (hm)
 

@@ -243,14 +243,14 @@ void run_event(byte event_num, byte param) {
       for (pots_index = 0; pots_index < Num_pots[param]; pots_index++) {
         pot = Pots[param][pots_index];
         if (Synced_pot_value[pot] != Current_pot_value[pot]) {
-          changed(param);
+          pot_changed(pot);
           break;
         }
       }
       break;
     case CHECK_FUNCTIONS: // trigger_num
       if (Function_changed) {
-        changed(param);
+        fun_changed(param);
       }
       break;
     default:
