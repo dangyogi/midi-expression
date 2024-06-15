@@ -21,12 +21,13 @@ extern byte Function_changed; // Some function somewhere has changed.
 extern byte Lowest_harmonic;  // 0-9, 0xFF when all switches off
 extern byte Lowest_channel;   // 0-15, 0xFF when all switches off
 
+extern void update_channel_memory(byte ch);
+extern void update_harmonic_memory(byte ch, byte hm);
 extern void load_functions(byte skip_ch_functions=0);
 extern void truncate_function(byte do_update_displays);
 extern void load_encoders(void);
 extern void clear_displays(void);
 extern void update_displays(void);
-extern void send_functions_to_synth(void);
 extern void harmonic_on(byte sw);
 extern void harmonic_off(byte sw);
 extern void channel_on(byte sw);

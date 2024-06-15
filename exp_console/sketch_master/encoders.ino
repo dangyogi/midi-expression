@@ -152,7 +152,7 @@ void display_note(byte enc) {
   variable_t *var = Encoders[enc].var;
   note_t *var_type = (note_t *)var->var_type;
   byte value = var->value;
-  if (var_type->include_null && value == var_type->num_notes) { // NULL
+  if (var_type->include_null && value == var_type->num_notes) { // NULL setting
     clear_numeric_display(enc);
   } else {
     const char *note = var_type->notes[value];
@@ -188,18 +188,22 @@ byte setup_encoders(byte EEPROM_offset) {
   // Function Params
   Encoders[0].A_sw = SWITCH_NUM(2, 3);
   Encoders[0].display_num = 0;
+  Encoders[0].encoder_event = FUN_PARAM_CHANGED;
   Encoders[0].var = 0;
   set_debounce(Encoders[0].A_sw);
   Encoders[1].A_sw = SWITCH_NUM(2, 6);
   Encoders[1].display_num = 1;
+  Encoders[1].encoder_event = FUN_PARAM_CHANGED;
   Encoders[1].var = 0;
   set_debounce(Encoders[1].A_sw);
   Encoders[2].A_sw = SWITCH_NUM(3, 0);
   Encoders[2].display_num = 2;
+  Encoders[2].encoder_event = FUN_PARAM_CHANGED;
   Encoders[2].var = 0;
   set_debounce(Encoders[2].A_sw);
   Encoders[3].A_sw = SWITCH_NUM(3, 3);
   Encoders[3].display_num = 3;
+  Encoders[3].encoder_event = FUN_PARAM_CHANGED;
   Encoders[3].var = 0;
   set_debounce(Encoders[3].A_sw);
 

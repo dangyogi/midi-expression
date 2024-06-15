@@ -21,8 +21,6 @@ extern byte Pots[NUM_POT_TRIGGERS][MAX_TRIGGER_POTS];
 
 extern void disable_triggers(void);
 extern void pot_changed(byte pot);
-extern void fun_changed(byte trigger);
-extern void check_triggers(void);        // checks triggers in continous mode
 extern void check_trigger(byte trigger); // called when triggered (button pressed) or in continuos mode
 
 extern byte setup_triggers(byte EEPROM_offset);

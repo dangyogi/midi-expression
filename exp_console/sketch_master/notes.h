@@ -33,7 +33,7 @@ extern void notes_off(void);     // call every time pulsed notes should be turne
 
 // These take internal channel numbers (starting at 0 rather than 1)
 extern void control_change(byte channel, byte control, byte value, byte cable);
-extern void nrpn_change(byte channel, unsigned short control, unsigned short value, byte cable);
+extern void nrpn_change(byte channel, unsigned short param_num, unsigned short value, byte cable);
 
 extern void flush_midi(void);
 

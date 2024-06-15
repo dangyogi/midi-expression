@@ -25,7 +25,7 @@ typedef struct var_type_s {
 typedef struct {
   var_type_t *var_type;
   byte value;           // initially set to default value, copied to memory in setup_functions.
-  byte changed;         // set to 1 each time value changes.  Used by triggers, which resets it.
+  byte changed;         // set to 1 each time value changes.  Used by SWITCH_REPORT, which resets it.
 } variable_t;
 
 // Every encoder has one of these:
@@ -114,6 +114,9 @@ extern void led_on(byte led);
 extern void led_off(byte led);
 
 extern var_type_t Disabled;
+extern variable_t Filename_var;
+extern variable_t Function_var;
+
 extern void select_led(byte enc);
 extern void turn_off_choices_leds(byte enc);
 extern void display_number(byte display_num, short num, byte dp);

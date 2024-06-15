@@ -123,8 +123,24 @@ byte Lowest_channel = 0xFF;   // 0-15, 0xFF when all switches off
 unsigned short Channel_bitmap;
 byte Buffer[NUM_FUNCTION_ENCODERS];
 
+void update_channel_memory(byte ch) { 
+  for (byte enc = 0; enc < NUM_FUNCTION_ENCODERS; enc++) {
+    if (Encoders[enc].var) {
+      Channel_memory[ch][FUNCTION][enc] = Encoders[enc].var->value;
+    }
+  }
+}
+
+void update_harmonic_memory(byte ch, byte hm) { 
+  for (byte enc = 0; enc < NUM_FUNCTION_ENCODERS; enc++) {
+    if (Encoders[enc].var) {
+      Harmonic_memory[ch][hm][FUNCTION - NUM_CH_FUNCTIONS][enc] = Encoders[enc].var->value;
+    }
+  }
+}
+
 void load_functions(byte skip_ch_functions) {
-  // Loads Function.values from Function_memory and Harmonic_memory.
+  // Loads Functions.values from Function_memory and Harmonic_memory.
   // Called when the Lowest_channel or Lowest_harmonic changes.
   // Resets Functions.changed.
   // If current FUNCTION changed, updates displays.
@@ -135,8 +151,11 @@ void load_functions(byte skip_ch_functions) {
     if (!skip_ch_functions) {
       for (fun = 0; fun < NUM_CH_FUNCTIONS; fun++) {
         for (enc = 0; enc < NUM_FUNCTION_ENCODERS; enc++) {
-          Functions[fun][enc].value = Channel_memory[Lowest_channel][fun][enc];
-          Functions[fun][enc].changed = 0;
+          if (Functions[fun][enc].value != Channel_memory[Lowest_channel][fun][enc]) {
+            Functions[fun][enc].value = Channel_memory[Lowest_channel][fun][enc];
+            Functions[fun][enc].changed = 1;
+            if (fun == FUNCTION) fun_changed = 1;
+          }
         }
       } // end for (fun)
     } else {
@@ -154,16 +173,21 @@ void load_functions(byte skip_ch_functions) {
     if (Lowest_harmonic != 0xFF) {
       for (fun = NUM_CH_FUNCTIONS; fun < NUM_FUNCTIONS; fun++) {
         for (enc = 0; enc < NUM_FUNCTION_ENCODERS; enc++) {
-          Functions[fun][enc].value = 
-            Harmonic_memory[Lowest_channel][Lowest_harmonic][fun - NUM_CH_FUNCTIONS][enc];
-          Functions[fun][enc].changed = 0;
+          if (Functions[fun][enc].value !=
+              Harmonic_memory[Lowest_channel][Lowest_harmonic][fun - NUM_CH_FUNCTIONS][enc]
+          ) {
+            Functions[fun][enc].value = 
+              Harmonic_memory[Lowest_channel][Lowest_harmonic][fun - NUM_CH_FUNCTIONS][enc];
+            Functions[fun][enc].changed = 1;
+            if (fun == FUNCTION) fun_changed = 1;
+          }
         }
       } // end for (fun)
     } // end if (Lowest_harmonic set)
     if (!skip_ch_functions || FUNCTION >= NUM_CH_FUNCTIONS) {
       update_displays();
     }
-    if (!fun_changed) Function_changed = 0;
+    if (fun_changed) Function_changed = 1;
   } // end if (Lowest_channel set)
 }
 
@@ -206,49 +230,6 @@ void update_displays(void) {
     }
   } // end for (enc)
 }
-
-void send_functions_to_synth(void) {
-  // Sends Functions to synth and save Functions in Function_memory and Harmonic_memory.
-  // Called when send is triggered.
-  // Resets Functions.changed.
-
-  if (Lowest_channel != 0xFF) {
-    byte fun, enc;
-    for (byte ch = 0; ch < NUM_CHANNELS; ch++) {
-      if (Channel_bitmap & (1 << ch)) {
-        for (enc = 0; enc < NUM_FUNCTION_ENCODERS; enc++) {
-          for (fun = 0; fun < NUM_CH_FUNCTIONS; fun++) {
-            if (Functions[fun][enc].changed) {
-              // FIX: Send value to synth
-              Channel_memory[ch][fun][enc] = Functions[fun][enc].value;
-            }
-          }
-          if (Lowest_harmonic != 0xFF) {
-            for (byte hm = 0; hm < NUM_HARMONICS; hm++) {
-              if (Harmonic_bitmap & (1 << hm)) {
-                for (fun = NUM_CH_FUNCTIONS; fun < NUM_FUNCTIONS; fun++) {
-                  if (Functions[fun][enc].changed) {
-                    // FIX: Send value to synth
-                    Harmonic_memory[ch][hm][fun - NUM_CH_FUNCTIONS][enc] = Functions[fun][enc].value;
-                  }
-                } // end for (fun)
-              } // end if (harmonic on)
-            } // end for (hm)
-          } // end if (Lowest_harmonic set)
-        } // end for (enc)
-      } // end if (channel on)
-    } // end for (ch)
-
-    // Reset Functions.changed.  Doesn't matter if haramonic Functions.changed reset if no harmonic
-    // selected, because those Functions will be reloaded anyway when a harmonic switch is set.
-    for (fun = 0; fun < NUM_FUNCTIONS; fun++) {
-      for (enc = 0; enc < NUM_FUNCTION_ENCODERS; enc++) {
-        Functions[fun][enc].changed = 0;
-      }
-    }
-    Function_changed = 0;
-  } // end if (Lowest_channel set)
-} // end send_functions_to_synth
 
 void harmonic_on(byte sw) {
   byte hm = SWITCH_TO_HARMONIC(sw);
@@ -307,8 +288,8 @@ void channel_on(byte sw) {
     Lowest_channel = ch;
     if (old_ch == 0xFF) {
       // turn function encoder back on
+      Encoders[FUNCTION_ENCODER].var = &Function_var;
       variable_t *var = Encoders[FUNCTION_ENCODER].var;
-      var->var_type->flags &= ~ENCODER_FLAGS_DISABLED;  // enable FUNCTION_ENCODER
       if (Lowest_harmonic == 0xFF) {
         var->var_type->max = NUM_CH_FUNCTIONS - 1;
         if (var->value > var->var_type->max) var->value = var->var_type->max;
@@ -333,9 +314,12 @@ void channel_off(byte sw) {
       }
     } // end for (i)
     if (Lowest_channel == 0xFF) {
-      Encoders[FUNCTION_ENCODER].var->var_type->flags |= ENCODER_FLAGS_DISABLED;
+      Encoders[FUNCTION_ENCODER].var = 0;   // disable FUNCTION_ENCODER
       turn_off_choices_leds(FUNCTION_ENCODER);
       clear_displays();
+      for (byte enc = 0; enc < NUM_FUNCTION_ENCODERS; enc++) {
+        Encoders[enc].var = 0; // disable function parameter encoders
+      }
     } else {
       load_functions();
     }

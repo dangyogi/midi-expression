@@ -18,7 +18,6 @@ Error Codes:
    25    remote_index       Wire.endTransmission status 5: timeout
    30    event_num          run_event: invalid event number (for switches and encoders)
    31     note[1]           display_note: invalid sharp/flat
-   41    LED_command        sendRequest: LED response timed out
 
 
 Switches:

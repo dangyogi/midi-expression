@@ -13,7 +13,7 @@
 #include "alpha_displays.h"
 #include "choices.h"
 
-#define PROGRAM_ID          "LEDs V33"
+#define PROGRAM_ID          "LEDs V34"
 
 #define I2C_MASTER          0x30   /* FIX: not needed */
 
@@ -43,7 +43,6 @@ void setup() {
   EEPROM_needed += setup_choices(EEPROM_needed);
 
   Wire.begin(0x32);
-  Wire.setClock(400000);
   
   if (EEPROM[NUM_EEPROM_USED] == 0xFF) {
     EEPROM[NUM_EEPROM_USED] = 0;

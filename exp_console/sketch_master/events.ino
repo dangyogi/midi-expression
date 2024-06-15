@@ -239,18 +239,22 @@ void run_event(byte event_num, byte param) {
         led_off(trig->led);
       }
       break;
-    case CHECK_POTS: // trigger_num
+    case CHECK_POTS: // trigger_num, called when trigger button is pressed
       for (pots_index = 0; pots_index < Num_pots[param]; pots_index++) {
         pot = Pots[param][pots_index];
         if (Synced_pot_value[pot] != Current_pot_value[pot]) {
-          pot_changed(pot);
-          break;
+          send_pot(pot);
         }
       }
       break;
-    case CHECK_FUNCTIONS: // trigger_num
+    case CHECK_FUNCTIONS: // trigger_num, called when trigger button is pressed
       if (Function_changed) {
-        fun_changed(param);
+        send_function();
+      }
+      break;
+    case FUN_PARAM_CHANGED: // enc, called when fun parameter encoder changes
+      if (Triggers[FUNCTIONS_TRIGGER].continuous) {
+        send_function();
       }
       break;
     default:

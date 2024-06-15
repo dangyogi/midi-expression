@@ -15,7 +15,7 @@
 #include "triggers.h"
 #include "midi_control.h"
 
-#define PROGRAM_ID    "Master V58"
+#define PROGRAM_ID    "Master V59"
 
 // These are set to INPUT_PULLDOWN to prevent flickering on unused ports
 #define FIRST_PORT    0
@@ -38,8 +38,6 @@ TwoWire *Remote_wire[NUM_REMOTES] = {&Wire1, &Wire};
 #define I2C_BASE              0x31
 #define I2C_POT_CONTROLLER    0x31
 #define I2C_LED_CONTROLLER    0x32
-
-#define I2C_MASTER            0x30    /* FIX: not needed */
 
 byte EEPROM_used;
 
@@ -157,11 +155,8 @@ void setup() {
   err_led(ERR_LED, ERR_LED_2);
   delay(2);
 
-  //Wire.begin(I2C_MASTER);       // to LED controller, FIX: I2C_MASTER not needed
   Wire.begin();                 // to LED controller
   Wire.setClock(400000);
-  // Wire.onReceive(receiveLEDErrno);  // FIX: not needed
-  //Wire1.begin(I2C_MASTER);      // to Pot controller, FIX: I2C_MASTER not needed
   Wire1.begin();                // to Pot controller
   Wire1.setClock(400000);
 
@@ -178,8 +173,11 @@ void setup() {
   Periodic_offset[PULSE_NOTES_ON] = PULSE_NOTES_ON_OFFSET;
   Periodic_offset[PULSE_NOTES_OFF] = PULSE_NOTES_OFF_OFFSET;
 
-  //Periodic_period[GET_POTS] = GET_POTS_PERIOD;  // mSec
+  Periodic_period[GET_POTS] = GET_POTS_PERIOD;  // mSec
   Periodic_offset[GET_POTS] = GET_POTS_OFFSET;
+  Periodic_next[GET_POTS] = millis() + 500;     // start in ~500 mSec
+  Periodic_next[GET_POTS] -= Periodic_next[GET_POTS] % Periodic_period[GET_POTS];
+  Periodic_next[GET_POTS] += Periodic_offset[GET_POTS];
   //Periodic_period[SWITCH_REPORT] = SWITCH_REPORT_PERIOD;
   Periodic_offset[SWITCH_REPORT] = SWITCH_REPORT_OFFSET;
 
@@ -212,26 +210,9 @@ void setup() {
 
 } // end setup()
 
-byte Got_LED_response = 0;
 byte Display_errors = 1;
 byte Master_last_errno;
 unsigned long Last_display_time;
-
-// FIX: not needed
-void receiveLEDErrno(int how_many) {
-  if (how_many != 2) {
-    Serial.print("receiveLEDResponse got "); Serial.print(how_many);
-    Serial.println(" bytes, expected 2");
-  } else {
-    byte LED_errno = Wire.read();
-    byte LED_err_data = Wire.read();
-    if (LED_errno) {
-      Remote_Errno[1] = LED_errno;
-      Remote_Err_data[1] = LED_err_data;
-    }
-  }
-  Got_LED_response = 1;
-}
 
 byte Debug = 0;
 
@@ -318,19 +299,6 @@ void sendRequest(byte i2c_addr, byte *data, byte data_len) {
     Errno = 20 + status;        // 21 to 25
     Err_data = remote_index;
   }
-  /***** FIX: delete
-  if (i2c_addr == I2C_LED_CONTROLLER) {
-    for (b0 = 0; b0 < 100; b0++) {
-      if (Got_LED_response) break;
-      delayMicroseconds(10);
-    }
-    if (Got_LED_response) Got_LED_response = 0;
-    else {
-      Errno = 41;
-      Err_data = data[0];
-    }
-  }
-  **********/
   unsigned long elapsed_time = micros() - start_time;
   if (elapsed_time > I2C_send_time) I2C_send_time = elapsed_time;
 }
@@ -505,10 +473,10 @@ void loop() {
             } // end if (Trace_events)
             if (Trace_encoders) {
               for (i = 0; i < NUM_ENCODERS; i++) {
-                if (Encoders[i].var == NULL) {
+                if (Encoders[i].var == 0) {
                   Serial.print(F("Encoder "));
                   Serial.print(i);
-                  Serial.println(F(": var is NULL"));
+                  Serial.println(F(": var is 0"));
                 } else if (Encoders[i].var->changed) {
                   Serial.print(F("Encoder "));
                   Serial.print(i);
@@ -725,7 +693,7 @@ void loop() {
           Serial.print(F(", B closed_event ")); Serial.print(Switch_closed_event[b2 + 1]);
           Serial.print(F(", B opened_event ")); Serial.print(Switch_opened_event[b2 + 1]);
           if (Encoders[b1].var == 0) {
-            Serial.println(F(", var is NULL"));
+            Serial.println(F(", var is 0"));
           } else {
             if (!(Encoders[b1].var->var_type->flags & ENCODER_FLAGS_DISABLED)) {
               Serial.println(F(", enabled"));

@@ -23,6 +23,7 @@ byte Pots[NUM_POT_TRIGGERS][MAX_TRIGGER_POTS] = {
   {18, 19, 20},  // vol note_on/off
 };
 
+// 0xFF means no trigger == always continuous!
 byte Pot_trigger[NUM_POTS];   // initialized from Triggers/Pots in setup_triggers
 
 // Called when Channel or Harmonic switches change.
@@ -38,44 +39,34 @@ void disable_triggers(void) {
 
 // Called when one of the monitored pot values for the trigger changes.
 void pot_changed(byte pot) {
-  if (Triggers[Pot_trigger[pot]].continuous) {
+  if (Pot_trigger[pot] == 0xFF || Triggers[Pot_trigger[pot]].continuous) {
+    send_pot(pot);
   }
 }
 
-// Called when one of the monitored values for the trigger changes value.
-void fun_changed(byte trigger) {
-  if (Triggers[trigger].continuous) {
-  }
-}
-
-void check_triggers(void) {
-  byte i;
-  for (i = 0; i < NUM_TRIGGERS; i++) {
-    if (Triggers[i].continuous) check_trigger(i);
-  }
-}
-
-// Called when trigger button pressed.  Value may, or may not have, changed.
+// Called when trigger button is pressed.  Value may, or may not have, changed.
 void check_trigger(byte trigger) {
   run_event(Triggers[trigger].check_event, trigger);
 }
 
 byte setup_triggers(byte EEPROM_offset) {
   EEPROM_triggers_offset = EEPROM_offset;
-  byte i;
-  for (i = 0; i < NUM_TRIGGERS; i++) {
-    Switches[Triggers[i].switch_].tag = i;
-    Switch_closed_event[Triggers[i].switch_] = TRIGGER_SW_ON;
-    Switch_opened_event[Triggers[i].switch_] = TRIGGER_SW_OFF;
+  byte tr, pot;
+  for (tr = 0; tr < NUM_TRIGGERS; tr++) {
+    Switches[Triggers[tr].switch_].tag = tr;
+    Switch_closed_event[Triggers[tr].switch_] = TRIGGER_SW_ON;
+    Switch_opened_event[Triggers[tr].switch_] = TRIGGER_SW_OFF;
 
-    Switches[Triggers[i].button].tag = i;
-    Switch_closed_event[Triggers[i].button] = TRIGGER_BT_PRESSED;
-    Switch_opened_event[Triggers[i].button] = TRIGGER_BT_RELEASED;
+    Switches[Triggers[tr].button].tag = tr;
+    Switch_closed_event[Triggers[tr].button] = TRIGGER_BT_PRESSED;
+    Switch_opened_event[Triggers[tr].button] = TRIGGER_BT_RELEASED;
 
-    if (Triggers[i].check_event == CHECK_POTS) {
-      byte pot;
-      for (pot = 0; pot < Num_pots[i]; pot++) {
-        Pot_trigger[pot] = i;
+    for (pot = 0; pot < NUM_POTS; pot++) {
+      Pot_trigger[pot] = 0xFF;
+    }
+    if (Triggers[tr].check_event == CHECK_POTS) {
+      for (pot = 0; pot < Num_pots[tr]; pot++) {
+        Pot_trigger[pot] = tr;
       }
     }
   }

@@ -19,11 +19,10 @@
 
 *************/
 
-typedef struct pot_control_s { // cable 1
-  byte trigger;       // 0xFF for always triggered
+typedef struct pot_control_s { // default PLAYER_CABLE
   byte control;
-  byte player;        // send to channel 16
-  byte synth;         // send to channel 16, cable 0
+  byte player;        // send to PLAYER_CHANNEL
+  byte synth;         // send to SYNTH_CHANNEL, SYNTH_CABLE
 } pot_control_t;
 
 typedef struct param_slice_s {
@@ -33,12 +32,13 @@ typedef struct param_slice_s {
 } param_slice_t;
 
 typedef struct fun_control_s {
-  unsigned short control;
-  byte nrpn;          // true/false
+  unsigned short control;  // param_num when nrpn is true
+  byte nrpn;               // true/false
   param_slice_t encoder_slices[NUM_FUNCTION_ENCODERS];
-  byte add_harmonic;  // harmonic added to control value
-  byte synth;         // send to channel 16
-  byte next_control;  // next control (pseudo function) if one function covers multiple controls, 0 = End
+  byte add_harmonic;       // harmonic added to control value, and sent to all harmonic switches on
+  byte synth;              // send to SYNTH_CHANNEL
+  byte next_control;       // Next control (pseudo function) if one function covers multiple controls.
+                           // Forms a linked list of controls.  0 = End.
 } fun_control_t;
 
 extern pot_control_t  Pot_controls[];

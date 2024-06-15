@@ -28,7 +28,8 @@
 #define TRIGGER_BT_RELEASED                43
 #define CHECK_POTS                         44
 #define CHECK_FUNCTIONS                    45
-#define NEXT_AVAIL_EVENT                   46
+#define FUN_PARAM_CHANGED                  46
+#define NEXT_AVAIL_EVENT                   47
 
 extern byte Trace_events;
 extern byte Trace_encoders;
@@ -37,10 +38,12 @@ extern byte setup_events(byte EEPROM_offset);
 
 extern void run_event(byte event_num, byte param);
 
+// These are set in the various setup routines and never change after that.
 extern byte Switch_closed_event[NUM_SWITCHES];
 extern byte Switch_opened_event[NUM_SWITCHES];
 
 extern void switch_closed(byte sw);
 extern void switch_opened(byte sw);
+
 
 // vim: sw=2

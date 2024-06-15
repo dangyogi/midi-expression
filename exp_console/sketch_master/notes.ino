@@ -119,22 +119,14 @@ void control_change(byte channel, byte control, byte value, byte cable) {
 
 unsigned short Last_nrpn[NUM_CHANNELS][2];
 
-void nrpn_change(byte channel, unsigned short control, unsigned short value, byte cable) {
-  if (control != Last_nrpn[channel][cable]) {
-    usbMIDI.beginNrpn(control, channel + 1, cable);
-    Last_nrpn[channel][cable] = control;
+void nrpn_change(byte channel, unsigned short param_num, unsigned short value, byte cable) {
+  if (param_num != Last_nrpn[channel][cable]) {
+    usbMIDI.beginNrpn(param_num, channel + 1, cable);
+    Last_nrpn[channel][cable] = param_num;
   }
   usbMIDI.sendNrpnValue(value, channel + 1, cable);
   // usbMIDI.endNrpn(channel + 1, cable);
 }
-
-/***** Not needed any more, now that we have multiple virtual MIDI cables!
-void system_common(byte code, byte b1, byte b2, byte cable) {
-  // FIX: looks like this needs to be a call to usb_midi_write_packed.
-  // see: ~/arduino-1,8.19/hardware/teensy/avr/cores/teensy[34]/usb_midi.h, search for 'void send('
-  usbMIDI.send(usbMIDI.SystemCommon, code, b1, b2, cable);
-}
-******/
 
 void flush_midi(void) {
   usbMIDI.send_now();

@@ -1,24 +1,98 @@
 scan_switches (in switches.ino) calls:
+  The Switch_opened/closed_events are assigned in the setup routines and never changed after that.
+
   switch_open (in events.ino) calls:
     run_event(Switch_opened_event[sw], sw) -- in events.ino
   switch_closed (in events.ino) calls:
     run_event(Switch_closed_event[sw], sw) -- in events.ino
 
-Encoders use the following events on sw_A/B:
-  ENC_A/B_CLOSED
-  ENC_A/B_OPENED
+Encoders:
 
-  These both call inc_encoder (in events.ino), which calls encoder_changed (in events.ino), which:
+  Structures:
+    encoder_t  has encoder_event and var pointer pointing to variable_t.
+
+               The encoder is considered disabled if var is 0.  This is done to the FUNCTION_ENCODER
+               and 4 parameter encoders when no channels are set.  These are restored when a channel is
+               selected.  Also, the 4 parameter encoder vars are set from "Functions" whenever the
+               FUNCTION changes.
+
+               The only storage for these is in Encoders array (encoders.h), one per encoder.
+    variable_t has value and var_type pointer pointing to var_type_t.
+               Two variable_t variables are declared in encoders.ino, one for FILENAME_ENCODER and the
+               other for FUNCTION_ENCODER.
+               Also, functions.ino declares "Functions" providing a set of 4 variable_t's for each of
+               the 15 functions.
+    var_type_t has the following derived types:
+      choices_t         -- controlling a set of individual LEDs with UPDATE_CHOICES display_event.
+      sharps_flats_t    -- displays a number of sharps/flats in a numeric display with
+                           UPDATE_SHARPS_FLATS display_event.
+      linear_number_t   -- scales 0-127 linearly to display in a numeric display with UPDATE_LINEAR_NUM
+                           display_event.
+      geometic_number_t -- scales 0-127 geometrically (exponentially) to display in a numeric display
+                           with UPDATE_GEOMETRIC_NUM display_event.
+      note_t            -- to display a musical note (e.g, C-sharp) in a numeric display with
+                           UPDATE_NOTE display_event.
+      encoders.ino declares a var_type_t Disabled, and a choices_t Function_var_type.
+      The rest of the various derived var_type_t's are declared in functions.ino.
+
+  Encoders use the following events on sw_A/B, which only operate when the encoder is enabled:
+    ENC_A/B_CLOSED
+    ENC_A/B_OPENED  -- calls inc_encoder (in events.ino) each time both A/B are open (detent position).
+
+  inc_encoder calls encoder_changed (in events.ino), which:
     calls run_event(Encoder[enc].var->var_type->display_value, enc) in events.ino to update the display
     and then run_event(Encoder[enc].encoder_event, enc) to process the change.
 
+  display_value can be (see encoders.h):
+    - UPDATE_CHOICES
+    - UPDATE_SHARPS_FLATS
+    - UPDATE_LINEAR_NUM
+    - UPDATE_GEOMETRIC_NUM
+    - UPDATE_NOTE
+
+  encoder_event can be (set setup_encoders):
+    - FUNCTION_CHANGED
+
 Triggers use the following events:
+  Triggers need to deal with two situations:
+    1. The button is pressed.  In this case, if the value has changed, it should be sent immediately.
+       When the button is pressed, the trigger.check_event is called:
+         -- for pot triggers, the event is:
+            -- CHECK_POTS, which calls send_pot for each changed pot value.
+         -- the function trigger, the event is:
+            -- CHECK_FUNCTIONS, which calls send_function if Function_changed.
+    2. The trigger is in continuous mode.  In this case, whenever the value changes, it should be sent
+       immediately.
+       -- For pots:
+          The GET_POTS periodic function checks the pot values and calls:
+            -- pot_changed for each pot value that has changed.
+               -- pot_changed calls send_pot if the trigger is in continuous mode
+       -- For functions:
+          Whenever Function_changed is set, encoder_changed is called (by inc_encoder in events.ino,
+          which is the only function to set Function_changed).
+            -- encoder_changed runs (with run_event):
+               -- display_value which updates the LED display(s)
+               -- encoder_event: there are two encoder_events:
+                  -- FUNCTION_CHANGED, called when Function encoder changes
+                     -- calls reset_function_encoders (in functions.ino)
+                        -- reset_function_encoders calls:
+                           -- load_encoders (from Functions based on new FUNCTION)
+                           -- update_displays
+                  -- FUN_PARAM_CHANGED, called when any enabled function parameter encoder changes
+                     -- calls send_function if FUNCTIONS_TRIGGER is in continuous mode.
   -- on the sw/bt:
        TRIGGER_SW_ON/OFF            -- turns trigger.continuous and led on/off
        TRIGGER_BT_PRESSED/RELEASED  -- turns led on/off and calls check_trigger,
                                        which runs the trigger's check_event.
-  -- for check_event:
-       CHECK_POTS                   -- calls pot_changed for each new pot value.
-       CHECK_FUNCTIONS              -- calls fun_changed if any function value has changed.
+  -- for check_event (only called by check_trigger, which is only called when trigger button is pressed)
+     sends values that have changed:
+       CHECK_POTS                   -- calls send_pot for each new pot value.
+       CHECK_FUNCTIONS              -- calls send_function if Function_changed.
+
+pot_changed called by GET_POTS periodic function when a pot value changes.
+  -- calls send_pot if the trigger is in continuous mode.
+
+send_pot and send_function update Channel_memory and Harmonic_memory with new values sent to synth.
+
 
 // vim: sw=2

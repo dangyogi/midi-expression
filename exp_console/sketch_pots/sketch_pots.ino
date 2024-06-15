@@ -90,7 +90,6 @@ void setup() {
   pinMode(MUX_C, OUTPUT);
 
   Wire.begin(0x31);
-  //Wire.setClock(400000);
   Serial.begin(230400);
 
   Serial.println(PROGRAM_ID);
