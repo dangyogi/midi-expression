@@ -37,6 +37,7 @@ extern byte Trace_encoders;
 extern byte setup_events(byte EEPROM_offset);
 
 extern void run_event(byte event_num, byte param);
+extern void encoder_changed(byte enc);
 
 // These are set in the various setup routines and never change after that.
 extern byte Switch_closed_event[NUM_SWITCHES];

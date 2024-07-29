@@ -1,0 +1,30 @@
+# sketch_master.yaml
+
+---
+
+program:
+  compile: g++ -Iteensy4 -I{test_dir} -I{dir} -m32 -o test test.cpp
+  dir: ../../exp_console/sketch_master
+  files_start:
+    - teensy4/first.cpp
+    - teensy4/core_pins.cpp
+    - teensy4/usb_serial.cpp
+    - teensy4/Wire.cpp
+    - teensy4/usb_midi.cpp
+  files_end:
+    - main.cpp
+  files:
+    - sketch_master.ino
+    - encoders.ino
+    - events.ino
+    - flash_errno.ino
+    - functions.ino
+    - midi_control.ino
+    - notes.ino
+    - switches.ino
+    - triggers.ino
+  test_dir: sketch_master
+
+generate: []
+
+# vim: sw=2 ic

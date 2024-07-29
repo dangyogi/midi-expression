@@ -33,6 +33,7 @@ extern byte Rows[];  // Row pins
 extern byte Cols[];  // Col pins
 
 extern unsigned short Debounce_period[2];    // long (switches), short (encoders) uSec
+extern void set_debounce_period(byte debounce_index, unsigned short dp);
 
 extern byte setup_switches(byte EEPROM_offset);
 

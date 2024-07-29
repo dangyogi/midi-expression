@@ -32,6 +32,17 @@ byte EEPROM_switches_offset;
 
 unsigned short Debounce_period[2];   /* 0 = switches, 1 = encoders: uSec */
 
+unsigned short get_debounce_period(byte debounce_index) {
+  return ((unsigned short)get_EEPROM(EEPROM_switches_offset + 2 * debounce_index) << 8)
+       | get_EEPROM(EEPROM_switches_offset + 2 * debounce_index + 1);
+}
+
+void set_debounce_period(byte debounce_index, unsigned short dp) {
+  set_EEPROM(EEPROM_switches_offset + 2 * debounce_index, dp >> 8);
+  set_EEPROM(EEPROM_switches_offset + 2 * debounce_index + 1, dp & 0xFF);
+  Debounce_period[debounce_index] = dp;
+}
+
 byte setup_switches(byte EEPROM_offset) {
   EEPROM_switches_offset = EEPROM_offset;
 
@@ -66,17 +77,6 @@ byte setup_switches(byte EEPROM_offset) {
   }
 
   return 2;
-}
-
-unsigned short get_debounce_period(byte debounce_index) {
-  return ((unsigned short)get_EEPROM(EEPROM_switches_offset + 2 * debounce_index) << 8)
-       | get_EEPROM(EEPROM_switches_offset + 2 * debounce_index + 1);
-}
-
-void set_debounce_period(byte debounce_index, unsigned short dp) {
-  set_EEPROM(EEPROM_switches_offset + 2 * debounce_index, dp >> 8);
-  set_EEPROM(EEPROM_switches_offset + 2 * debounce_index + 1, dp & 0xFF);
-  Debounce_period[debounce_index] = dp;
 }
 
 unsigned long Longest_scan = 0;                                   // uSec, measured at 13
