@@ -981,7 +981,7 @@ void loop() {
     while (Serial.available() && Serial.read() != '\n') ;
   } // end if (Serial.available())
   
-  errno();   // Flash pin D13 and D12
+  report_errno();   // Flash pin D13 and D12
   
   Cycle_time = micros() - start_time;
   if (Cycle_time > Max_cycle_time) Max_cycle_time = Cycle_time;

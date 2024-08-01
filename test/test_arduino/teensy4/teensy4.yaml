@@ -1,0 +1,184 @@
+# teensy4.yaml
+
+---
+
+functions:   # optional 'gen_caller: False', 'return: <type>' and
+             #          'params: type|{type:, default:, len:, max_len:}'.
+             # null if none of these are included.
+
+  # core_pins.h
+  pinMode:
+    gen_caller: False
+    params:
+      - pin: uint8_t
+      - mode: uint8_t
+  digitalWrite:
+    gen_caller: False
+    params:
+      - pin: uint8_t
+      - val: uint8_t
+  digitalRead:
+    gen_caller: False
+    return: uint8_t
+    params:
+      - pin: uint8_t
+  digitalToggle:
+    gen_caller: False
+    params:
+      - pin: uint8_t
+  delay:
+    gen_caller: False
+    params:
+      - msec: uint32_t
+  millis:
+    gen_caller: False
+    return: uint32_t
+  micros:
+    gen_caller: False
+    return: uint32_t
+  delayMicroseconds:
+    gen_caller: False
+    params:
+      - usec: uint32_t
+
+  # usb_serial.h
+  serial_begin:
+    gen_caller: False
+    params:
+      - baud: long
+  serial_bool:
+    gen_caller: False
+    return: bool
+  serial_available:
+    gen_caller: False
+    return: int
+  serial_peekchar:
+    gen_caller: False
+    return: int
+  serial_read:
+    gen_caller: False
+    return: int
+  serial_parseInt:
+    gen_caller: False
+    return: long
+    params:
+      - lookahead: LookaheadMode
+      - ignore: char
+  serial_println_void:
+    gen_caller: False
+    return: size_t
+  serial_print_str:
+    gen_caller: False
+    return: size_t
+    params:
+      - s:
+          type: const char*
+          null_terminated: True
+  serial_println_str:
+    gen_caller: False
+    return: size_t
+    params:
+      - s:
+          type: const char*
+          null_terminated: True
+  serial_print_ulong:
+    gen_caller: False
+    return: size_t
+    params:
+      - l: unsigned long
+      - base: int
+  serial_println_ulong:
+    gen_caller: False
+    return: size_t
+    params:
+      - l: unsigned long
+      - base: int
+  serial_print_long:
+    gen_caller: False
+    return: size_t
+    params:
+      - l: long
+      - base: int
+  serial_println_long:
+    gen_caller: False
+    return: size_t
+    params:
+      - l: long
+      - base: int
+  serial_putchar:
+    gen_caller: False
+    return: size_t
+    params:
+      - c: uint8_t
+  serial_print_double:
+    gen_caller: False
+    return: size_t
+    params:
+      - d: double
+  serial_println_double:
+    gen_caller: False
+    return: size_t
+    params:
+      - d: double
+
+  # Wire.h
+  TwoWire_begin_void:
+    gen_caller: False
+    params:
+      - channel: byte
+  TwoWire_begin:
+    gen_caller: False
+    params:
+      - channel: byte
+      - address: uint8_t
+  TwoWire_end:
+    gen_caller: False
+    params:
+      - channel: byte
+  TwoWire_setClock:
+    gen_caller: False
+    params:
+      - channel: byte
+      - frequency: uint32_t
+  TwoWire_beginTransmission:
+    gen_caller: False
+    params:
+      - channel: byte
+      - address: uint8_t
+  TwoWire_endTransmission:
+    gen_caller: False
+    return: uint8_t
+    params:
+      - channel: byte
+      - sendStop: uint8_t
+  TwoWire_write:
+    gen_caller: False
+    return: size_t
+    params:
+      - channel: byte
+      - buf_addr:
+          type: const uint8_t *
+          len: len
+          max_len: 32
+      - len: size_t
+  TwoWire_available:
+    gen_caller: False
+    return: int
+    params:
+      - channel: byte
+  TwoWire_read:
+    gen_caller: False
+    return: int
+    params:
+      - channel: byte
+  TwoWire_requestFrom:
+    gen_caller: False
+    return: uint8_t
+    params:
+      - channel: byte
+      - address: uint8_t
+      - quantity: uint8_t
+      - sendStop: uint8_t
+
+
+# vim: sw=2 ic

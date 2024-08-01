@@ -84,7 +84,6 @@ unsigned long Longest_open_bounce[2] = {0, 0};                    // uSec, measu
 unsigned long Shortest_close_bounce[2] = {1000000ul, 1000000ul};  // uSec, measured at 9, 9
 unsigned long Longest_wire_clear = 0;                             // uSec, measured at 5
 
-#define MAX_DEBOUNCE_COUNT    30
 byte Close_counts[NUM_SWITCHES];
 byte Debounce_delay_counts[2][MAX_DEBOUNCE_COUNT + 1];   // debounce_index, mSec
 

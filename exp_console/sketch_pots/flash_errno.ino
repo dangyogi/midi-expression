@@ -42,7 +42,7 @@ void push(int delay) {
   }
 }
 
-void errno(void) {
+void report_errno(void) {
   if (Errno == 0) {
     if (Last_errno) {
       Last_errno = 0;

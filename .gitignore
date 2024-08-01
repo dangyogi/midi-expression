@@ -1,5 +1,6 @@
 # Project specific files
 synth/synth_settings.py
+tmp/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

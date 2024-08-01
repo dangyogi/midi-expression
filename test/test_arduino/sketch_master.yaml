@@ -3,11 +3,12 @@
 ---
 
 program:
-  compile: g++ -Iteensy4 -I{test_dir} -I{dir} -m32 -o test test.cpp
+  compile: g++ -Iteensy4 -I{test_dir} -I{dir} -m32 -Wno-invalid-offsetof -o tmp/test tmp/test.cpp
   dir: ../../exp_console/sketch_master
+  arch_defs: teensy4/teensy4.yaml
   files_start:
     - teensy4/first.cpp
-    - teensy4/core_pins.cpp
+    - utils.cpp
     - teensy4/usb_serial.cpp
     - teensy4/Wire.cpp
     - teensy4/usb_midi.cpp
@@ -25,6 +26,527 @@ program:
     - triggers.ino
   test_dir: sketch_master
 
-generate: []
+defines:
+  # encoders.h
+  - ENCODER_FLAGS_DISABLED
+  - ENCODER_FLAGS_CYCLE
+  - ENCODER_FLAGS_CHOICE_LEDS
+  - NUM_ENCODERS
+  - FUNCTION_ENCODER
+  - FILENAME_ENCODER
+
+  # events.h
+  - FUNCTION_CHANGED
+  - NOTE_BT_ON
+  - NOTE_BT_OFF
+  - NOTE_SW_ON
+  - NOTE_SW_OFF
+  - CONTINUOUS
+  - PULSE
+  - CHANNEL_ON
+  - CHANNEL_OFF
+  - HARMONIC_ON
+  - HARMONIC_OFF
+  - UPDATE_CHOICES
+  - UPDATE_LINEAR_NUM
+  - UPDATE_GEOMETRIC_NUM
+  - UPDATE_NOTE
+  - UPDATE_SHARPS_FLATS
+  - TRIGGER_SW_ON
+  - TRIGGER_SW_OFF
+  - TRIGGER_BT_PRESSED
+  - TRIGGER_BT_RELEASED
+  - CHECK_POTS
+  - CHECK_FUNCTIONS
+  - FUN_PARAM_CHANGED
+  - NEXT_AVAIL_EVENT
+
+  # functions.h
+  - NUM_CHANNELS
+  - NUM_HARMONICS
+  - NUM_CH_FUNCTIONS
+  - NUM_HM_FUNCTIONS
+  - NUM_FUNCTIONS
+  - NUM_FUNCTION_ENCODERS
+
+  # midi_control.h
+  - NUM_FUN_CONTROLS
+
+  # notes.h
+  - NUM_NOTES
+  - FIRST_BUTTON
+  - FIRST_SWITCH
+  - SYNTH_CABLE
+  - PLAYER_CABLE
+  - PLAYER_CHANNEL
+  - SYNTH_CHANNEL
+  - CONTINUOUS_PULSE_SW
+  - CONTINUOUS_ON
+
+  # switches.h
+  - NUM_ROWS
+  - NUM_COLS
+  - NUM_SWITCHES
+  - SAVE_PROGRAM_SWITCH
+  - SAVE_OR_SYNTH
+  - FIRST_HARMONIC_SWITCH
+  - FIRST_CHANNEL_SWITCH
+  - MAX_DEBOUNCE_COUNT
+
+  # triggers.h
+  - NUM_POT_TRIGGERS
+  - NUM_TRIGGERS
+  - MAX_TRIGGER_POTS
+  - FUNCTIONS_TRIGGER
+
+  # sketch_master.ino
+  - FIRST_PORT
+  - ERR_LED
+  - ERR_LED_2
+  - MIN_ERROR_DISPLAY_INTERVAL
+  - NUM_REMOTES
+  - I2C_BASE
+  - I2C_POT_CONTROLLER
+  - I2C_LED_CONTROLLER
+  - NUM_PERIODICS
+
+   # Periodic functions:
+  - PULSE_NOTES_ON
+  - PULSE_NOTES_OFF
+  - UPDATE_LEDS
+  - GET_POTS
+  - SEND_MIDI
+  - SWITCH_REPORT
+
+  # mSec:
+  - PULSE_NOTES_PERIOD
+  - PULSE_NOTES_ON_OFFSET
+  - PULSE_NOTES_OFF_OFFSET
+  - GET_POTS_PERIOD
+  - GET_POTS_OFFSET
+  - SWITCH_REPORT_PERIOD
+  - SWITCH_REPORT_OFFSET
+
+  - NUM_POTS
+
+
+classes:
+  # encoders.h
+  var_type_t:
+    - choices_t
+    - sharps_flats_t
+    - linear_number_t
+    - geometric_number_t
+    - note_t
+
+structs:
+  # encoders.h
+  encoder_t:
+    - A_sw: byte
+    - display_num: byte
+    - encoder_event: byte
+    - count: signed char
+    - var: variable_t*
+  variable_t:
+    - var_type: var_type_t*
+    - value: byte
+    - changed: byte
+  var_type_t:
+    - min: byte
+    - max: byte
+    - display_value: byte
+    - flags: byte
+    - bt_mul:
+        element_type: byte
+        dims: 2
+  choices_t:
+    - base_class: var_type_t
+    - choices_num: byte
+  sharps_flats_t:
+    - base_class: var_type_t
+  linear_number_t:
+    - base_class: var_type_t
+    - scale: long
+    - offset: long
+    - dp: byte
+    - extra_10s: byte
+    - trim: byte
+  geometric_number_t:
+    - base_class: var_type_t
+    - m: float
+    - b: float
+    - c: float
+  note_t:
+    - base_class: var_type_t
+    - num_notes: byte
+    - include_null: byte
+    - notes: const char **
+
+  # midi_control.h
+  pot_control_t:
+    - control: byte
+    - player: byte
+    - synth: byte
+  param_slice_t:
+    - bits: byte
+    - lshift: byte
+    - bit_mask: byte
+  fun_control_t:
+    - control: unsigned short
+    - nrpn: byte
+    - encoder_slices:
+        element_type: param_slice_t
+        dims: NUM_FUNCTION_ENCODERS
+    - add_harmonic: byte
+    - synth: byte
+
+      # Forms a linked list of controls.  0 = End.
+    - next_control: byte
+
+  # switches.h
+  switch_t:
+    - current: byte
+    - last_seen: byte
+    - open_time_set: byte
+    - close_time_set: byte
+    - debounce_index: byte
+    - tag: byte
+    - open_time: unsigned long
+    - close_time: unsigned long
+
+  # triggers.h
+  trigger_t:
+    - switch_: byte
+    - button: byte
+    - led: byte
+    - check_event: byte
+    - continuous: byte
+
+globals:
+  # events.h
+  Trace_events: byte
+  Trace_encoders: byte
+
+  # functions.h
+  Function_changed: byte
+  Lowest_harmonic: byte
+  Lowest_channel: byte
+
+  # notes.h
+  Notes_currently_on: byte
+
+  # switches.h
+  Longest_scan: unsigned long
+  Longest_wire_clear: unsigned long
+
+  # sketch_master.ino
+  EEPROM_used: byte
+  Driver_up: byte
+  Display_errors: byte
+  Master_last_errno: byte
+  Last_display_time: unsigned long
+  Debug: byte
+  Debug_pin_high: byte
+  I2C_send_time: unsigned long
+  I2C_request_from_time: unsigned long
+  I2C_read_time: unsigned long
+  Scan_switches_on: byte
+  Scan_switches_trace: byte
+  Last_get_pots_time: unsigned long
+
+arrays:
+  # encoders.h
+  Encoders:
+    element_type: encoder_t
+    dims: NUM_ENCODERS
+
+  # events.h
+  Switch_closed_event:
+    element_type: byte 
+    dims: NUM_SWITCHES
+  Switch_opened_event:
+    element_type: byte 
+    dims: NUM_SWITCHES
+
+  # functions.h
+  Functions:
+    element_type: variable_t
+    dims: [NUM_FUNCTIONS, NUM_FUNCTION_ENCODERS]
+  Channel_memory:
+    element_type: byte
+    dims: [NUM_CHANNELS, NUM_CH_FUNCTIONS, NUM_FUNCTION_ENCODERS]
+  Harmonic_memory:
+    element_type: byte
+    dims: [NUM_CHANNELS, NUM_HARMONICS, NUM_HM_FUNCTIONS, NUM_FUNCTION_ENCODERS]
+  
+  # midi_control.h
+  Pot_controls:
+    element_type: pot_control_t
+  Function_controls:
+    element_type: fun_control_t
+    dims: NUM_FUN_CONTROLS
+
+  # notes.h
+  MIDI_note:
+    element_type: byte
+
+  # switches.h
+  Switches:
+    element_type: switch_t
+    dims: NUM_SWITCHES
+  Rows:
+    element_type: byte
+  Cols:
+    element_type: byte
+  Debounce_period:
+    element_type: unsigned short
+    dims: 2
+  Longest_open_bounce:
+    element_type: unsigned long
+    dims: 2
+  Shortest_close_bounce:
+    element_type: unsigned long
+    dims: 2
+  Debounce_delay_counts:
+    element_type: byte
+    dims: [2, MAX_DEBOUNCE_COUNT + 1]
+  Close_counts:
+    element_type: byte
+    dims: NUM_SWITCHES
+
+  # triggers.h
+  Triggers:
+    element_type: trigger_t
+    dims: NUM_TRIGGERS
+  Num_pots:
+    element_type: byte
+    dims: NUM_POT_TRIGGERS
+  Pots:
+    element_type: byte
+    dims: [NUM_POT_TRIGGERS, MAX_TRIGGER_POTS]
+
+  # sketch_master.ino
+  Remote_Errno:
+    element_type: byte
+    dims: NUM_REMOTES
+  Remote_Err_data:
+    element_type: byte
+    dims: NUM_REMOTES
+  Remote_last_errno:
+    element_type: byte
+    dims: NUM_REMOTES
+  Remote_last_display_time:
+    element_type: unsigned long
+    dims: NUM_REMOTES
+  Remote_char:
+    element_type: char
+    dims: NUM_REMOTES
+  Remote_wire:
+    element_type: TwoWire *
+    dims: NUM_REMOTES
+  Periodic_period:
+    element_type: unsigned short
+    dims: NUM_PERIODICS
+  Periodic_offset:
+    element_type: unsigned short
+    dims: NUM_PERIODICS
+  Periodic_next:
+    element_type: unsigned long
+    dims: NUM_PERIODICS
+  Response_data:
+    element_type: byte
+    dims: 32
+  Current_pot_value:
+    element_type: byte
+    dims: NUM_POTS
+  Synced_pot_value:
+    element_type: byte
+    dims: NUM_POTS
+
+functions:   # optional 'gen_caller: False', 'return: <type>' and
+             #          'params: type|{type:, default:, len:, max_len:}'.
+             # null if none of these are included.
+  # encoders.h
+  led_on:
+    params:
+      - led: byte
+  led_off:
+    params:
+      - led: byte
+  select_led:
+    params:
+      - enc: byte
+  turn_off_choices_leds:
+    params:
+      - enc: byte
+  display_number:
+    params:
+      - display_num: byte
+      - num: short
+      - dp: byte
+  clear_numeric_display:
+    params:
+      - display_num: byte
+  display_linear_number:
+    params:
+      - enc: byte
+  display_geometric_number:
+    params:
+      - enc: byte
+  display_note:
+    params:
+      - enc: byte
+  display_sharps_flats:
+    params:
+      - enc: byte
+
+  # events.h
+  run_event:
+    params:
+      - event_num: byte
+      - param: byte
+  encoder_changed:
+    params:
+      - enc: byte
+  switch_closed:
+    params:
+      - sw: byte
+  switch_opened:
+    params:
+      - sw: byte
+
+  # functions.h
+  update_channel_memory:
+    params:
+      - ch: byte
+  update_harmonic_memory:
+    params:
+      - ch: byte
+      - hm: byte
+  load_functions:
+    params:
+      - skip_ch_functions:
+          type: byte
+          default: 0
+  truncate_function: null
+  load_encoders: null
+  clear_displays: null
+  update_displays: null
+  harmonic_on:
+    params:
+      - sw: byte
+  harmonic_off:
+    params:
+      - sw: byte
+  channel_on:
+    params:
+      - sw: byte
+  channel_off:
+    params:
+      - sw: byte
+  reset_function_encoders: null
+  
+  # midi_control.h
+  send_pot:
+    params:
+      - pot: byte
+  send_function: null
+
+  # notes.h
+  note_on_by_bt:
+    params:
+      - sw: byte
+  note_off_by_bt:
+    params:
+      - sw: byte
+  note_on_by_sw:
+    params:
+      - sw: byte
+  note_off_by_sw:
+    params:
+      - sw: byte
+  check_pulse_on: null
+  check_pulse_off: null
+  note_on:
+    params:
+      - note: byte
+  note_off:
+    params:
+      - note: byte
+  notes_on: null
+  notes_off: null
+
+    # These take internal channel numbers (starting at 0 rather than 1)
+  control_change:
+    params:
+      - channel: byte
+      - control: byte
+      - value: byte
+      - cable: byte
+  nrpn_change:
+    params:
+      - channel: byte
+      - param_num: unsigned short
+      - value: unsigned short
+      - cable: byte
+  flush_midi: null
+
+  # switches.h
+  scan_switches:
+    params:
+      - trace:
+          type: byte
+          default: 0
+      - trace_col:
+          type: byte
+          default: 0
+
+  # triggers.h
+  disable_triggers: null
+  pot_changed:
+    params:
+      - pot: byte
+  check_trigger:
+    params:
+      - trigger: byte
+
+  # sketch_master.ino
+  set_EEPROM:
+    params:
+      - EEPROM_addr: byte
+      - value: byte
+  get_EEPROM:
+    return: byte
+    params:
+      - EEPROM_addr: byte
+  turn_off_periodic_fun:
+    params:
+      - fun: byte
+  turn_on_periodic_fun:
+    params:
+      - fun: byte
+      - period: unsigned short
+  toggle_periodic_fun:
+    params:
+      - fun: byte
+      - period: unsigned short
+  setup: null
+  turn_off_test_pin: null
+  sendRequest:
+    params:
+      - i2c_addr: byte
+      - data: 
+          type: byte*
+          len: data_len
+          max_len: 32
+      - data_len: byte
+  getResponse:
+    return: byte
+    params:
+      - i2c_addr: byte
+      - data_len: byte
+      - check_errno: byte
+  loop: null
+
 
 # vim: sw=2 ic

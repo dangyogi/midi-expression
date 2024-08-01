@@ -1,0 +1,84 @@
+Functions exposed for testing have two stubs generated:
+
+  - a stub representing the function being exposed.  This function will be called rather than the
+    actual function.  It is called a "called_stub".
+      
+      1. This stub sends a "fun called" request to the test driver with the parameter values.
+      2. The stub then processes all test driver requests (if any) up to the "return" request.
+         - The test driver validates the parameter values.
+         - The test driver may issue requests for global values to validate them.
+         - The test driver may issue requests to change global values.
+         - The test driver may use this opportunity to issue "call" requests to other functions to test
+           them out before returning.
+         - The test driver may print messages to its stdout/stderr.
+         - The test driver may, or may not, send a "call" request to call the actual function (if there
+           is one).
+         - Finally, the test driver issues a "return" request.
+      3. The stub returns the value in the "return" request.
+
+  - a stub to call the real function and return the results.  This is the function actually called when
+    the test driver issues a "call" request.  This is called a "caller_stub".
+
+      1. This stub translates the received parameter values (ascii to byte, int, long, bool, etc).
+      2. The stub then calls the real function (which has had it's name modified so as not to conflict
+         with the first stub above).
+      3. The stub issues a "returned" request back to the test driver.
+
+
+C++ Requests
+
+    The C++ program connects to the test driver program and then may issue the following requests:
+
+    - "#define" name
+      - issued at program startup
+      - no response expected
+    - "global" name addr len type
+      - issued at program startup
+      - no response expected
+    - "array" name addr array_len(bytes) element_len element_type: dimensions
+      - issued at program startup
+      - no response expected
+    - "sub_classes" name sub_classes
+      - issued at program startup
+      - no response expected
+    - "field" struct_name field_name offset field_len field_type
+      - issued at program startup
+      - no response expected
+    - "ready"
+      - issued once at program startup, after all above messages have been sent out
+      - no response expected
+      - indicates the C++ program is now ready to process test driver requests.
+    - "fun called" name params
+      - Issued by first type of stub, above.
+      - C++ program now accepts any test driver requests, until "return" request received.
+      - return value returned from stub
+    - "returned" [value]
+      - issued in response to "call" test driver request.
+
+
+Test Driver Requests
+
+    The test driver may issue the following requests:
+
+    - "get_global" addr offsets len
+      - expects get_global final_addr data
+    - "set_global" addr offsets len data
+      - expects set_global final_addr previous_value
+    - "call" name arguments
+      - Arguments are separated by a space.  The elements in a single array argument are surrounded by
+        [ and ], for example: [elem1 elem2 elem3] next_arg.
+      - This calls the second type of stub, above within the C++ program.  If there are no arguments,
+        it passes 0 as args (rather than a pointer to '\0').
+      - Test driver now responds to C++ "fun called" requests until "returned" request received.
+      - Test driver validates the returned value.
+      - Test driver issues whatever other requests it wants to do (e.g., "get global" to validate
+        global variables have been set correctly).
+    - "return" [value]
+      - issued in response to "fun called" C++ request.
+    - "exit" exit_status
+      - causes the C++ program to immediately terminate.
+      - This will break the socket connection to the test driver, which will loop back to accept the
+        next connection and start over again.
+
+TODO:
+    make 'size_t' unsigned

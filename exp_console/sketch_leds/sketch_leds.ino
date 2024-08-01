@@ -1204,7 +1204,7 @@ void timeout(void) {
 
   while (Serial.available() && Serial.read() != '\n') ;
 
-  errno();
+  report_errno();
   Timeout_runtime += micros() - now_micros;
 } // end timeout()
 

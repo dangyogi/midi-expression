@@ -1212,7 +1212,7 @@ void loop() {
     } // end if (Remote_Errno)
   } // end for (i)
 
-  errno();
+  report_errno();
 }
 
 // vim: sw=2

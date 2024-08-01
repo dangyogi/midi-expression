@@ -243,7 +243,7 @@ void harmonic_on(byte sw) {
   }
 }
 
-void truncate_function() {
+void truncate_function(void) {
   // Reduces FUNCTION_ENCODER max value.
   // Checks FUNCTION to see if it's a harmonic function.
   // If so, changes it to last non-harmonic function.
