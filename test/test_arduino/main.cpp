@@ -30,6 +30,7 @@ int main(int argc, char *argv[]) {
     }
 
     init_EEPROM();
+    init_sketch();
 
     arch_send_defines();
     arch_send_classes();

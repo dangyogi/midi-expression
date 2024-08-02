@@ -14,6 +14,7 @@ program:
     - teensy4/usb_midi.cpp
   files_end:
     - run_to_return.cpp
+    - sketch_master/init_sketch.cpp
     - main.cpp
   files:
     - sketch_master.ino
