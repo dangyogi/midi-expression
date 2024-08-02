@@ -44,6 +44,8 @@ int main(int argc, char *argv[]) {
     send_globals();
     send_arrays();
 
+    send_functions();
+
     sendf("ready\n");
 
     int ret = atoi(run_to_return());

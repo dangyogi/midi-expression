@@ -30,11 +30,12 @@ def sock_readline(recv_flags=0):
     #print("sock_readline returning:", ans)
     return ans
 
-Defines = {}  # name: value
-Classes = {}  # name: (subclasses)
-Structs = {}  # struct_name: Struct()
-Globals = {}  # name: Global()
-Arrays = {}   # name: Array()
+Defines = {}   # name: value
+Classes = {}   # name: (subclasses)
+Structs = {}   # struct_name: Struct()
+Globals = {}   # name: Global()
+Arrays = {}    # name: Array()
+Functions = {} # name: Function()
 
 def init():
     global Sock_buffer, Defines, Classes, Structs, Globals, Arrays
@@ -44,6 +45,7 @@ def init():
     Structs = {}  # struct_name: Struct()
     Globals = {}  # name: Global()
     Arrays = {}   # name: Array()
+    Functions = {} # name: Function()
 
 def add_define(name, value):
     assert name not in Defines, f"{name} already #defined"
@@ -148,6 +150,16 @@ def add_array(name, addr, array_size, element_size, type, dims):
     assert name not in Arrays
     Arrays[name] = Array(name, addr, array_size, element_size, type, dims)
 
+class Function:
+    def __init__(self, name, expects_return, params):
+        self.name = name
+        self.ret = expects_return
+        self.params = params
+
+def add_function(name, expects_return, params):
+    assert name not in Functions
+    Functions[name] = Function(name, expects_return, params)
+
 def load():
     while True:
         line = sock_readline()
@@ -166,6 +178,8 @@ def load():
             dims = [int(dim) for dim in dims_str.strip().split()]
             add_array(words[1], int(words[2]), int(words[3]), int(words[4]), 
                       ' '.join(words[4:]), dims)
+        elif words[0] == 'function':
+            add_function(words[1], int(words[2]), words[3:])
         elif words[0] == 'ready':
             break
         else:

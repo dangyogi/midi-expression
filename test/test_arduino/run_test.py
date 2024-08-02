@@ -47,7 +47,7 @@ def generate_test_file(test, program):
         else:
             arch_defs = {}
         arch_called_stubs_file, arch_caller_stubs_file, arch_regex = \
-          gen_functions(arch_defs.get('functions', {}), "arch_")
+          gen_functions(arch_defs['functions'], "arch_")
         assert arch_regex is None
         assert arch_caller_stubs_file is None
         copy_file(arch_called_stubs_file, source_file)
@@ -65,12 +65,15 @@ def generate_test_file(test, program):
         copy_file(gen_arrays(arch_defs['arrays'], "arch_"), source_file)
         copy_file(gen_arrays(test['arrays']), source_file)
         copy_file(caller_stubs_file, source_file)
+        all_funs = arch_defs['functions'].copy()
+        all_funs.update(test['functions'])
+        copy_file(gen_send_functions(all_funs), source_file)
         copy_files('.', program['files_end'], source_file)
 
 def gen_defines(defines, prefix=""):
     defines_file = os.path.join(Source_dir, prefix + "defines.cpp")
     with open(defines_file, "wt") as source_file:
-        print('// defines.cpp', file=source_file)
+        print(f'// {prefix}defines.cpp', file=source_file)
         print(file=source_file)
         print(f'void {prefix}send_defines(void) {{', file=source_file)
         for name in defines:
@@ -82,7 +85,7 @@ def gen_defines(defines, prefix=""):
 def gen_sub_classes(classes, prefix=""):
     subclasses_file = os.path.join(Source_dir, prefix + "subclasses.cpp")
     with open(subclasses_file, "wt") as source_file:
-        print('// subclasses.cpp', file=source_file)
+        print(f'// {prefix}subclasses.cpp', file=source_file)
         print(file=source_file)
         print(f'void {prefix}send_classes(void) {{', file=source_file)
         for name, sub_classes in classes.items():
@@ -95,7 +98,7 @@ def gen_sub_classes(classes, prefix=""):
 def gen_fields(structs, prefix=""):
     fields_file = os.path.join(Source_dir, prefix + "fields.cpp")
     with open(fields_file, "wt") as source_file:
-        print('// fields.cpp', file=source_file)
+        print(f'// {prefix}fields.cpp', file=source_file)
         print(file=source_file)
         print(f'void {prefix}send_structs(void) {{', file=source_file)
         for name, fields in structs.items():
@@ -131,7 +134,7 @@ def gen_fields1(name, fields, structs, source_file):
 def gen_globals(globals, prefix=""):
     globals_file = os.path.join(Source_dir, prefix + "globals.cpp")
     with open(globals_file, "wt") as source_file:
-        print('// globals.cpp', file=source_file)
+        print(f'// {prefix}globals.cpp', file=source_file)
         print(file=source_file)
         print(f'void {prefix}send_globals(void) {{', file=source_file)
         for name, type in globals.items():
@@ -146,7 +149,7 @@ def gen_globals(globals, prefix=""):
 def gen_arrays(arrays, prefix=""):
     arrays_file = os.path.join(Source_dir, prefix + "arrays.cpp")
     with open(arrays_file, "wt") as source_file:
-        print('// arrays.cpp', file=source_file)
+        print(f'// {prefix}arrays.cpp', file=source_file)
         print(file=source_file)
         print(f'void {prefix}send_arrays(void) {{', file=source_file)
         for name, info in arrays.items():
@@ -180,9 +183,9 @@ def gen_functions(functions, prefix=""):
     caller_stubs_file = os.path.join(Source_dir, prefix + "caller_stubs_file.cpp")
     with open(called_stubs_file, "wt") as called_stubs, \
          open(caller_stubs_file, "wt") as caller_stubs:
-        print('// called_stubs_file.cpp', file=called_stubs)
+        print(f'// {prefix}called_stubs_file.cpp', file=called_stubs)
         print(file=called_stubs)
-        print('// caller_stubs_file.cpp', file=caller_stubs)
+        print(f'// {prefix}caller_stubs_file.cpp', file=caller_stubs)
         print(file=caller_stubs)
         names = set()  # names of generated caller_stubs
         for name, info in functions.items():
@@ -402,6 +405,27 @@ def gen_called_stub(name, info, source_file):
 
     print('}', file=source_file)
     print(file=source_file)
+
+def gen_send_functions(functions):
+    functions_file = os.path.join(Source_dir, "functions.cpp")
+    with open(functions_file, "wt") as source_file:
+        print('// functions.cpp', file=source_file)
+        print(file=source_file)
+        print('void send_functions(void) {', file=source_file)
+        for name, info in functions.items():
+            ret = 0
+            pnames = []
+            if info:
+                if 'return' in info:
+                    ret = 1
+                for param in info.get('params', ()):
+                    pname, pinfo = param.copy().popitem()
+                    pnames.append(' ' + pname)
+            pnames_str = ''.join(pnames)
+            print(fr'  sendf("function {name} {ret}{pnames_str}\n");', file=source_file)
+        print('}', file=source_file)
+        print(file=source_file)
+    return functions_file
 
 def copy_files(source_dir, files, dest_file, regex=None):
     for file in files:

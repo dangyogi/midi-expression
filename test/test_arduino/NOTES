@@ -44,6 +44,9 @@ C++ Requests
     - "field" struct_name field_name offset field_len field_type
       - issued at program startup
       - no response expected
+    - "function" name expects_return param_names
+      - issued at program startup
+      - no response expected
     - "ready"
       - issued once at program startup, after all above messages have been sent out
       - no response expected
