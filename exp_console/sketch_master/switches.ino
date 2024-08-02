@@ -76,7 +76,7 @@ byte setup_switches(byte EEPROM_offset) {
     Debounce_period[1] = us;
   }
 
-  return 2;
+  return 4;
 }
 
 unsigned long Longest_scan = 0;                                   // uSec, measured at 13

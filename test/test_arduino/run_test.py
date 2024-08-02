@@ -2,12 +2,11 @@
 
 import sys
 from io import StringIO
-import os.path
+import os, os.path
 import re
 import subprocess
 from yaml import safe_load
 
-Source_dir = "tmp"
 
 def read_yaml(filename):
     if not filename.endswith(".yaml"):
@@ -15,8 +14,14 @@ def read_yaml(filename):
     with open(filename, "r") as yaml_file:
         return safe_load(yaml_file)
 
-def run(filename, no_compile):
-    test = read_yaml(filename)
+def run(sketch_dir, no_compile):
+    global Source_dir
+    Source_dir = os.path.join(sketch_dir, 'tmp')
+    try:
+        os.mkdir(Source_dir)
+    except FileExistsError:
+        pass
+    test = read_yaml(os.path.join(sketch_dir, 'test_compile.yaml'))
     program = test['program']
     generate_test_file(test, program)
     if no_compile:
@@ -400,7 +405,7 @@ def copy_file(filename, dest_file, regex=None):
             dest_file.write(line)
 
 def compile(program):
-    command = program['compile'].format(**program)
+    command = program['compile'].format(source_dir=Source_dir, **program)
     exit_status = subprocess.run(command.split()).returncode
     if exit_status:
         print("Compile Errors", file=sys.stderr)
@@ -413,7 +418,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', action='store_true')
-    parser.add_argument('yaml_file')
+    parser.add_argument('sketch_dir')
     args = parser.parse_args()
 
-    run(args.yaml_file, args.c)
+    run(args.sketch_dir, args.c)
