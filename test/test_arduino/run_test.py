@@ -195,6 +195,7 @@ def gen_functions(functions, prefix=""):
     if names:
         regex = re.compile(r'\b(' + '|'.join(names) + r')(?=\()')
     else:
+        os.remove(caller_stubs_file)
         caller_stubs_file = None
         regex = None
     return called_stubs_file, caller_stubs_file, regex
@@ -303,7 +304,6 @@ def gen_caller_stub(name, info, source_file):
     gen_code()
 
 def gen_called_stub(name, info, source_file):
-
     format = [f"fun_called {name}"]
     args = []
     initial = ''
@@ -379,14 +379,26 @@ def gen_called_stub(name, info, source_file):
 
     print(f"  ret_value = run_to_return();", file=source_file)
     if ret == 'void':
+        print('  if (ret_value) {', file=source_file)
+        print(f'    fprintf(stderr, "ERROR on call {name} return: '
+              r'''unexpected value='%s'\n", ret_value);''',
+              file=source_file)
+        print('    exit(2);', file=source_file)
+        print('}', file=source_file)
         print(f"  return;", file=source_file)
-    elif integer(ret):
-        if unsigned(ret):
-            print(f'  return ({ret})strtoul(ret_value, NULL, 10);', file=source_file)
-        else:
-            print(f'  return ({ret})atol(ret_value);', file=source_file)
-    elif double(ret):
-        print(f'  return ({ret})atof(ret_value);', file=source_file)
+    else:
+        print('  if (!ret_value) {', file=source_file)
+        print(fr'    fprintf(stderr, "ERROR on call {name} missing return value\n");',
+              file=source_file)
+        print('    exit(2);', file=source_file)
+        print('}', file=source_file)
+        if integer(ret):
+            if unsigned(ret):
+                print(f'  return ({ret})strtoul(ret_value, NULL, 10);', file=source_file)
+            else:
+                print(f'  return ({ret})atol(ret_value);', file=source_file)
+        elif double(ret):
+            print(f'  return ({ret})atof(ret_value);', file=source_file)
 
     print('}', file=source_file)
     print(file=source_file)

@@ -22,7 +22,7 @@ find_global(char *type, int max_type_len) {
 
     // apply offsets
     int first = 1;
-    while (*Word_ptr && *Word_ptr != '=') {
+    while (Word_ptr && *Word_ptr != '=') {
         unsigned int offset = (unsigned int)strtoul(next_word(), NULL, 10);
         if (first) {
             first = 0;
@@ -145,7 +145,7 @@ run_to_return(void) {
 
         if (strcmp(command, "return") == 0) {
             // return [value]
-            if (*Word_ptr == '\0') return NULL;
+            if (!Word_ptr) return NULL;
             return next_word();
         }
         if (strcmp(command, "call") == 0) {

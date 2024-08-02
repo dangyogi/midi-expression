@@ -14,11 +14,11 @@ Sock_buffer = ''
 class Sock_closed(EOFError):
     pass
 
-def sock_readline():
+def sock_readline(recv_flags=0):
     global Sock_buffer
     newline = Sock_buffer.find('\n')
     while newline == -1:
-        data_read = Sock.recv(4095).decode('ascii')
+        data_read = Sock.recv(4096, recv_flags).decode('ascii')
         if not data_read:
             print()
             print("Null recv, quiting connection")
@@ -175,6 +175,7 @@ def run(port):
     global Sock
 
     listen_socket = socket.socket()
+    listen_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     addr = 'localhost', port
     listen_socket.bind(('localhost', port))
     print("listening on", addr)
@@ -186,12 +187,28 @@ def run(port):
         Sock, addr = listen_socket.accept()
         print("got connection from", addr)
         print()
+        Sock.settimeout(0.3)
         try:
             load()
-            print("client ready!")
+            interactive()
         except Sock_closed:
-            Sock.close()
-            Sock = None
+            pass
+        Sock.close()
+        Sock = None
+
+def interactive():
+    print("client ready!")
+    while True:
+        print("> ", end='')
+        sys.stdout.flush()
+        request = sys.stdin.readline()
+        send_sock(request)
+        try:
+            response = sock_readline()
+            print("got", repr(response))
+        except socket.timeout:
+            pass
+
 
 
 if __name__ == "__main__":

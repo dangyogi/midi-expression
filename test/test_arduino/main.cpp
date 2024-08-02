@@ -46,6 +46,7 @@ int main(int argc, char *argv[]) {
 
     sendf("ready\n");
 
-    printf("Hello World!\n");
-    return 0;
+    int ret = atoi(run_to_return());
+
+    return ret;
 }
