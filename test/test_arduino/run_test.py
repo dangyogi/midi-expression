@@ -1,9 +1,10 @@
 # run_test.py
 
 import sys
+import re
 from io import StringIO
 import os, os.path
-import re
+import shutil
 import subprocess
 from yaml import safe_load
 
@@ -17,10 +18,8 @@ def read_yaml(filename):
 def run(sketch_dir, no_compile):
     global Source_dir
     Source_dir = os.path.join(sketch_dir, 'tmp')
-    try:
-        os.mkdir(Source_dir)
-    except FileExistsError:
-        pass
+    shutil.rmtree(Source_dir)
+    os.mkdir(Source_dir)
     test = read_yaml(os.path.join(sketch_dir, 'test_compile.yaml'))
     program = test['program']
     generate_test_file(test, program)
