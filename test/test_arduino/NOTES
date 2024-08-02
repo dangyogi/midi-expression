@@ -60,13 +60,20 @@ Test Driver Requests
 
     The test driver may issue the following requests:
 
-    - "get_global" addr offsets len
-      - expects get_global final_addr data
-    - "set_global" addr offsets len data
+    - "display" text
+      - the entire command line is displayed on stdout.
+      - no result is returned to the test_driver.
+    - "get_global" type addr offsets
+      - expects get_global final_addr value
+      - each offset is to another pointer
+      - type is: s[1,2,4], u[1,2,4], f[4,8], str (null terminated), <int> (len of data)
+    - "set_global" type addr offsets = value
       - expects set_global final_addr previous_value
+      - each offset is to another pointer
+      - type is: s[1,2,4], u[1,2,4], f[4,8], str (null terminated), <int> (len of data)
     - "call" name arguments
-      - Arguments are separated by a space.  The elements in a single array argument are surrounded by
-        [ and ], for example: [elem1 elem2 elem3] next_arg.
+      - Arguments are separated by a space.  The elements in a single array argument are passed as a
+        hex data stream of the length of the array.
       - This calls the second type of stub, above within the C++ program.  If there are no arguments,
         it passes 0 as args (rather than a pointer to '\0').
       - Test driver now responds to C++ "fun called" requests until "returned" request received.
@@ -80,5 +87,3 @@ Test Driver Requests
       - This will break the socket connection to the test driver, which will loop back to accept the
         next connection and start over again.
 
-TODO:
-    make 'size_t' unsigned

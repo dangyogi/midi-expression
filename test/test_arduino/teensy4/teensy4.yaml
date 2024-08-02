@@ -2,6 +2,43 @@
 
 ---
 
+defines:
+  # core_pins.h
+  - HIGH
+  - LOW
+  - INPUT
+  - OUTPUT
+  - INPUT_PULLUP
+  - INPUT_PULLDOWN
+  - OUTPUT_OPENDRAIN
+  - INPUT_DISABLE
+  - LSBFIRST
+  - MSBFIRST
+  - CHANGE
+  - FALLING
+  - RISING
+
+  # EEPROM.h
+  - EEPROM_SIZE
+
+  # usb_serial.h
+  - DEC
+  - HEX
+  - OCT
+  - BIN
+
+classes: {}
+
+structs: {}
+
+globals: {}
+
+arrays:
+  # EEPROM.h
+  EEPROM:
+    element_type: byte
+    dims: EEPROM_SIZE
+
 functions:   # optional 'gen_caller: False', 'return: <type>' and
              #          'params: type|{type:, default:, len:, max_len:}'.
              # null if none of these are included.

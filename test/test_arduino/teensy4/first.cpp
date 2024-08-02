@@ -5,3 +5,7 @@
 
 byte EEPROM[EEPROM_SIZE];
 
+void
+init_EEPROM(void) {
+    memset(EEPROM, 0xFF, EEPROM_SIZE);
+}

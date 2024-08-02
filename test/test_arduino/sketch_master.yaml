@@ -13,6 +13,7 @@ program:
     - teensy4/Wire.cpp
     - teensy4/usb_midi.cpp
   files_end:
+    - run_to_return.cpp
     - main.cpp
   files:
     - sketch_master.ino

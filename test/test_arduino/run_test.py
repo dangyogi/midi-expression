@@ -50,20 +50,15 @@ def generate_test_file(test, program):
         called_stubs_file, caller_stubs_file, regex = gen_functions(test['functions'])
         copy_file(called_stubs_file, source_file)
         copy_files(program['dir'], program['files'], source_file, regex)
-        if 'defines' in arch_defs:
-            copy_file(gen_defines(arch_defs['defines'], "arch_"), source_file)
+        copy_file(gen_defines(arch_defs['defines'], "arch_"), source_file)
         copy_file(gen_defines(test['defines']), source_file)
-        if 'classes' in arch_defs:
-            copy_file(gen_sub_classes(arch_defs['classes'], "arch_"), source_file)
+        copy_file(gen_sub_classes(arch_defs['classes'], "arch_"), source_file)
         copy_file(gen_sub_classes(test['classes']), source_file)
-        if 'structs' in arch_defs:
-            copy_file(gen_fields(arch_defs['structs'], "arch_"), source_file)
+        copy_file(gen_fields(arch_defs['structs'], "arch_"), source_file)
         copy_file(gen_fields(test['structs']), source_file)
-        if 'globals' in arch_defs:
-            copy_file(gen_globals(arch_defs['globals'], "arch_"), source_file)
+        copy_file(gen_globals(arch_defs['globals'], "arch_"), source_file)
         copy_file(gen_globals(test['globals']), source_file)
-        if 'arrays' in arch_defs:
-            copy_file(gen_arrays(arch_defs['arrays'], "arch_"), source_file)
+        copy_file(gen_arrays(arch_defs['arrays'], "arch_"), source_file)
         copy_file(gen_arrays(test['arrays']), source_file)
         copy_file(caller_stubs_file, source_file)
         copy_files('.', program['files_end'], source_file)
@@ -73,7 +68,7 @@ def gen_defines(defines, prefix=""):
     with open(defines_file, "wt") as source_file:
         print('// defines.cpp', file=source_file)
         print(file=source_file)
-        print('void send_defines(void) {', file=source_file)
+        print(f'void {prefix}send_defines(void) {{', file=source_file)
         for name in defines:
             print(fr'  sendf("#define {name} %d\n", (int)({name}));', file=source_file)
         print('}', file=source_file)
@@ -85,7 +80,7 @@ def gen_sub_classes(classes, prefix=""):
     with open(subclasses_file, "wt") as source_file:
         print('// subclasses.cpp', file=source_file)
         print(file=source_file)
-        print('void send_classes(void) {', file=source_file)
+        print(f'void {prefix}send_classes(void) {{', file=source_file)
         for name, sub_classes in classes.items():
             print(fr'  sendf("sub_classes {name} {" ".join(sub_classes)}\n");',
                   file=source_file)
@@ -98,7 +93,7 @@ def gen_fields(structs, prefix=""):
     with open(fields_file, "wt") as source_file:
         print('// fields.cpp', file=source_file)
         print(file=source_file)
-        print('void send_structs(void) {', file=source_file)
+        print(f'void {prefix}send_structs(void) {{', file=source_file)
         for name, fields in structs.items():
             gen_fields1(name, fields, structs, source_file)
         print('}', file=source_file)
@@ -134,7 +129,7 @@ def gen_globals(globals, prefix=""):
     with open(globals_file, "wt") as source_file:
         print('// globals.cpp', file=source_file)
         print(file=source_file)
-        print('void send_globals(void) {', file=source_file)
+        print(f'void {prefix}send_globals(void) {{', file=source_file)
         for name, type in globals.items():
             print(fr'  sendf("global {name} %u %d {type}\n",',
                   file=source_file)
@@ -149,7 +144,7 @@ def gen_arrays(arrays, prefix=""):
     with open(arrays_file, "wt") as source_file:
         print('// arrays.cpp', file=source_file)
         print(file=source_file)
-        print('void send_arrays(void) {', file=source_file)
+        print(f'void {prefix}send_arrays(void) {{', file=source_file)
         for name, info in arrays.items():
             type = info['element_type']
             print(f'  sendf("array {name} %u %d %d {type}:",',

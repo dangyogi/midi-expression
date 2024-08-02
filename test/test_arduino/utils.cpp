@@ -7,6 +7,9 @@
 #include <errno.h>
 #include <sys/socket.h>
 
+
+extern const char *run_to_return(void);
+
 int
 calc_dim(int array_size, int element_size) {
     for (int i = 0; i <= 1; i++) {
@@ -61,6 +64,8 @@ sendf(const char *format, ...) {
 char Recv_buffer[SOCK_BUFFER_SIZE];
 char *Recv_buffer_start = Recv_buffer;
 
+char *Word_ptr;
+
 char *
 sock_readline() {
     if (Recv_buffer_start > Recv_buffer) {
@@ -81,7 +86,57 @@ sock_readline() {
     }
     *newline = '\0';
     Recv_buffer_start = newline + 1;
+    Word_ptr = Recv_buffer;
     return Recv_buffer;
+}
+
+#define WORD_BUFFER_SIZE    200
+char Word_buffer[WORD_BUFFER_SIZE];
+
+char *
+copy_next_word(char *end) {
+    int word_len = end - Word_ptr;
+    if (word_len >= WORD_BUFFER_SIZE) {
+        fprintf(stderr,
+                "ERROR: next_word len=%d greater than WORD_BUFFER_SIZE=%d\n",
+                word_len, WORD_BUFFER_SIZE);
+        exit(2);
+    }
+    strncpy(Word_buffer, Word_ptr, word_len);
+    Word_buffer[word_len] = '\0';
+    Word_ptr += word_len;
+    while (*Word_ptr == ' ') Word_ptr++;
+    return Word_buffer;
+}
+
+char *
+next_word(char delimiter=' ') {
+    // word is returned in a separate buffer so that the original command line is not altered.
+    // This buffer will be overwritten on the next call to next_word.
+    if (Word_ptr == 0) {
+        fprintf(stderr, "ERROR: next_word called at end of line='%s'\n", Recv_buffer);
+        exit(2);
+    }
+    char *end = strchr(Word_ptr, delimiter);
+    if (end) {
+        return copy_next_word(end);
+    }
+    // else delimiter not found
+    if (delimiter != ' ') {
+        fprintf(stderr,
+                "ERROR: next_word, delimiter=%X not found in Word_ptr='%s'\n", delimiter,
+                Word_ptr);
+        exit(2);
+    }
+    // go to end of line
+    end = strchr(Word_ptr, '\0');
+    if (end) {
+        return copy_next_word(end);
+    }
+    fprintf(stderr,
+            "INTERNAL ERROR: next_word can't find end of command line='%s'\n",
+            Word_ptr);
+    exit(1);
 }
 
 byte
@@ -170,11 +225,5 @@ send_data(const byte *data, int len) {
         data++;
     }
     *Sendf_buf_end = '\0';
-}
-
-const char *
-run_to_return(void) {
-    // FIX: Implement this
-    return "";
 }
 
