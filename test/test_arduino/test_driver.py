@@ -93,11 +93,11 @@ def get_global_args(fields, type, ggtype, next_poffset, poffsets=None):
     # fields is a list of strings
     # returns type, poffsets
     if poffsets is None:
-        poffets = []
+        poffsets = []
 
     while fields:
         if type.endswith('*'):
-            poffsets.append(next_poffset)
+            poffsets.append(str(next_poffset))
             next_poffset = 0
             type = type[:-1].strip()
         if type in Classes:
@@ -114,9 +114,9 @@ def get_global_args(fields, type, ggtype, next_poffset, poffsets=None):
             print(f"ERROR: expected Struct type, ended up with {type=}", file=sys.stderr)
             sys.exit(1)
 
-    assert self.ggtype
-    poffsets.append(next_poffset)
-    return self.ggtype, poffsets
+    assert ggtype
+    poffsets.append(str(next_poffset))
+    return ggtype, poffsets
 
 class Struct:
     def __init__(self, name):
@@ -137,9 +137,9 @@ class Field:
         self.offset = offset
         self.len = len
         self.type = type
-        self.ggtype = to_ggtype(type)
+        self.ggtype = to_ggtype(type, len)
 
-def to_ggtype(type):
+def to_ggtype(type, len):
     # returns type for "get_global" command: s<len>, u<len>, f<len>, str, <data_len>
     if integer(type):
         if unsigned(type):
@@ -189,7 +189,7 @@ class Global:
         self.addr = addr
         self.len = len
         self.type = type
-        self.ggtype = to_ggtype(type)
+        self.ggtype = to_ggtype(type, len)
 
     def global_args(self, fields):
         # fields is a list of strings
@@ -224,17 +224,22 @@ class Array:
         self.array_size = array_size
         self.element_size = element_size
         self.type = type
-        self.ggtype = to_ggtype(type)
+        self.ggtype = to_ggtype(type, element_size)
         self.dims = dims
 
     def global_args(self, words_in):
         # words_in is a list of strings
         # returns type, offsets
         addr = self.addr
-        for i in range(len(dims)):
+        if Trace:
+            print(f"{self.name}.global_args, {self.addr=}, {self.element_size=}, {self.type=}")
+            print(f"  {self.ggtype=}, {self.dims=}")
+        for i in range(len(self.dims)):
             arg = translate_word(words_in.pop(0))
             dim_in = int(arg)
             addr += dim_in * product(self.dims[i + 1:]) * self.element_size
+            if Trace:
+                print(f"{self.name}.global_args, got arg={dim_in}, {addr=}")
         return get_global_args(words_in, self.type, self.ggtype, addr)
 
 def product(iterable):
@@ -280,7 +285,7 @@ def load():
             words = head.split()
             dims = [int(dim) for dim in dims_str.strip().split()]
             add_array(words[1], int(words[2]), int(words[3]), int(words[4]), 
-                      ' '.join(words[4:]), dims)
+                      ' '.join(words[5:]), dims)
         elif words[0] == 'function':
             add_function(words[1], int(words[2]), words[3:])
         elif words[0] == 'ready':
@@ -333,7 +338,9 @@ def translate(request):
     words_out = []
     if words_in[0] == 'get':
         type, offsets = make_get_global(words_in[1:])
-        return f"get_global {type} {' '.join(offsets)}"
+        words_out.append('get_global')
+        words_out.append(type)
+        words_out.extend(offsets)
     else:
         words_out.append(words_in[0])
         for word in words_in[1:]:
@@ -350,13 +357,15 @@ def translate_word(word):
 def make_get_global(words_in):
     # words_in: global_name/array_name dims fields
     # returns type, poffsets
+    # returned poffsets are strings, not ints
     if words_in[0] in Globals:
-        type, offsets = Globals[words_in[0]].get_globals(words_in[1:])
+        type, offsets = Globals[words_in[0]].global_args(words_in[1:])
     elif words_in[0] in Arrays:
-        type, offsets = Arrays[words_in[0]].get_globals(words_in[1:])
+        type, offsets = Arrays[words_in[0]].global_args(words_in[1:])
     else:
         printf(f"ERROR: Unrecognized Global/Array {words_in[0]!r}", file=sys.stderr)
         sys.exit(2)
+    return type, offsets
 
 
 def compare(response, script_line):
@@ -407,11 +416,17 @@ def run_script(filename, verbose):
                         break
 
 def do_icommand(request, verbose):
+    # request includes trailing '\n'
+    global Trace
     if request.startswith('?'):
         print(translate(request[1:].strip()), end='')
-    elif request.startswith('flush'):
-        Sock.flush()
-    elif request.startswith('recv'):
+    elif request.startswith('trace '):
+        words = request.split()
+        if words[1] == 'on':
+            Trace = 1
+        else:
+            Trace = 0
+    elif request.startswith('readline'):
         try:
             print("sock_readline returned:", repr(sock_readline()))
         except socket.timeout:
@@ -479,6 +494,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--port', '-p', type=int, default=2020)
     parser.add_argument('--verbose', '-v', action='store_true')
+    parser.add_argument('--trace', '-t', action='store_true')
     args = parser.parse_args()
+
+    if args.trace:
+        Trace = True
 
     run(args.port, args.verbose)

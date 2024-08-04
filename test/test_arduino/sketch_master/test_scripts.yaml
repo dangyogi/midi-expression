@@ -3,25 +3,30 @@
 ---
 
 defaults:
-  - pinMode: null
-  - serial_begin: null
-  - delay: null
-  - serial_println_ulong: 4
-  - serial_print_str: 10
-  - serial_println_str: 11
-  - serial_println_void: 1
-  - serial_available: 0
-  - digitalWrite: null: null
-  - TwoWire_begin_void: null
-  - TwoWire_setClock: null
+  pinMode: null
+  serial_begin: null
+  delay: null
+  serial_print_double: 4
+  serial_println_double: 4
+  serial_println_long: 4
+  serial_println_str: 4
+  serial_println_ulong: 4
+  serial_println_void: 4
+  serial_print_long: 4
+  serial_print_str: 4
+  serial_print_ulong: 4
+  serial_available: 0
+  digitalWrite: null: null
+  TwoWire_begin_void: null
+  TwoWire_setClock: null
 
 setup:
   defaults:
-    - get_EEPROM:
-        "0": 78  # 20000
-        "1": 32
-        "2": 3   # 1000
-        "3": 232
+    get_EEPROM:
+      "0": 78  # 20000
+      "1": 32
+      "2": 3   # 1000
+      "3": 232
 
   script:
     - < call setup
