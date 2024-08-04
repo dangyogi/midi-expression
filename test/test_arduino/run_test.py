@@ -2,58 +2,49 @@
 
 import sys
 import re
-from io import StringIO
 import os, os.path
 import shutil
 import subprocess
-from yaml import safe_load
+
+from utils import *
 
 
-def read_yaml(filename):
-    if not filename.endswith(".yaml"):
-        filename += '.yaml'
-    with open(filename, "r") as yaml_file:
-        return safe_load(yaml_file)
-
-def run(sketch_dir, no_compile):
+def run(sketch_dir, no_compile, gen):
     global Source_dir
     Source_dir = os.path.join(sketch_dir, 'tmp')
-    shutil.rmtree(Source_dir)
-    os.mkdir(Source_dir)
     test = read_yaml(os.path.join(sketch_dir, 'test_compile.yaml'))
     program = test['program']
-    generate_test_file(test, program)
+    if gen:
+        shutil.rmtree(Source_dir)
+        os.mkdir(Source_dir)
+        generate_test_file(test, program, sketch_dir)
     if no_compile:
         print("test.cpp generated")
     else:
         compile(program)
 
-def unsigned(type):
-    return type[0] == 'u' or type == 'byte' or type == 'size_t'
-
-def double_float(type):
-    return 'float' in type or 'double' in type
-
-def integer(type):
-    # was: 'byte' in ptype or 'short' in ptype or 'int' in ptype or 'long' in ptype
-    return not type.endswith('*') and not double_float(type)
-
-
-def generate_test_file(test, program):
+def generate_test_file(test, program, sketch_dir):
     with open(os.path.join(Source_dir, "test.cpp"), "wt") as source_file:
         copy_files('.', program['files_start'], source_file)
-        if 'arch_defs' in program:
-            arch_defs = read_yaml(program['arch_defs'])
-        else:
-            arch_defs = {}
+
+        print(file=source_file)
+        print("void send_sketch_dir(void) {", file=source_file)
+        print(fr'  sendf("sketch_dir {sketch_dir}\n");', file=source_file)
+        print("}", file=source_file)
+        print(file=source_file)
+
+        arch_defs = read_yaml(program['arch_defs'])
         arch_called_stubs_file, arch_caller_stubs_file, arch_regex = \
           gen_functions(arch_defs['functions'], "arch_")
         assert arch_regex is None
         assert arch_caller_stubs_file is None
         copy_file(arch_called_stubs_file, source_file)
+
         called_stubs_file, caller_stubs_file, regex = gen_functions(test['functions'])
         copy_file(called_stubs_file, source_file)
+
         copy_files(program['dir'], program['files'], source_file, regex)
+
         copy_file(gen_defines(arch_defs['defines'], "arch_"), source_file)
         copy_file(gen_defines(test['defines']), source_file)
         copy_file(gen_sub_classes(arch_defs['classes'], "arch_"), source_file)
@@ -64,10 +55,12 @@ def generate_test_file(test, program):
         copy_file(gen_globals(test['globals']), source_file)
         copy_file(gen_arrays(arch_defs['arrays'], "arch_"), source_file)
         copy_file(gen_arrays(test['arrays']), source_file)
+
         copy_file(caller_stubs_file, source_file)
         all_funs = arch_defs['functions'].copy()
         all_funs.update(test['functions'])
         copy_file(gen_send_functions(all_funs), source_file)
+
         copy_files('.', program['files_end'], source_file)
 
 def gen_defines(defines, prefix=""):
@@ -378,6 +371,7 @@ def gen_called_stub(name, info, source_file):
                     initial = ' '
 
     # finish sending "fun_called" line
+    initial = ''
     do_send(r'\n')
 
     print(f"  ret_value = run_to_return();", file=source_file)
@@ -387,14 +381,14 @@ def gen_called_stub(name, info, source_file):
               r'''unexpected value='%s'\n", ret_value);''',
               file=source_file)
         print('    exit(2);', file=source_file)
-        print('}', file=source_file)
+        print('  }', file=source_file)
         print(f"  return;", file=source_file)
     else:
         print('  if (!ret_value) {', file=source_file)
         print(fr'    fprintf(stderr, "ERROR on call {name} missing return value\n");',
               file=source_file)
         print('    exit(2);', file=source_file)
-        print('}', file=source_file)
+        print('  }', file=source_file)
         if integer(ret):
             if unsigned(ret):
                 print(f'  return ({ret})strtoul(ret_value, NULL, 10);', file=source_file)
@@ -453,7 +447,8 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', action='store_true')
+    parser.add_argument('-g', action='store_false')
     parser.add_argument('sketch_dir')
     args = parser.parse_args()
 
-    run(args.sketch_dir, args.c)
+    run(args.sketch_dir, args.c, args.g)

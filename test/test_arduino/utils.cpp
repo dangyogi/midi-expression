@@ -68,6 +68,7 @@ char *Word_ptr;
 
 char *
 sock_readline() {
+    // removes trailing '\n'
     if (Recv_buffer_start > Recv_buffer) {
         memmove(Recv_buffer, Recv_buffer_start, strlen(Recv_buffer_start) + 1); // include null at end
         Recv_buffer_start = Recv_buffer;
@@ -106,7 +107,7 @@ copy_next_word(char *end) {
     Word_buffer[word_len] = '\0';
     Word_ptr += word_len;
     while (*Word_ptr == ' ') Word_ptr++;
-    if (!*Word_ptr) Word_ptr = 0;
+    if (!*Word_ptr || Word_ptr[0] == '\n') Word_ptr = 0;
     return Word_buffer;
 }
 

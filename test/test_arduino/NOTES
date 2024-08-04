@@ -29,6 +29,9 @@ C++ Requests
 
     The C++ program connects to the test driver program and then may issue the following requests:
 
+    - "test_dir" dir
+      - issued at program startup
+      - no response expected
     - "#define" name
       - issued at program startup
       - no response expected
@@ -51,7 +54,7 @@ C++ Requests
       - issued once at program startup, after all above messages have been sent out
       - no response expected
       - indicates the C++ program is now ready to process test driver requests.
-    - "fun called" name params
+    - "fun_called" name params
       - Issued by first type of stub, above.
       - C++ program now accepts any test driver requests, until "return" request received.
       - return value returned from stub
@@ -89,4 +92,40 @@ Test Driver Requests
       - causes the C++ program to immediately terminate.
       - This will break the socket connection to the test driver, which will loop back to accept the
         next connection and start over again.
+
+Test Scripts:
+
+    Responses = {(function_name, test_name, seq_number): [Response]}
+
+    Each response has the following methods:
+        - select: determine whether it is applicable (e.g., based on combinations of params)
+        - run: to respond to the function being called.
+
+    The selection process runs the following steps until a response answer True to its select method:
+        - Examine each response in (function_name, test_name, seq_number) list.
+        - Examine each response in (function_name, test_name) list.
+        - Examine each response in function_name list.
+        - If all of these fail, report an error.
+
+    When the response is run it can:
+        - expression
+          - number
+          - name (could be param name, "as" names, or defined name)
+        - verify
+          - "vrange exp low high"
+          - "vin exp valid_values"
+        - get global
+          - "global as name accessors"
+        - set globals
+          - "store prev value name accessors"
+        - call function(s) (with possibly different params)
+          - "call as name params"
+        - verify function results (use "as" in call as exp in verify)
+        - verify globals (use "as" in get global as exp in verify)
+        - set globals
+        - display messages
+          - "display message-with-{}s"
+        - return function results
+          - "return result"
+        - error (function shouldn't be called)
 

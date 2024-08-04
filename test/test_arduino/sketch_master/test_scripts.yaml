@@ -1,0 +1,33 @@
+# test_scripts.yaml
+
+---
+
+defaults:
+  - pinMode: null
+  - serial_begin: null
+  - delay: null
+  - serial_println_ulong: 4
+  - serial_print_str: 10
+  - serial_println_str: 11
+  - serial_println_void: 1
+  - serial_available: 0
+  - digitalWrite: null: null
+  - TwoWire_begin_void: null
+  - TwoWire_setClock: null
+
+setup:
+  defaults:
+    - get_EEPROM:
+        "0": 78  # 20000
+        "1": 32
+        "2": 3   # 1000
+        "3": 232
+
+  script:
+    - < call setup
+    - > fun_called millis
+    - < return 100
+    - > returned
+
+
+# vim: sw=2 ic

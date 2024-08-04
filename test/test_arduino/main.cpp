@@ -32,6 +32,8 @@ int main(int argc, char *argv[]) {
     init_EEPROM();
     init_sketch();
 
+    send_sketch_dir();
+
     arch_send_defines();
     arch_send_classes();
     arch_send_structs();
