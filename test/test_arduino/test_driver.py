@@ -473,6 +473,16 @@ def translate(request):
         words_out.append('get_global')
         words_out.append(type)
         words_out.extend(offsets)
+    elif words_in[0] == 'set':
+        value = words_in.pop(-1)
+        assert words_in[-1] == '=', f"Missing '=' in 'set' command {request!r}"
+        words_in.pop(-1)
+        type, offsets = make_get_global(words_in[1:])
+        words_out.append('set_global')
+        words_out.append(type)
+        words_out.extend(offsets)
+        words_out.append('=')
+        words_out.append(value)
     else:
         words_out.append(words_in[0])
         for word in words_in[1:]:

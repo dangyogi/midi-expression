@@ -34,5 +34,32 @@ setup:
     < return 100
     > returned
 
+  # interesting things in loop:
+  #
+  # call switch_closed sw
+  # call switch_opened sw
+  #
+  # <set Encoders enc var value = X>
+  # call encoder_changed enc (only if var set and flags not DISABLED)
+  #
+  # periodics:
+  #
+  # call notes_on
+  # call notes_off
+  # call pot_changed pot (calls send_pot if trigger set: Pot_trigger pot == 0xFF
+  #                                                      or Triggers[Pot_trigger[pot]].continuous)
+  # call send_pot pot
+
+  # get Encoders FUNCTION_ENCODER (0-3 are fn args) encoder_event (when encoder changes)
+  #                                                 var (is var set?)
+  #                                                 var value
+  #                                                 var var_type
+  #                                                              var_type_t flags (DISABLED is 1)
+  #                                                              var_type_t display_value (event)
+  #                                                              <subclass> ...
+  #
+  # set Switches sw current = 0 or 1
+  # get Switch_closed_event sw
+  # get Switch_opened_event sw
 
 # vim: sw=2 ic

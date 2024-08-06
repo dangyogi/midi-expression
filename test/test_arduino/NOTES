@@ -71,12 +71,11 @@ Test Driver Requests
       - no result is returned to the test_driver.
     - "get_global" type addr offsets
       - expects get_global final_addr value
-      - each offset is to another pointer
+      - each offset follows a pointer, addrs prior to all offsets are dereferenced in C++ program
       - type is: s[1,2,4], u[1,2,4], f[4,8], str (null terminated), <int> (len of data)
     - "set_global" type addr offsets = value
       - expects set_global final_addr previous_value
-      - each offset is to another pointer
-      - type is: s[1,2,4], u[1,2,4], f[4,8], str (null terminated), <int> (len of data)
+      - type, addr and offsets work as in "get_global" request.
     - "call" name arguments
       - Arguments are separated by a space.  The elements in a single array argument are passed as a
         hex data stream of the length of the array.
@@ -128,4 +127,19 @@ Test Scripts:
         - return function results
           - "return result"
         - error (function shouldn't be called)
+
+Interactive commands:
+
+    - ? command
+      shows translated command
+    - trace on|off
+    - readline
+      readline from Sock and display it
+    - run script
+    - get global_name dims fields (subclass name required after class fields)
+      - result: get_global final_addr value
+    - set global_name dims fields = value
+      - dims and fields work like get
+      - result: set_global final_addr prev_value
+    - <any test_driver request>
 

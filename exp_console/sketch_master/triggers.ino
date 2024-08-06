@@ -44,7 +44,7 @@ void pot_changed(byte pot) {
   }
 }
 
-// Called when trigger button is pressed.  Value may, or may not have, changed.
+// Called when trigger button is pressed.  Value may (or may not) have changed.
 void check_trigger(byte trigger) {
   run_event(Triggers[trigger].check_event, trigger);
 }
