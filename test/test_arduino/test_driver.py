@@ -3,6 +3,7 @@
 import sys
 import os.path
 from collections import Counter
+import readline
 import socket
 
 from utils import *
@@ -58,25 +59,26 @@ Globals = {}   # name: Global()
 Arrays = {}    # name: Array()
 Functions = {} # name: Function()
 
-Defaults = {}  # fname: default_return_value
-
 Seq_numbers = Counter() # fname: seq_number
 
 Sketch_dir = None
+Script = None
+Current_script = None
 
 def init():
-    global Sock_buffer, Defines, Classes, Structs, Globals, Arrays, Functions, Defaults, Seq_numbers
-    global Sketch_dir
+    global Sock_buffer, Defines, Classes, Structs, Globals, Arrays, Functions, Seq_numbers
+    global Sketch_dir, Script, Current_script
     Sock_buffer = ''
-    Defines = {}   # name: value
+    Defines = {}   # name: int(value)
     Classes = {}   # name: (subclasses)
     Structs = {}   # struct_name: Struct()
     Globals = {}   # name: Global()
     Arrays = {}    # name: Array()
     Functions = {} # name: Function()
-    Defaults = {}  # name: default_return_value
     Seq_numbers = Counter()  # fname: seq_number
     Sketch_dir = None
+    Script = None
+    Current_script = None
 
 def add_define(name, value):
     assert name not in Defines, f"{name} already #defined"
@@ -92,10 +94,16 @@ def unsigned(type):
 def get_global_args(fields, type, ggtype, next_poffset, poffsets=None):
     # fields is a list of strings
     # returns type, poffsets
+    if Trace:
+        print(f"get_global_args({fields=}, {type=}, {ggtype=}, {next_poffset=}, {poffsets=}")
     if poffsets is None:
         poffsets = []
 
+    fields = fields.copy()
+
     while fields:
+        if Trace:
+            print(f"get_global_args examining {type=} with {fields=} and {next_poffset=}")
         if type.endswith('*'):
             poffsets.append(str(next_poffset))
             next_poffset = 0
@@ -104,7 +112,8 @@ def get_global_args(fields, type, ggtype, next_poffset, poffsets=None):
             subclass = fields.pop(0)
             assert subclass in Classes[type]
             assert subclass in Structs
-        if type in Structs:
+            type = subclass
+        elif type in Structs:
             struct = Structs[type]
             field = struct.get_field(fields.pop(0))
             next_poffset += field.offset
@@ -114,9 +123,48 @@ def get_global_args(fields, type, ggtype, next_poffset, poffsets=None):
             print(f"ERROR: expected Struct type, ended up with {type=}", file=sys.stderr)
             sys.exit(1)
 
-    assert ggtype
     poffsets.append(str(next_poffset))
+    if type.endswith('*'):
+        if Trace:
+            print(f"get_global_args for pointer -> u4, {poffsets}")
+        return 'u4', poffsets
+    assert ggtype
+    if Trace:
+        print(f"get_global_args for base type -> {ggtype}, {poffsets}")
     return ggtype, poffsets
+
+def get_completion_choices(type, words_in, verbose):
+    if verbose:
+        print(f"get_completion_choices({type=}, {words_in=})")
+    words_in = words_in.copy()
+    while True:
+        if verbose:
+            print(f"get_completion_choices examining {type=}")
+        if type.endswith('*'):
+            type = type[:-1].strip()
+        if type in Classes:
+            if verbose:
+                print(f"get_completion_choices type in Classes with {words_in=}")
+            if words_in:
+                subclass = words_in.pop(0)
+                assert subclass in Classes[type]
+                assert subclass in Structs
+                type = subclass
+            else:
+                return Classes[type]
+        elif type in Structs:
+            if verbose:
+                print(f"get_completion_choices type in Structs with {words_in=}")
+            if words_in:
+                struct = Structs[type]
+                field = struct.get_field(words_in.pop(0))
+                type = field.type
+            else:
+                return list(Structs[type].fields.keys())
+        else:
+            if verbose:
+                print(f"get_completion_choices unknown {type=}")
+            return []
 
 class Struct:
     def __init__(self, name):
@@ -196,6 +244,9 @@ class Global:
         # returns type, offsets
         return get_global_args(fields, self.type, self.ggtype, self.addr)
 
+    def get_completion_choices(self, words_in, verbose):
+        return get_completion_choices(self.type, words_in, verbose)
+
     def get(self):
         assert not Sock_buffer
         send_sock(f"get_global {self.addr} {self.len}\n")
@@ -237,10 +288,25 @@ class Array:
         for i in range(len(self.dims)):
             arg = translate_word(words_in.pop(0))
             dim_in = int(arg)
+            if dim_in >= self.dims[i]:
+                print(f"ERROR Array({self.name}), dim {i}: "
+                      f"requested dim={dim_in} >= array dim={self.dims[i]}",
+                      file=sys.stderr) 
+                sys.exit(2)
             addr += dim_in * product(self.dims[i + 1:]) * self.element_size
             if Trace:
                 print(f"{self.name}.global_args, got arg={dim_in}, {addr=}")
         return get_global_args(words_in, self.type, self.ggtype, addr)
+
+    def get_completion_choices(self, words_in, verbose):
+        num_dims = len(self.dims)
+        if len(words_in) < num_dims:
+            if verbose:
+                print(f"Array({self.name}).get_completion_choices needs more dims")
+            return list(Defines.keys())
+        if verbose:
+            print(f"Array({self.name}).get_completion_choices got all dims")
+        return get_completion_choices(self.type, words_in[num_dims:], verbose)
 
 def product(iterable):
     ans = 1
@@ -293,22 +359,83 @@ def load():
         else:
             print("ERROR: unrecognized client command:", line, file=sys.stderr)
 
-def load_defaults(filename):
-    with open(os.path.join(Sketch_dir, filename)) as defaults_file:
-        for line in defaults_file:
-            line = strip_comment(line)
-            if not line:
-                continue
-            if ' ' in line:
-                name, ret = line.split()
-                assert name not in Defaults
-                Defaults[name] = str(ret)   # FIX: change when test_scripts.yaml is used...
-            else:
-                assert line not in Defaults
-                Defaults[line] = None
+Completer_trace = 0
 
-def run(port, verbose):
-    global Sock
+def completer(text, state):
+    # This is called by readline library which gobbles up (hides) exceptions!
+    try:
+        line = readline.get_line_buffer()
+        prior_words = line.split()
+        if text:
+            prior_words = prior_words[:-1]
+        if Completer_trace > 1:
+            print(f"completer({text=!r}, {state=}), {line=!r}, {prior_words=}")
+        choices = []
+        got_Q = False
+        if prior_words and prior_words[0] == '?':
+            prior_words = prior_words[1:]
+            got_Q = True
+        if not prior_words:
+            choices = ['? ', 'trace ', 'readline', 'run ', 'display ', 'get ', 'call ',
+                       'return ', 'exit ']
+            if got_Q:
+                choices.remove('? ')
+        elif prior_words[0] == 'trace':
+            if len(prior_words) == 1:
+                choices = ['on', 'off']
+        elif prior_words[0] == 'run':
+            if len(prior_words) == 1:
+                choices = list(Script.keys())
+                choices.remove('defaults')
+        elif prior_words[0] == 'get':
+            if len(prior_words) == 1:
+                choices = list(Globals.keys())
+                choices.extend(Arrays.keys())
+            elif prior_words[1] in Globals:
+                if Completer_trace and state == 0:
+                    print(f"completer {prior_words[1]=} in Globals")
+                choices = Globals[prior_words[1]].get_completion_choices(prior_words[2:], state == 0)
+            elif prior_words[1] in Arrays:
+                if Completer_trace and state == 0:
+                    print(f"completer {prior_words[1]=} in Arrays")
+                choices = Arrays[prior_words[1]].get_completion_choices(prior_words[2:], state == 0)
+            else:
+                choices = list(Defines.keys())
+        elif prior_words[0] == 'call':
+            if len(prior_words) == 1:
+                choices = list(Functions.keys())
+            else:
+                choices = list(Defines.keys())
+        elif prior_words[0] == 'return':
+            if len(prior_words) == 1:
+                choices = list(Defines.keys())
+        if Completer_trace and state == 0:
+            print("completer choices", choices)
+        legal_choices = [choice for choice in choices if choice.startswith(text)]
+        if Completer_trace and state == 0:
+            print(f"completer choices starting with {text!r}:", legal_choices)
+        if state < len(legal_choices):
+            if Completer_trace > 2:
+                print("completer ->", legal_choices[state])
+            return legal_choices[state]
+        if Completer_trace > 2:
+            print("completer -> None")
+        return None
+    except e:
+        print("completer got exception", e, file=sys.stderr)
+
+def run(port, script_file, verbose):
+    global Sock, Script
+
+    histfile = '.history'
+    try:
+        readline.read_history_file(histfile)
+    except FileNotFoundError:
+        pass
+    readline.set_history_length(1000)
+    readline.set_completer(completer)
+    readline.set_completer_delims(" ")
+    print("readline completer_delims", repr(readline.get_completer_delims()))
 
     listen_socket = socket.socket()
     listen_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -317,23 +444,28 @@ def run(port, verbose):
     print("listening on", addr)
     listen_socket.listen()
 
-    while True:
-        init()
-        print("Waiting for connection")
-        Sock, addr = listen_socket.accept()
-        print("got connection from", addr)
-        print()
-        #Sock.settimeout(0.3)
-        try:
-            load()
-            load_defaults("defaults")
-            interactive(verbose)
-        except Sock_closed:
-            pass
-        Sock.close()
-        Sock = None
+    try:
+        while True:
+            init()
+            Script = read_yaml(script_file)
+            print("Waiting for connection")
+            Sock, addr = listen_socket.accept()
+            print("got connection from", addr)
+            print()
+            #Sock.settimeout(0.3)
+            try:
+                load()
+                interactive(verbose)
+            except Sock_closed:
+                pass
+            Sock.close()
+            Sock = None
+    finally:
+        readline.write_history_file(histfile)
 
 def translate(request):
+    # request does not require trailing '\n' (but is OK with it)
+    # returns a command string terminated with '\n'
     words_in = request.split()
     words_out = []
     if words_in[0] == 'get':
@@ -348,10 +480,11 @@ def translate(request):
     return ' '.join(words_out) + '\n'
 
 def translate_word(word):
+    # returns a str
     if word[0] in "0123456789+-":
         return word
     if word in Defines:
-        return Defines[word]
+        return str(Defines[word])
     return word
 
 def make_get_global(words_in):
@@ -386,37 +519,44 @@ def strip_comment(line):
     # strips trailing '\n'
     #
     # does not strip trailing spaces if no comment.
-    line = line[: -1]
+    if line and line[-1] == '\n':
+        line = line[: -1]
     comment_start = line.find('#')
     if comment_start >= 0:
         line = line[: comment_start]
         return line.strip()
     return line
 
-def run_script(filename, verbose):
-    with open(os.path.join(Sketch_dir, filename)) as script_file:
+def run_script(script_name, verbose):
+    global Current_script
+    try:
+        Current_script = Script[script_name]
         Seq_numbers = Counter()
-        for line_no, line in enumerate(script_file, 1):
+        for line_no, line in enumerate(Current_script['script'].split('\n'), 1):
+            print(f"run_script: {line_no=}, {line=!r}")
             line = strip_comment(line)
             if not line:
                 continue
             if line[0] == '<':
-                translated_request = translate(request[1:].lstrip())
+                translated_request = translate(line[1:].lstrip())
                 print('<', translated_request, end='')
-                sock_send(translated_request)
+                send_sock(translated_request)
             elif line[0] == '>':
                 while True:
                     response = sock_readline()
-                    if not do_default(response):
+                    if not do_default(response, verbose):
                         expect = line[1:].lstrip()
-                        if expect != response:
-                            print("ERROR: expected '{expect!r}', got '{response!r}'", file=sys.stderr)
-                            sys.exit(1)
                         print(">", repr(response))
+                        compare(response, expect)
                         break
+            else:
+                print(f"ERROR: {script_name}[{line_no}]: Unknown line prefix {line=!r}", file=sys.stderr)
+                sys.exit(2)
+    finally:
+        Current_script = None
 
 def do_icommand(request, verbose):
-    # request includes trailing '\n'
+    # request does not require trailing '\n' (but is OK with it)
     global Trace
     if request.startswith('?'):
         print(translate(request[1:].strip()), end='')
@@ -454,9 +594,12 @@ def do_default(cpp_command, verbose):
     if not cpp_command.startswith('fun_called '):
         return False
     words = cpp_command.split()
-    if words[1] not in Defaults:
+    if Current_script and words[1] in Current_script['defaults']:
+        result = Current_script['defaults'][words[1]]
+    elif words[1] in Script['defaults']:
+        result = Script['defaults'][words[1]]
+    else:
         return False
-    result = Defaults[words[1]]
     while True:
         if isinstance(result, dict):
             cpp_cmd, fname, param0, *params = cpp_command.split()
@@ -475,15 +618,13 @@ def do_default(cpp_command, verbose):
             if verbose:
                 print(">", cpp_command)
                 print("< return", result)
-            send_sock("return {result}\n")
+            send_sock(f"return {result}\n")
             return True
 
 def interactive(verbose):
     print("client ready!")
     while True:
-        print("< ", end='')
-        sys.stdout.flush()
-        request = sys.stdin.readline()
+        request = input("< ")
         do_icommand(request, verbose)
 
 
@@ -495,9 +636,10 @@ if __name__ == "__main__":
     parser.add_argument('--port', '-p', type=int, default=2020)
     parser.add_argument('--verbose', '-v', action='store_true')
     parser.add_argument('--trace', '-t', action='store_true')
+    parser.add_argument('script_file')
     args = parser.parse_args()
 
     if args.trace:
         Trace = True
 
-    run(args.port, args.verbose)
+    run(args.port, args.script_file, args.verbose)

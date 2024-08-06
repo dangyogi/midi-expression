@@ -21,14 +21,9 @@ find_global(char *type, int max_type_len) {
     char *addr = (char *)strtoul(next_word(), NULL, 10);
 
     // apply offsets
-    int first = 1;
     while (Word_ptr && *Word_ptr != '=') {
         unsigned int offset = (unsigned int)strtoul(next_word(), NULL, 10);
-        if (first) {
-            first = 0;
-        } else {
-            addr = *(char **)addr;
-        }
+        addr = *(char **)addr;
         addr += offset;
     }
 

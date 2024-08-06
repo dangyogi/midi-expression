@@ -4,8 +4,8 @@
 
 defaults:
   pinMode: null
+  digitalWrite: null
   serial_begin: null
-  delay: null
   serial_print_double: 4
   serial_println_double: 4
   serial_println_long: 4
@@ -16,7 +16,7 @@ defaults:
   serial_print_str: 4
   serial_print_ulong: 4
   serial_available: 0
-  digitalWrite: null: null
+  delay: null
   TwoWire_begin_void: null
   TwoWire_setClock: null
 
@@ -28,11 +28,11 @@ setup:
       "2": 3   # 1000
       "3": 232
 
-  script:
-    - < call setup
-    - > fun_called millis
-    - < return 100
-    - > returned
+  script: |
+    < call setup
+    > fun_called millis
+    < return 100
+    > returned
 
 
 # vim: sw=2 ic
