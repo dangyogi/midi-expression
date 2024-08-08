@@ -134,6 +134,7 @@ defines:
 classes:
   # encoders.h
   var_type_t:
+    - var_type_t
     - choices_t
     - sharps_flats_t
     - linear_number_t

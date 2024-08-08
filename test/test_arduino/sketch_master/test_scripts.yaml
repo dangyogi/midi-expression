@@ -5,6 +5,8 @@
 defaults:
   pinMode: null
   digitalWrite: null
+  digitalToggle: null
+
   serial_begin: null
   serial_print_double: 4
   serial_println_double: 4
@@ -16,9 +18,16 @@ defaults:
   serial_print_str: 4
   serial_print_ulong: 4
   serial_available: 0
+
+  sendRequest: null
+
   delay: null
+  delayMicroseconds: null
   TwoWire_begin_void: null
+  TwoWire_begin: null
+  TwoWire_end: null
   TwoWire_setClock: null
+  TwoWire_beginTransmission: null
 
 setup:
   defaults:
@@ -30,16 +39,46 @@ setup:
 
   script: |
     < call setup
-    > fun_called millis
-    < return 100
+      > fun_called millis
+      < return 100
     > returned
+
+ch_switch_on:
+  defaults:
+    turn_off_choices_leds: null
+    clear_numeric_display: null
+
+  script: |
+    < set Switches 55 current = 1   # turn on CH-1 switch
+    > set_global . 0
+    < call switch_closed 55
+      > fun_called run_event 31 55
+        < call run_event 31 55          # channel_on
+          > fun_called channel_on 55
+            < call channel_on 55
+              > fun_called run_event 35 4     # update choices
+                < call run_event 35 4
+                  > fun_called select_led 4
+                    < get Encoders 4 var var_type flags
+                      > get_global . ENCODER_FLAGS_CHOICE_LEDS
+                    < get Encoders 4 var value
+                      > get_global . ENCODER_FLAGS_CHOICE_LEDS
+                    < return     # from fun_called select_led
+                  > returned   # from call run_event
+                < return     # from fun_called run_event
+              > fun_called load_encoders      # called from channel_on
+                < call load_encoders
+                  > fun_called clear_displays
+                    < call clear_displays
+
 
   # interesting things in loop:
   #
+  # set Switches sw current = X
   # call switch_closed sw
   # call switch_opened sw
   #
-  # <set Encoders enc var value = X>
+  # set Encoders enc var value = X
   # call encoder_changed enc (only if var set and flags not DISABLED)
   #
   # periodics:
@@ -54,12 +93,23 @@ setup:
   #                                                 var (is var set?)
   #                                                 var value
   #                                                 var var_type
-  #                                                              var_type_t flags (DISABLED is 1)
-  #                                                              var_type_t display_value (event)
+  #                                                              flags (DISABLED is 1)
+  #                                                              display_value (event)
   #                                                              <subclass> ...
+  # FUNCTION_ENCODER   4
   #
   # set Switches sw current = 0 or 1
   # get Switch_closed_event sw
   # get Switch_opened_event sw
+  #
+  # FIRST_HARMONIC_SWITCH   36
+  # FIRST_CHANNEL_SWITCH    54  (54 is actually the "Synth" switch)
+  # Function stream switch  33
+  # Function stream button  46
+  # Ch Vol,Note-on/off stream switch  34
+  # Ch Vol,Note-on/off stream button  47
+  # Note Switches           48-53
+  # Note Buttons            72-77
+  # Note Cont/Pulse switch  35
 
 # vim: sw=2 ic

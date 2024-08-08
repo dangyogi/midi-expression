@@ -264,6 +264,9 @@ def gen_caller_stub(name, info, source_file):
                 gen_code('  exit(2);')
                 gen_code('}')
 
+            if i > 1:
+                gen_code("args++;")
+
             if ptype.endswith('*'):
                 gen_code(f"int data_len = load_data(p{i}, args);")
                 check_len = pinfo['len']
@@ -371,7 +374,6 @@ def gen_called_stub(name, info, source_file):
                     initial = ' '
 
     # finish sending "fun_called" line
-    initial = ''
     do_send(r'\n')
 
     print(f"  ret_value = run_to_return();", file=source_file)

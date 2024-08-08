@@ -30,24 +30,25 @@ Switches:
     15        Load Program
     16        Sync to Synth
     17        Abandon Program
-    18-32     Encoders 0-4 (see below)
+    18-20     Encoders 4 (see below)
+    21-32     Encoders 0-3 (see below)
     33-34     Stream Switches
     35        Note Continuous/Pulse Switch
     36-45     Harmonic Switches
     46-47     Send Buttons
     48-53     Note Switches
-    54-69     Channel Switches
+    54-69     Channel Switches (starting with Synth switch)
     70-71     <not used>
     72-77     Note Buttons
     78-80     <not used>
 
 Encoders:
   Encoder #  Switches   Use
-    0         18-20     Function
-    1         21-23     Function Parm 1
-    2         24-26     Function Parm 2
-    3         27-29     Function Parm 3
-    4         30-32     Function Parm 4
+    0         21-23     Function Parm 1
+    1         24-26     Function Parm 2
+    2         27-29     Function Parm 3
+    3         30-32     Function Parm 4
+    4         18-20     Function
     5          5-7      Filename
 
 Button bounce:

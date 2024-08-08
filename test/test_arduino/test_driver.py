@@ -108,12 +108,12 @@ def get_global_args(fields, type, ggtype, next_poffset, poffsets=None):
             poffsets.append(str(next_poffset))
             next_poffset = 0
             type = type[:-1].strip()
-        if type in Classes:
+        if type in Classes and fields[0] in Classes[type]:
             subclass = fields.pop(0)
-            assert subclass in Classes[type]
-            assert subclass in Structs
+            #assert subclass in Classes[type], f"{subclass=} not in Classes[{type}]"
+            #assert subclass in Structs, f"{subclass=} not in Structs"
             type = subclass
-        elif type in Structs:
+        if type in Structs:
             struct = Structs[type]
             field = struct.get_field(fields.pop(0))
             next_poffset += field.offset
@@ -128,7 +128,7 @@ def get_global_args(fields, type, ggtype, next_poffset, poffsets=None):
         if Trace:
             print(f"get_global_args for pointer -> u4, {poffsets}")
         return 'u4', poffsets
-    assert ggtype
+    assert ggtype, f"no ggtype, not enough fields to get to base type"
     if Trace:
         print(f"get_global_args for base type -> {ggtype}, {poffsets}")
     return ggtype, poffsets
@@ -146,13 +146,15 @@ def get_completion_choices(type, words_in, verbose):
             if verbose:
                 print(f"get_completion_choices type in Classes with {words_in=}")
             if words_in:
-                subclass = words_in.pop(0)
-                assert subclass in Classes[type]
-                assert subclass in Structs
-                type = subclass
+                if words_in[0] in Classes[type]:
+                    subclass = words_in.pop(0)
+                    assert subclass in Structs, f"{subclass=} not in Structs"
+                    type = subclass
             else:
-                return Classes[type]
-        elif type in Structs:
+                ans = list(Classes[type]).copy()
+                ans.extend(Structs[type].fields.keys())
+                return ans
+        if type in Structs:
             if verbose:
                 print(f"get_completion_choices type in Structs with {words_in=}")
             if words_in:
@@ -205,6 +207,7 @@ def add_field(struct, name, offset, len, type):
         Structs[struct] = Struct(struct)
     Structs[struct].add_field(Field(struct, name, offset, len, type))
 
+# FIX: Not used
 def from_hex(data, unsigned, len):
     # converts hex data received from client "get_global" command to integer.
     # data has a 0X prefix.
@@ -217,6 +220,7 @@ def from_hex(data, unsigned, len):
         num -= 1 << len * 8
     return num
 
+# FIX: Not used
 def to_hex(value, unsigned, len):
     # converts value to 0X hex data value for client "set_global" command.
     if unsigned:
@@ -247,6 +251,7 @@ class Global:
     def get_completion_choices(self, words_in, verbose):
         return get_completion_choices(self.type, words_in, verbose)
 
+    # FIX: Not used
     def get(self):
         assert not Sock_buffer
         send_sock(f"get_global {self.addr} {self.len}\n")
@@ -255,6 +260,7 @@ class Global:
         assert int(final_addr) == self.addr
         return from_hex(data, self.unsigned, self.len)
 
+    # FIX: Not used
     def set(self, value):
         # returns prev value
         assert not Sock_buffer
@@ -265,7 +271,7 @@ class Global:
         return from_hex(prev_data, self.unsigned, self.len)
 
 def add_global(name, addr, len, type):
-    assert name not in Globals
+    assert name not in Globals, f"{name=!r} already in Globals"
     Globals[name] = Global(name, addr, len, type)
 
 class Array:
@@ -315,7 +321,7 @@ def product(iterable):
     return ans
 
 def add_array(name, addr, array_size, element_size, type, dims):
-    assert name not in Arrays
+    assert name not in Arrays, f"{name=!r} already in Arrays"
     Arrays[name] = Array(name, addr, array_size, element_size, type, dims)
 
 class Function:
@@ -325,7 +331,7 @@ class Function:
         self.params = params
 
 def add_function(name, expects_return, params):
-    assert name not in Functions
+    assert name not in Functions, f"{name=!r} already in Functions"
     Functions[name] = Function(name, expects_return, params)
 
 def load():
@@ -336,7 +342,7 @@ def load():
         line = sock_readline()
         words = line.split()
         if words[0] == 'sketch_dir':
-            assert Sketch_dir is None
+            assert Sketch_dir is None, "Duplicate C++ 'Sketch_dir' command"
             Sketch_dir = words[1]
         elif words[0] == '#define':
             add_define(words[1], int(words[2]))
@@ -520,7 +526,7 @@ def compare(response, script_line):
         sys.exit(1)
     for i, (rword, sword) in enumerate(zip(rwords, swords), 1):
         if sword != '.' and rword != translate_word(sword):
-            print(f"ERROR: in response=%{response!r}, "
+            print(f"ERROR: in response={response!r}, "
                   f"word {i}={rword!r} does not match script={sword!r}",
                   file=sys.stderr)
             sys.exit(1)
@@ -534,30 +540,31 @@ def strip_comment(line):
     comment_start = line.find('#')
     if comment_start >= 0:
         line = line[: comment_start]
-        return line.strip()
-    return line
+    return line.strip()
 
-def run_script(script_name, verbose):
+def run_script(script_name, indent, verbose):
     global Current_script
     try:
         Current_script = Script[script_name]
         Seq_numbers = Counter()
         for line_no, line in enumerate(Current_script['script'].split('\n'), 1):
-            print(f"run_script: {line_no=}, {line=!r}")
+            #print(f"run_script: {line_no=}, {line=!r}")
             line = strip_comment(line)
             if not line:
                 continue
             if line[0] == '<':
                 translated_request = translate(line[1:].lstrip())
-                print('<', translated_request, end='')
+                print(' ' * indent, '< ', translated_request, sep='', end='')
                 send_sock(translated_request)
+                indent += test_driver_indent(translated_request)
             elif line[0] == '>':
                 while True:
                     response = sock_readline()
-                    if not do_default(response, verbose):
+                    if not do_default(response, indent, verbose):
                         expect = line[1:].lstrip()
-                        print(">", repr(response))
+                        print(' ' * indent, "> ", repr(response), sep='')
                         compare(response, expect)
+                        indent += cpp_indent(response)
                         break
             else:
                 print(f"ERROR: {script_name}[{line_no}]: Unknown line prefix {line=!r}", file=sys.stderr)
@@ -565,11 +572,32 @@ def run_script(script_name, verbose):
     finally:
         Current_script = None
 
-def do_icommand(request, verbose):
+def test_driver_indent(test_driver_command):
+    # Returns change to indent level after test_driver_request issued to C++ program
+    if test_driver_command.startswith('call') \
+       or test_driver_command.startswith('get_global') \
+       or test_driver_command.startswith('set_global'):
+        return 2
+    if test_driver_command.startswith('return'):
+        return -2
+    return 0
+
+def cpp_indent(cpp_command):
+    if cpp_command.startswith('fun_called'):
+        return 2
+    if cpp_command.startswith('returned') \
+       or cpp_command.startswith('get_global') \
+       or cpp_command.startswith('set_global'):
+        return -2
+    print("Unexpected cpp_command:", cpp_command, file=sys.stderr)
+    exit(2)
+
+def do_icommand(request, indent, verbose):
     # request does not require trailing '\n' (but is OK with it)
+    # returns new indent level
     global Trace
     if request.startswith('?'):
-        print(translate(request[1:].strip()), end='')
+        print(' ' * indent, translate(request[1:].strip()), sep='', end='')
     elif request.startswith('trace '):
         words = request.split()
         if words[1] == 'on':
@@ -578,35 +606,40 @@ def do_icommand(request, verbose):
             Trace = 0
     elif request.startswith('readline'):
         try:
-            print("sock_readline returned:", repr(sock_readline()))
+            print(f"{' ' * indent}sock_readline returned:", repr(sock_readline()))
         except socket.timeout:
-            print("sock_readline: socket.timeout")
+            print(f"{' ' * indent}sock_readline: socket.timeout")
     elif request.startswith('run '):
         words = request.split()
         assert len(words) == 2, f'invalid "run" request: expected 2 words, got {len(words)}'
-        run_script(words[1], verbose)
+        run_script(words[1], indent, verbose)
+        indent -= 2
     else:
         translated_request = translate(request.strip())
         if Trace:
-            print(f"{translated_request=!r}")
+            print(f"{' ' * indent}{translated_request=!r}")
         send_sock(translated_request)
+        indent += test_driver_indent(translated_request)
         try:
             while True:
                 response = sock_readline()
                 if not do_default(response, verbose):
                     # don't know this one, show it to user and let them respond...
-                    print(">", repr(response))
+                    print(' ' * indent, "> ", repr(response), sep='')
+                    indent += cpp_indent(response)
                     break
         except socket.timeout:
             print("do_icommand: socket.timeout")
+    return indent
 
-def do_default(cpp_command, verbose):
+def do_default(cpp_command, indent, verbose):
+    # Returns True if cpp_command handled by a default, False otherwise.
     if not cpp_command.startswith('fun_called '):
         return False
     words = cpp_command.split()
-    if Current_script and words[1] in Current_script['defaults']:
+    if Current_script and words[1] in Current_script.get('defaults', {}):
         result = Current_script['defaults'][words[1]]
-    elif words[1] in Script['defaults']:
+    elif words[1] in Script.get('defaults', {}):
         result = Script['defaults'][words[1]]
     else:
         return False
@@ -620,22 +653,23 @@ def do_default(cpp_command, verbose):
             Seq_numbers[fname] += 1
         elif result is None:
             if verbose:
-                print(">", cpp_command)
-                print("< return")
+                print(' ' * indent, "> ", cpp_command, sep='')
+                print(' ' * (indent + 2), "< return", sep='')
             send_sock("return\n")
             return True
         else:
             if verbose:
-                print(">", cpp_command)
-                print("< return", result)
+                print(' ' * indent, "> ", cpp_command, sep='')
+                print(' ' * (indent + 2), "< return ", result, sep='')
             send_sock(f"return {result}\n")
             return True
 
 def interactive(verbose):
     print("client ready!")
+    indent = 0
     while True:
-        request = input("< ")
-        do_icommand(request, verbose)
+        request = input(f"{' ' * indent}< ")
+        indent = do_icommand(request, indent + 2, verbose)
 
 
 
