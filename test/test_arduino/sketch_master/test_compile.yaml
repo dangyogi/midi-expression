@@ -130,6 +130,56 @@ defines:
 
   - NUM_POTS
 
+lookups:
+  events:
+    - ENC_A_CLOSED(0)
+    - ENC_B_CLOSED(0)
+    - ENC_A_OPENED(0)
+    - ENC_B_OPENED(0)
+    - ENC_A_CLOSED(1)
+    - ENC_B_CLOSED(1)
+    - ENC_A_OPENED(1)
+    - ENC_B_OPENED(1)
+    - ENC_A_CLOSED(2)
+    - ENC_B_CLOSED(2)
+    - ENC_A_OPENED(2)
+    - ENC_B_OPENED(2)
+    - ENC_A_CLOSED(3)
+    - ENC_B_CLOSED(3)
+    - ENC_A_OPENED(3)
+    - ENC_B_OPENED(3)
+    - ENC_A_CLOSED(4)
+    - ENC_B_CLOSED(4)
+    - ENC_A_OPENED(4)
+    - ENC_B_OPENED(4)
+    - ENC_A_CLOSED(5)
+    - ENC_B_CLOSED(5)
+    - ENC_A_OPENED(5)
+    - ENC_B_OPENED(5)
+    - FUNCTION_CHANGED
+    - NOTE_BT_ON
+    - NOTE_BT_OFF
+    - NOTE_SW_ON
+    - NOTE_SW_OFF
+    - CONTINUOUS
+    - PULSE
+    - CHANNEL_ON
+    - CHANNEL_OFF
+    - HARMONIC_ON
+    - HARMONIC_OFF
+    - UPDATE_CHOICES
+    - UPDATE_LINEAR_NUM
+    - UPDATE_GEOMETRIC_NUM
+    - UPDATE_NOTE
+    - UPDATE_SHARPS_FLATS
+    - TRIGGER_SW_ON
+    - TRIGGER_SW_OFF
+    - TRIGGER_BT_PRESSED
+    - TRIGGER_BT_RELEASED
+    - CHECK_POTS
+    - CHECK_FUNCTIONS
+    - FUN_PARAM_CHANGED
+    - NEXT_AVAIL_EVENT
 
 classes:
   # encoders.h

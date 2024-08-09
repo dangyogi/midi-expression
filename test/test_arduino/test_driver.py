@@ -2,7 +2,7 @@
 
 import sys
 import os.path
-from collections import Counter
+from collections import Counter, deque, defaultdict
 import readline
 import socket
 
@@ -29,12 +29,15 @@ def send_sock(data):
         print("send_sock done")
 
 Sock_buffer = ''
+Report_output = deque()       # lines output from internal commands, with no trailing '\n'
 
-def sock_readline(recv_flags=0):
+def sock_readline(sock_only=False, recv_flags=0):
     # Returns next line with the trailing '\n' stripped.
     global Sock_buffer
     if Trace:
         print("sock_readline called, recv_flags", recv_flags)
+    #if Report_output and not sock_only:
+    #    return Report_output.popleft()
     newline = Sock_buffer.find('\n')
     while newline == -1:
         if Trace:
@@ -53,6 +56,7 @@ def sock_readline(recv_flags=0):
     return ans
 
 Defines = {}   # name: value
+Lookups = defaultdict(dict)   # type: {value: name}
 Classes = {}   # name: (subclasses)
 Structs = {}   # struct_name: Struct()
 Globals = {}   # name: Global()
@@ -66,10 +70,12 @@ Script = None
 Current_script = None
 
 def init():
-    global Sock_buffer, Defines, Classes, Structs, Globals, Arrays, Functions, Seq_numbers
-    global Sketch_dir, Script, Current_script
+    global Sock_buffer, Report_output, Defines, Lookups, Classes, Structs, Globals, Arrays
+    global Functions, Seq_numbers, Sketch_dir, Script, Current_script
     Sock_buffer = ''
+    Report_output = deque()
     Defines = {}   # name: int(value)
+    Lookups = defaultdict(dict)   # type: {value: name}
     Classes = {}   # name: (subclasses)
     Structs = {}   # struct_name: Struct()
     Globals = {}   # name: Global()
@@ -83,6 +89,10 @@ def init():
 def add_define(name, value):
     assert name not in Defines, f"{name} already #defined"
     Defines[name] = value
+
+def add_lookup(type, value, name):
+    assert value not in Lookups[type], f"{value} already stored in Lookups as {Lookups[type][value]}"
+    Lookups[type][value] = name
 
 def add_subclasses(name, subclasses):
     assert name not in Classes, f"{name} already subclassed"
@@ -252,13 +262,15 @@ class Global:
         return get_completion_choices(self.type, words_in, verbose)
 
     # FIX: Not used
-    def get(self):
-        assert not Sock_buffer
-        send_sock(f"get_global {self.addr} {self.len}\n")
+    def get(self, fields):
+        # returns data as str
+        # not intended to be called from command line
+        assert Sock_buffer.find('\n') == -1, f"Global.get: Sock_buffer not empty"
+        type, offsets = self.global_args(fields)
+        send_sock(f"get_global {type} {' '.join(offsets)}\n")
         command, final_addr, data = sock_readline().split()
         assert command == 'get_global'
-        assert int(final_addr) == self.addr
-        return from_hex(data, self.unsigned, self.len)
+        return data  # as str
 
     # FIX: Not used
     def set(self, value):
@@ -346,6 +358,8 @@ def load():
             Sketch_dir = words[1]
         elif words[0] == '#define':
             add_define(words[1], int(words[2]))
+        elif words[0] == 'lookup':
+            add_lookup(words[1], int(words[2]), words[3])
         elif words[0] == 'sub_classes':
             add_subclasses(words[1], words[2:])
         elif words[0] == 'field':
@@ -383,7 +397,7 @@ def completer(text, state):
             got_Q = True
         if not prior_words:
             choices = ['? ', 'trace ', 'readline', 'run ', 'display ', 'get ', 'call ',
-                       'return ', 'exit ']
+                       'report ', 'return ', 'exit ']
             if got_Q:
                 choices.remove('? ')
         elif prior_words[0] == 'trace':
@@ -393,6 +407,9 @@ def completer(text, state):
             if len(prior_words) == 1:
                 choices = list(Script.keys())
                 choices.remove('defaults')
+        elif prior_words[0] == 'report':
+            if len(prior_words) == 1:
+                choices = list(Reports.keys())
         elif prior_words[0] == 'get':
             if len(prior_words) == 1:
                 choices = list(Globals.keys())
@@ -471,7 +488,7 @@ def run(port, script_file, verbose):
 
 def translate(request):
     # request does not require trailing '\n' (but is OK with it)
-    # returns a command string terminated with '\n'
+    # returns a command string terminated with '\n' ('' if no C++ command generated)
     words_in = request.split()
     words_out = []
     if words_in[0] == 'get':
@@ -489,6 +506,10 @@ def translate(request):
         words_out.extend(offsets)
         words_out.append('=')
         words_out.append(value)
+    elif words_in[0] == 'report':
+        assert len(words_in) == 2, f'invalid "report" request: expected 2 words, got {len(words_in)}'
+        Reports[words_in[1]]()  # loads Report_output with output lines
+        return ''
     else:
         words_out.append(words_in[0])
         for word in words_in[1:]:
@@ -542,23 +563,86 @@ def strip_comment(line):
         line = line[: comment_start]
     return line.strip()
 
+def get(*words_in):
+    # returns data as str
+    # not intended to be called from command line
+    assert Sock_buffer.find('\n') == -1, f"get: Sock_buffer not empty"
+    type, offsets = make_get_global(list(words_in))
+    send_sock(f"get_global {type} {' '.join(offsets)}\n")
+    command, final_addr, data = sock_readline(sock_only=True).split()
+    assert command == 'get_global'
+    return data  # as str
+
+def dump_encoders():
+    Report_output.append(dump_encoder('FUNCTION_ENCODER'))
+    for enc in range(4):
+        Report_output.append(dump_encoder(str(enc)))
+
+def dump_encoder(enc):
+    if enc.isdigit():
+        enc_name = f"P{int(enc) + 1}"
+    else:
+        enc_name = "FN"
+    encoder_event = decode_event(int(get('Encoders', enc, 'encoder_event')))
+    var = get('Encoders', enc, 'var')
+    if var == '0':
+        # NULL var
+        return f"{enc_name}: N {encoder_event} - -"
+    display_value = decode_event(int(get('Encoders', enc, 'var', 'var_type', 'display_value')))
+    flags = int(get('Encoders', enc, 'var', 'var_type', 'flags'))
+    if flags & Defines['ENCODER_FLAGS_DISABLED']:
+        # Disabled
+        return f"{enc_name}: D {encoder_event} {display_value} -"
+    value = get('Encoders', enc, 'var', 'value')
+    # Enabled
+    return f"{enc_name}: E {encoder_event} {display_value} {value}"
+
+def decode_event(n):
+    # n must be an int
+    # return may str or int
+    if n in Lookups['events']:
+        return Lookups['events'][n]
+    return n
+
+Reports = {
+    'encoders': dump_encoders,
+}
+
 def run_script(script_name, indent, verbose):
     global Current_script
     try:
         Current_script = Script[script_name]
         Seq_numbers = Counter()
+        in_report = False
         for line_no, line in enumerate(Current_script['script'].split('\n'), 1):
             #print(f"run_script: {line_no=}, {line=!r}")
             line = strip_comment(line)
             if not line:
                 continue
-            if line[0] == '<':
-                translated_request = translate(line[1:].lstrip())
-                print(' ' * indent, '< ', translated_request, sep='', end='')
-                send_sock(translated_request)
-                indent += test_driver_indent(translated_request)
+            elif line[0] == '<':
+                line_rest = line[1:].lstrip()
+                translated_request = translate(line_rest)
+                if not translated_request:
+                    print(' ' * indent, '< ', line_rest, sep='', end='')
+                    indent += 2
+                    in_report = True
+                else:
+                    print(' ' * indent, '< ', translated_request, sep='', end='')
+                    send_sock(translated_request)
+                    indent += test_driver_indent(translated_request)
             elif line[0] == '>':
+                if in_report:
+                    if Report_output:
+                        expect = line[1:].lstrip()
+                        response = Report_output.popleft()
+                        print(' ' * indent, "> ", repr(response), sep='')
+                        compare(response, expect)
+                        continue
+                    else:
+                        indent -= 2
+                        in_report = False
                 while True:
+                    assert not Report_output
                     response = sock_readline()
                     if not do_default(response, indent, verbose):
                         expect = line[1:].lstrip()
@@ -593,7 +677,7 @@ def cpp_indent(cpp_command):
     exit(2)
 
 def do_icommand(request, indent, verbose):
-    # request does not require trailing '\n' (but is OK with it)
+    # request should not have trailing whitespace (including '\n')
     # returns new indent level
     global Trace
     if request.startswith('?'):
@@ -615,21 +699,29 @@ def do_icommand(request, indent, verbose):
         run_script(words[1], indent, verbose)
         indent -= 2
     else:
-        translated_request = translate(request.strip())
-        if Trace:
-            print(f"{' ' * indent}{translated_request=!r}")
-        send_sock(translated_request)
-        indent += test_driver_indent(translated_request)
-        try:
-            while True:
-                response = sock_readline()
-                if not do_default(response, verbose):
-                    # don't know this one, show it to user and let them respond...
-                    print(' ' * indent, "> ", repr(response), sep='')
-                    indent += cpp_indent(response)
-                    break
-        except socket.timeout:
-            print("do_icommand: socket.timeout")
+        translated_request = translate(request)
+        if not translated_request:
+            if Trace:
+                print(f"{' ' * indent}{request=!r}")
+            while Report_output:
+                print(' ' * indent, "> ", repr(Report_output.popleft()), sep='')
+            indent -= 2
+        else:
+            if Trace:
+                print(f"{' ' * indent}{translated_request=!r}")
+            send_sock(translated_request)
+            indent += test_driver_indent(translated_request)
+            try:
+                while True:
+                    assert not Report_output
+                    response = sock_readline()
+                    if not do_default(response, verbose):
+                        # don't know this one, show it to user and let them respond...
+                        print(' ' * indent, "> ", repr(response), sep='')
+                        indent += cpp_indent(response)
+                        break
+            except socket.timeout:
+                print("do_icommand: socket.timeout")
     return indent
 
 def do_default(cpp_command, indent, verbose):
@@ -669,7 +761,7 @@ def interactive(verbose):
     indent = 0
     while True:
         request = input(f"{' ' * indent}< ")
-        indent = do_icommand(request, indent + 2, verbose)
+        indent = do_icommand(request.strip(), indent + 2, verbose)
 
 
 

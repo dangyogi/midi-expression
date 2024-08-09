@@ -35,12 +35,14 @@ int main(int argc, char *argv[]) {
     send_sketch_dir();
 
     arch_send_defines();
+    arch_send_lookups();
     arch_send_classes();
     arch_send_structs();
     arch_send_globals();
     arch_send_arrays();
 
     send_defines();
+    send_lookups();
     send_classes();
     send_structs();
     send_globals();

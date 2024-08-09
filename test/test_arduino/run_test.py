@@ -47,6 +47,8 @@ def generate_test_file(test, program, sketch_dir):
 
         copy_file(gen_defines(arch_defs['defines'], "arch_"), source_file)
         copy_file(gen_defines(test['defines']), source_file)
+        copy_file(gen_lookups(arch_defs['lookups'], "arch_"), source_file)
+        copy_file(gen_lookups(test['lookups']), source_file)
         copy_file(gen_sub_classes(arch_defs['classes'], "arch_"), source_file)
         copy_file(gen_sub_classes(test['classes']), source_file)
         copy_file(gen_fields(arch_defs['structs'], "arch_"), source_file)
@@ -74,6 +76,19 @@ def gen_defines(defines, prefix=""):
         print('}', file=source_file)
         print(file=source_file)
     return defines_file
+
+def gen_lookups(lookups, prefix=""):
+    lookups_file = os.path.join(Source_dir, prefix + "lookups.cpp")
+    with open(lookups_file, "wt") as source_file:
+        print(f'// {prefix}lookups.cpp', file=source_file)
+        print(file=source_file)
+        print(f'void {prefix}send_lookups(void) {{', file=source_file)
+        for name, defines in lookups.items():
+            for define in defines:
+                print(fr'  sendf("lookup {name} %d {define}\n", (int)({define}));', file=source_file)
+        print('}', file=source_file)
+        print(file=source_file)
+    return lookups_file
 
 def gen_sub_classes(classes, prefix=""):
     subclasses_file = os.path.join(Source_dir, prefix + "subclasses.cpp")

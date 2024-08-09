@@ -35,6 +35,9 @@ C++ Requests
     - "#define" name
       - issued at program startup
       - no response expected
+    - "lookup" type value name
+      - issued at program startup
+      - no response expected
     - "global" name addr len type
       - issued at program startup
       - no response expected
