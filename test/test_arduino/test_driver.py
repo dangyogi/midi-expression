@@ -15,6 +15,7 @@ class Sock_closed(EOFError):
     pass
 
 def send_sock(data):
+    # Caller must supply trailing '\n'
     bdata = data.encode('ascii')
     if Trace:
         print("send_sock sending:", repr(bdata))
@@ -29,15 +30,15 @@ def send_sock(data):
         print("send_sock done")
 
 Sock_buffer = ''
-Report_output = deque()       # lines output from internal commands, with no trailing '\n'
+Report_lines = deque()       # lines output from internal commands, with no trailing '\n'
 
 def sock_readline(sock_only=False, recv_flags=0):
     # Returns next line with the trailing '\n' stripped.
     global Sock_buffer
     if Trace:
         print("sock_readline called, recv_flags", recv_flags)
-    #if Report_output and not sock_only:
-    #    return Report_output.popleft()
+    #if Report_lines and not sock_only:
+    #    return Report_lines.popleft()
     newline = Sock_buffer.find('\n')
     while newline == -1:
         if Trace:
@@ -68,12 +69,14 @@ Seq_numbers = Counter() # fname: seq_number
 Sketch_dir = None
 Script = None
 Current_script = None
+Call_depth = 0
 
 def init():
-    global Sock_buffer, Report_output, Defines, Lookups, Classes, Structs, Globals, Arrays
+    global Sock_buffer, Report_lines, Defines, Lookups, Classes, Structs, Globals, Arrays
     global Functions, Seq_numbers, Sketch_dir, Script, Current_script
+    global Call_depth
     Sock_buffer = ''
-    Report_output = deque()
+    Report_lines = deque()
     Defines = {}   # name: int(value)
     Lookups = defaultdict(dict)   # type: {value: name}
     Classes = {}   # name: (subclasses)
@@ -85,6 +88,7 @@ def init():
     Sketch_dir = None
     Script = None
     Current_script = None
+    Call_depth = 0
 
 def add_define(name, value):
     assert name not in Defines, f"{name} already #defined"
@@ -487,8 +491,9 @@ def run(port, script_file, verbose):
         readline.write_history_file(histfile)
 
 def translate(request):
+    # called from run_script and do_icommand
     # request does not require trailing '\n' (but is OK with it)
-    # returns a command string terminated with '\n' ('' if no C++ command generated)
+    # returns a command string terminated with '\n' ('' if report run, so no C++ command generated)
     words_in = request.split()
     words_out = []
     if words_in[0] == 'get':
@@ -508,7 +513,7 @@ def translate(request):
         words_out.append(value)
     elif words_in[0] == 'report':
         assert len(words_in) == 2, f'invalid "report" request: expected 2 words, got {len(words_in)}'
-        Reports[words_in[1]]()  # loads Report_output with output lines
+        Reports[words_in[1]]()  # loads Report_lines with output lines
         return ''
     else:
         words_out.append(words_in[0])
@@ -574,9 +579,9 @@ def get(*words_in):
     return data  # as str
 
 def dump_encoders():
-    Report_output.append(dump_encoder('FUNCTION_ENCODER'))
+    Report_lines.append(dump_encoder('FUNCTION_ENCODER'))
     for enc in range(4):
-        Report_output.append(dump_encoder(str(enc)))
+        Report_lines.append(dump_encoder(str(enc)))
 
 def dump_encoder(enc):
     if enc.isdigit():
@@ -602,14 +607,21 @@ def decode_event(n):
     # return may str or int
     if n in Lookups['events']:
         return Lookups['events'][n]
+    if n == 0xFF:
+        return '0xFF'
     return n
 
 Reports = {
     'encoders': dump_encoders,
 }
 
-def run_script(script_name, indent, verbose):
-    global Current_script
+def indent(added_call_depth=0):
+    # returns indent string
+    assert Call_depth >= 0
+    return ' ' * ((Call_depth + added_call_depth) * 2)
+
+def run_script(script_name, verbose):
+    global Current_script, Call_depth
     try:
         Current_script = Script[script_name]
         Seq_numbers = Counter()
@@ -623,32 +635,33 @@ def run_script(script_name, indent, verbose):
                 line_rest = line[1:].lstrip()
                 translated_request = translate(line_rest)
                 if not translated_request:
-                    print(' ' * indent, '< ', line_rest, sep='', end='')
-                    indent += 2
+                    # report run by translate
+                    print(indent(), '< ', line_rest, sep='', end='')
+                    Call_depth += 1
                     in_report = True
                 else:
-                    print(' ' * indent, '< ', translated_request, sep='', end='')
+                    print(indent(), '< ', translated_request, sep='', end='')
                     send_sock(translated_request)
-                    indent += test_driver_indent(translated_request)
+                    test_driver_adj_depth(translated_request)
             elif line[0] == '>':
                 if in_report:
-                    if Report_output:
+                    if Report_lines:
                         expect = line[1:].lstrip()
-                        response = Report_output.popleft()
-                        print(' ' * indent, "> ", repr(response), sep='')
+                        response = Report_lines.popleft()
+                        print(indent(), "> ", repr(response), sep='')
                         compare(response, expect)
                         continue
                     else:
-                        indent -= 2
+                        Call_depth -= 1
                         in_report = False
                 while True:
-                    assert not Report_output
+                    assert not Report_lines
                     response = sock_readline()
-                    if not do_default(response, indent, verbose):
+                    if not do_default(response, verbose):
                         expect = line[1:].lstrip()
-                        print(' ' * indent, "> ", repr(response), sep='')
+                        print(indent(), "> ", repr(response), sep='')
                         compare(response, expect)
-                        indent += cpp_indent(response)
+                        cpp_adj_depth(response)
                         break
             else:
                 print(f"ERROR: {script_name}[{line_no}]: Unknown line prefix {line=!r}", file=sys.stderr)
@@ -656,32 +669,34 @@ def run_script(script_name, indent, verbose):
     finally:
         Current_script = None
 
-def test_driver_indent(test_driver_command):
-    # Returns change to indent level after test_driver_request issued to C++ program
+def test_driver_adj_depth(test_driver_command):
+    # Adjusts Call_depth after test_driver_command issued to C++ program
+    global Call_depth
     if test_driver_command.startswith('call') \
        or test_driver_command.startswith('get_global') \
        or test_driver_command.startswith('set_global'):
-        return 2
-    if test_driver_command.startswith('return'):
-        return -2
-    return 0
+        Call_depth += 1
+    elif test_driver_command.startswith('return'):
+        Call_depth -= 1
 
-def cpp_indent(cpp_command):
+def cpp_adj_depth(cpp_command):
+    # Adjusts Call_depth after cpp_command issued to test driver
+    global Call_depth
     if cpp_command.startswith('fun_called'):
-        return 2
-    if cpp_command.startswith('returned') \
+        Call_depth += 1
+    elif cpp_command.startswith('returned') \
        or cpp_command.startswith('get_global') \
        or cpp_command.startswith('set_global'):
-        return -2
-    print("Unexpected cpp_command:", cpp_command, file=sys.stderr)
-    exit(2)
+        Call_depth -= 1
+    else:
+        print("Unexpected cpp_command:", repr(cpp_command), file=sys.stderr)
+        exit(2)
 
-def do_icommand(request, indent, verbose):
+def do_icommand(request, verbose):
     # request should not have trailing whitespace (including '\n')
-    # returns new indent level
-    global Trace
+    global Trace, Call_depth
     if request.startswith('?'):
-        print(' ' * indent, translate(request[1:].strip()), sep='', end='')
+        print(indent(), translate(request[1:].strip()), sep='', end='')
     elif request.startswith('trace '):
         words = request.split()
         if words[1] == 'on':
@@ -690,78 +705,147 @@ def do_icommand(request, indent, verbose):
             Trace = 0
     elif request.startswith('readline'):
         try:
-            print(f"{' ' * indent}sock_readline returned:", repr(sock_readline()))
+            print(f"{indent()}sock_readline returned:", repr(sock_readline()))
         except socket.timeout:
-            print(f"{' ' * indent}sock_readline: socket.timeout")
+            print(f"{indent()}sock_readline: socket.timeout")
     elif request.startswith('run '):
         words = request.split()
         assert len(words) == 2, f'invalid "run" request: expected 2 words, got {len(words)}'
-        run_script(words[1], indent, verbose)
-        indent -= 2
+        Call_depth += 1
+        run_script(words[1], verbose)
+        Call_depth -= 1
     else:
         translated_request = translate(request)
         if not translated_request:
             if Trace:
-                print(f"{' ' * indent}{request=!r}")
-            while Report_output:
-                print(' ' * indent, "> ", repr(Report_output.popleft()), sep='')
-            indent -= 2
+                print(f"{indent()}{request=!r}")
+            Call_depth += 1
+            while Report_lines:
+                print(indent(), "> ", repr(Report_lines.popleft()), sep='')
+            Call_depth -= 1
         else:
             if Trace:
-                print(f"{' ' * indent}{translated_request=!r}")
+                print(f"{indent()}{translated_request=!r}")
             send_sock(translated_request)
-            indent += test_driver_indent(translated_request)
+            test_driver_adj_depth(translated_request)
             try:
                 while True:
-                    assert not Report_output
+                    assert not Report_lines
                     response = sock_readline()
                     if not do_default(response, verbose):
                         # don't know this one, show it to user and let them respond...
-                        print(' ' * indent, "> ", repr(response), sep='')
-                        indent += cpp_indent(response)
+                        print(indent(), "> ", repr(response), sep='')
+                        cpp_adj_depth(response)
                         break
             except socket.timeout:
                 print("do_icommand: socket.timeout")
     return indent
 
-def do_default(cpp_command, indent, verbose):
+def do_default(cpp_command, verbose):
     # Returns True if cpp_command handled by a default, False otherwise.
+    # cpp_command does not have trailing '\n'
+    global Call_depth
+    #print(f"do_default({cpp_command=!r}, {verbose=}), {Call_depth=}")
+
     if not cpp_command.startswith('fun_called '):
+        #print("do_default cpp_command not fun_called -> False")
         return False
-    words = cpp_command.split()
-    if Current_script and words[1] in Current_script.get('defaults', {}):
-        result = Current_script['defaults'][words[1]]
-    elif words[1] in Script.get('defaults', {}):
-        result = Script['defaults'][words[1]]
-    else:
-        return False
-    while True:
-        if isinstance(result, dict):
-            cpp_cmd, fname, param0, *params = cpp_command.split()
-            result = result[param0]
-        elif isinstance(result, (list, tuple)):
-            cpp_cmd, fname, *params = cpp_command.split()
-            result = result[Seq_numbers[fname]]
-            Seq_numbers[fname] += 1
-        elif result is None:
-            if verbose:
-                print(' ' * indent, "> ", cpp_command, sep='')
-                print(' ' * (indent + 2), "< return", sep='')
-            send_sock("return\n")
-            return True
+    def get_action(doing_pass_through=False):
+        # returns 'no_default', 'pass_through', or 'return_sent'
+        if Current_script and fname in Current_script.get('defaults', {}):
+            action = Current_script['defaults'][fname]
+        elif fname in Script.get('defaults', {}):
+            action = Script['defaults'][fname]
         else:
-            if verbose:
-                print(' ' * indent, "> ", cpp_command, sep='')
-                print(' ' * (indent + 2), "< return ", result, sep='')
-            send_sock(f"return {result}\n")
-            return True
+            print(f"get_action {fname=} -> 'no_default'")
+            return 'no_default'
+        while True:
+            if action == 'pass-through':
+                print(f"get_action {fname=} -> 'pass_through'")
+                return 'pass_through'
+            if isinstance(action, dict):
+                action = action[params[0]]
+                #print(f"get_action got dict for", fname, "new action is", action)
+            elif isinstance(action, (list, tuple)):
+                action = action[Seq_numbers[fname]]
+                #print("get_action got sequence for", fname, "new action is", action, "seq_num is",
+                #      Seq_numbers[fname])
+                Seq_numbers[fname] += 1
+            else:
+                break
+        if action is None:
+            if verbose and not doing_pass_through:
+                print(indent(), "> ", cpp_command, sep='')
+                print(indent(1), "< return", sep='')
+            send_sock("return\n")
+            print(f"get_action {fname=} default 'return' -> 'return_sent'")
+        else:
+            if verbose and not doing_pass_through:
+                print(indent(), "> ", cpp_command, sep='')
+                print(indent(1), "< return ", action, sep='')
+            send_sock(f"return {action}\n")
+            print(f"get_action {fname=} default 'return {action}' -> 'return_sent'")
+        return 'return_sent'
+
+    cpp_cmd, fname, *params = cpp_command.split()
+    result = get_action()
+    if result == 'no_default':
+        return False
+    if result == 'return_sent':
+        return True
+
+    # Start pass-through
+    print("do_default starting pass-through for", fname)
+    if len(params) > 0:
+        call = f"call {fname} {' '.join(params)}\n"
+    else:
+        call = f"call {fname}\n"
+    print(indent(), '< ', call, sep='', end='')
+    if Trace:
+        print(indent(), '< ', call, sep='', end='')
+    send_sock(call)
+    #print("do_default: send_sock done")
+    starting_fname = fname
+    Call_depth += 1
+    pass_through_depth = Call_depth
+    while Call_depth >= pass_through_depth:
+        #print(f"do_default {Call_depth=}, {pass_through_depth=}: calling sock_readline")
+        line = sock_readline()
+        #print("do_default doing pass-through: got cpp line", repr(line))
+        if line.startswith('returned'):
+            words = line.split()
+            if len(words) == 1:
+                print(indent(), '< return', sep='')
+                send_sock(r"return\n")
+            else:
+                print(indent(), f'< return {words[1]}', sep='')
+                send_sock(f"return {words[1]}\n")
+            Call_depth -= 1
+        elif line.startswith('fun_called'):
+            cpp_cmd, fname, *params = line.split()
+            result = get_action(True)
+            if result != 'return_sent':
+                if params:
+                    print(indent(), f"< call {fname} {' '.join(params)}", sep='')
+                    send_sock(f"call {fname} {' '.join(params)}\n")
+                else:
+                    print(indent(), f'< call {fname}', sep='')
+                    send_sock(f"call {fname}\n")
+            Call_depth += 1
+        else:
+            print(f"ERROR: unrecognized cpp_command={line!r} during pass-through",
+                  file=sys.stderr)
+            sys.exit(1)
+    print(f"do_default finished pass-through for {starting_fname} -> True")
+    return True
 
 def interactive(verbose):
+    global Call_depth
     print("client ready!")
-    indent = 0
+    Call_depth = 0
     while True:
-        request = input(f"{' ' * indent}< ")
-        indent = do_icommand(request.strip(), indent + 2, verbose)
+        request = input(f"{indent()}< ")
+        do_icommand(request.strip(), verbose)
 
 
 
