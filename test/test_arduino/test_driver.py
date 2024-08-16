@@ -70,11 +70,11 @@ Sketch_dir = None
 Script = None
 Current_script = None
 Call_depth = 0
+Pass_through_depth = None   # pass-through until Call_depth < Pass_through_depth
 
 def init():
     global Sock_buffer, Report_lines, Defines, Lookups, Classes, Structs, Globals, Arrays
-    global Functions, Seq_numbers, Sketch_dir, Script, Current_script
-    global Call_depth
+    global Functions, Seq_numbers, Sketch_dir, Script, Current_script, Call_depth, Pass_through_depth
     Sock_buffer = ''
     Report_lines = deque()
     Defines = {}   # name: int(value)
@@ -89,6 +89,7 @@ def init():
     Script = None
     Current_script = None
     Call_depth = 0
+    Pass_through_depth = None
 
 def add_define(name, value):
     assert name not in Defines, f"{name} already #defined"
@@ -547,11 +548,11 @@ def compare(response, script_line):
     rwords = response.split()
     swords = script_line.split()
     if len(rwords) != len(swords):
-        print(f"ERROR: different number of words in response=%{response!r} and script={script_line!r}",
+        print(f"ERROR: different number of words in response={response!r} and script={script_line!r}",
               file=sys.stderr)
         sys.exit(1)
     for i, (rword, sword) in enumerate(zip(rwords, swords), 1):
-        if sword != '.' and rword != translate_word(sword):
+        if sword != '.' and rword != sword and rword != translate_word(sword):
             print(f"ERROR: in response={response!r}, "
                   f"word {i}={rword!r} does not match script={sword!r}",
                   file=sys.stderr)
@@ -622,28 +623,42 @@ def indent(added_call_depth=0):
 
 def run_script(script_name, verbose):
     global Current_script, Call_depth
+    if Trace:
+        print(f"run_script called, {Call_depth=}")
     try:
         Current_script = Script[script_name]
         Seq_numbers = Counter()
-        in_report = False
         for line_no, line in enumerate(Current_script['script'].split('\n'), 1):
-            #print(f"run_script: {line_no=}, {line=!r}")
+            #print(f"run_script({script_name=}): {line_no=}, {line=!r}")
             line = strip_comment(line)
             if not line:
                 continue
-            elif line[0] == '<':
+            if line[0] == '<':
                 line_rest = line[1:].lstrip()
+                print(indent(), '< ', line_rest, sep='')
+                to_cpp(line_rest)
+                ''' FIX: delete
+                assert not in_report, "run_script: not enough lines in script to match report output"
                 translated_request = translate(line_rest)
                 if not translated_request:
                     # report run by translate
-                    print(indent(), '< ', line_rest, sep='', end='')
+                    print(indent(), '< ', line_rest, sep='')
                     Call_depth += 1
                     in_report = True
                 else:
                     print(indent(), '< ', translated_request, sep='', end='')
                     send_sock(translated_request)
                     test_driver_adj_depth(translated_request)
+                '''
             elif line[0] == '>':
+                if Trace:
+                    print(f"run_script got {line=!r}, calling from_cpp")
+                response = from_cpp(verbose)
+                if Trace:
+                    print("run_script: from_cpp returned", repr(response))
+                expect = line[1:].lstrip()
+                compare(response, expect)
+                ''' FIX: delete
                 if in_report:
                     if Report_lines:
                         expect = line[1:].lstrip()
@@ -663,11 +678,15 @@ def run_script(script_name, verbose):
                         compare(response, expect)
                         cpp_adj_depth(response)
                         break
+                '''
             else:
                 print(f"ERROR: {script_name}[{line_no}]: Unknown line prefix {line=!r}", file=sys.stderr)
                 sys.exit(2)
     finally:
+        assert not Report_lines, f"run_script: extra report_lines not matched at end of script"
         Current_script = None
+        if Trace:
+            print(f"run_script done, {Call_depth=}")
 
 def test_driver_adj_depth(test_driver_command):
     # Adjusts Call_depth after test_driver_command issued to C++ program
@@ -692,9 +711,97 @@ def cpp_adj_depth(cpp_command):
         print("Unexpected cpp_command:", repr(cpp_command), file=sys.stderr)
         exit(2)
 
+def to_cpp(command):
+    # caller must print command to stdout before calling
+    # does not return anything
+    global Call_depth, Pass_through_depth
+    assert not Report_lines, f"to_cpp called with {len(Report_lines)} Report_lines remaining"
+    tcmd = translate(command)  # runs report and returns '', if "report" command given
+    if command.startswith('get ') or command.startswith('set '):
+        # don't print the translated "get" or "set" (i.e., tcmd)
+        Call_depth += 1
+        send_sock(tcmd)
+    elif tcmd == '':
+        # report run
+        Call_depth += 1
+    elif tcmd.startswith('call '):
+        Call_depth += 1
+        send_sock(tcmd)
+        action = get_action(tcmd)
+        if Trace:
+            print(f"to_cpp({tcmd=!r}): {action=}")
+        if action == 'pass-through' and Pass_through_depth is None:
+            if Trace:
+                print("to_cpp: setting Pass_through_depth to", Call_depth)
+            Pass_through_depth = Call_depth
+    else:
+        send_sock(tcmd)
+        if tcmd.startswith('return'):
+            Call_depth -= 1
+
+def from_cpp(verbose):
+    # This skips over pass-through and default return fun_calls so that the caller doesn't see them,
+    # though they are printed if verbose is True.
+    # Prints recvd_cmd before returning it (no trailing '\n').
+    # Caller does validation (if any) on recvd_cmd.
+    global Call_depth, Pass_through_depth
+    while True:
+        if Trace:
+            print(f"top of from_cpp loop, {Call_depth=}, {Pass_through_depth=}")
+        dec_call_depth = False
+        default_return = None
+        do_adjust_indent = True
+        if Report_lines:
+            recvd_cmd = Report_lines.popleft()
+            do_adjust_indent = False
+            if not Report_lines:
+                dec_call_depth = True
+        else:
+            recvd_cmd = sock_readline()  # no trailing '\n'
+            if Trace:
+                print("from_cpp loop received:", repr(recvd_cmd))
+            if recvd_cmd.startswith('fun_called '):
+                action = get_action(recvd_cmd)
+                if action is not None and action.startswith('return'):
+                    default_return = action
+                    if Trace:
+                        print("from_cpp loop, fun_called with default return:", repr(default_return))
+                    send_sock(default_return + '\n')
+                    dec_call_depth = True
+                else:
+                    if action is not None and action == 'pass-through':
+                        if Pass_through_depth is None:
+                            Pass_through_depth = Call_depth + 1
+                            if Trace:
+                                print(f"from_cpp loop, fun_called with pass-through {Call_depth=} "
+                                      f"{Pass_through_depth=}")
+                    if Pass_through_depth is not None:
+                        call_cmd = 'call' + recvd_cmd[10:]
+                        if Trace:
+                            print(f"from_cpp loop, sending {call_cmd=!r}")
+                        send_sock(call_cmd + '\n')
+        if Pass_through_depth is None and default_return is None or verbose:
+            print(indent(), '> ', recvd_cmd, sep='')
+            if default_return is not None:
+                print(indent(1), '< ', default_return, sep='')
+        if do_adjust_indent:
+            cpp_adj_depth(recvd_cmd)
+        if dec_call_depth:
+            Call_depth -= 1
+        if Pass_through_depth is not None and Call_depth < Pass_through_depth:
+            if Trace:
+                print(f"from_cpp loop, setting {Pass_through_depth=} to None {Call_depth=}")
+            Pass_through_depth = None
+        if Pass_through_depth is None and default_return is None:
+            if Trace:
+                print(f"from_cpp no pass-through or default_return, returning {recvd_cmd=!r}")
+            return recvd_cmd
+
+
 def do_icommand(request, verbose):
     # request should not have trailing whitespace (including '\n')
     global Trace, Call_depth
+    #print(f"do_icommand called, {Call_depth=}")
     if request.startswith('?'):
         print(indent(), translate(request[1:].strip()), sep='', end='')
     elif request.startswith('trace '):
@@ -715,8 +822,18 @@ def do_icommand(request, verbose):
         run_script(words[1], verbose)
         Call_depth -= 1
     else:
+        to_cpp(request)
+        starting_depth = Call_depth
+        try:
+            while Call_depth >= starting_depth:
+                from_cpp(verbose)
+        except socket.timeout:
+            print("do_icommand: socket.timeout")
+
+        ''' FIX: delete
         translated_request = translate(request)
         if not translated_request:
+            # translate ran report, results in Report_lines
             if Trace:
                 print(f"{indent()}{request=!r}")
             Call_depth += 1
@@ -739,8 +856,92 @@ def do_icommand(request, verbose):
                         break
             except socket.timeout:
                 print("do_icommand: socket.timeout")
-    return indent
+        '''
+    #print(f"do_icommand done, {Call_depth=}")
 
+def get_action(command):
+    # returns None, 'pass-through', or 'return X' (no trailing '\n')
+    if not command.startswith('call') and not command.startswith('fun_called'):
+        assert command.startswith('returned')
+        assert Pass_through_depth is not None  # I think this will always be the case... ??
+        return command[:6] + command[8:]   # change 'returned' to 'return'
+    cmd, fname, *params = command.split()
+    if Current_script and fname in Current_script.get('defaults', {}):
+        action = Current_script['defaults'][fname]
+    elif fname in Script.get('defaults', {}):
+        action = Script['defaults'][fname]
+    else:
+        #print(f"get_action {fname=} -> None")
+        return None
+    while True:
+        if action == 'pass-through':
+            #print(f"get_action {fname=} -> 'pass-through'")
+            if Pass_through_depth is not None:
+                return None
+            return 'pass-through'
+        if isinstance(action, dict):
+            action = action[params[0]]
+            #print(f"get_action got dict for", fname, "new action is", action)
+        elif isinstance(action, (list, tuple)):
+            action = action[Seq_numbers[fname]]
+            #print("get_action got sequence for", fname, "new action is", action, "seq_num is",
+            #      Seq_numbers[fname])
+            Seq_numbers[fname] += 1
+        else:
+            break
+    # Got an default action that is not 'pass=through', hence a return value
+    if cmd == 'call':
+        return None
+    if action is None:
+        return 'return'
+        # FIX: delete
+        if verbose and not doing_pass_through:
+            print(indent(), "> ", command, sep='')
+            print(indent(1), "< return", sep='')
+        send_sock("return\n")
+        #print(f"get_action {fname=} default 'return' -> 'return_sent'")
+    else:
+        return f"return {action}"
+        # FIX: delete
+        if verbose and not doing_pass_through:
+            print(indent(), "> ", cpp_command, sep='')
+            print(indent(1), "< return ", action, sep='')
+        send_sock(f"return {action}\n")
+        #print(f"get_action {fname=} default 'return {action}' -> 'return_sent'")
+
+# FIX: Not used
+def get_returned(doing_pass_through, command=None):
+    if command is None:
+        command = sock_readline()
+    action = get_action(command, doing_pass_through)
+    if command.startswith('call'):
+        send_sock(command + '\n')
+        if not doing_pass_through and action != 'pass-through':
+            return None
+        return get_returned(doing_pass_through or action == 'pass-through')
+    if command.startswith('fun_called'):
+        if not doing_pass_through:
+            if action is None:
+                return None
+            elif action == 'pass-through':
+                cmd, *args = command.split()
+                send_sock('call ' + ' '.join(args) + '\n')
+                return get_returned(True)
+        if action.startswith('return'):
+            send_sock(action + '\n')
+            return action
+        else:
+            assert doing_pass_through
+            cmd, *args = command.split()
+            send_sock('call ' + ' '.join(args) + '\n')
+            return get_returned(True)
+    assert command.startswith('returned')
+    assert doing_pass_through  # I think this will always be the case... ??
+    ret = command[6:] + command[8:]
+    send_sock(ret + '\n')
+    return ret
+
+# FIX: obsolete
 def do_default(cpp_command, verbose):
     # Returns True if cpp_command handled by a default, False otherwise.
     # cpp_command does not have trailing '\n'
@@ -750,42 +951,6 @@ def do_default(cpp_command, verbose):
     if not cpp_command.startswith('fun_called '):
         #print("do_default cpp_command not fun_called -> False")
         return False
-    def get_action(doing_pass_through=False):
-        # returns 'no_default', 'pass_through', or 'return_sent'
-        if Current_script and fname in Current_script.get('defaults', {}):
-            action = Current_script['defaults'][fname]
-        elif fname in Script.get('defaults', {}):
-            action = Script['defaults'][fname]
-        else:
-            print(f"get_action {fname=} -> 'no_default'")
-            return 'no_default'
-        while True:
-            if action == 'pass-through':
-                print(f"get_action {fname=} -> 'pass_through'")
-                return 'pass_through'
-            if isinstance(action, dict):
-                action = action[params[0]]
-                #print(f"get_action got dict for", fname, "new action is", action)
-            elif isinstance(action, (list, tuple)):
-                action = action[Seq_numbers[fname]]
-                #print("get_action got sequence for", fname, "new action is", action, "seq_num is",
-                #      Seq_numbers[fname])
-                Seq_numbers[fname] += 1
-            else:
-                break
-        if action is None:
-            if verbose and not doing_pass_through:
-                print(indent(), "> ", cpp_command, sep='')
-                print(indent(1), "< return", sep='')
-            send_sock("return\n")
-            print(f"get_action {fname=} default 'return' -> 'return_sent'")
-        else:
-            if verbose and not doing_pass_through:
-                print(indent(), "> ", cpp_command, sep='')
-                print(indent(1), "< return ", action, sep='')
-            send_sock(f"return {action}\n")
-            print(f"get_action {fname=} default 'return {action}' -> 'return_sent'")
-        return 'return_sent'
 
     cpp_cmd, fname, *params = cpp_command.split()
     result = get_action()
@@ -809,14 +974,13 @@ def do_default(cpp_command, verbose):
     Call_depth += 1
     pass_through_depth = Call_depth
     while Call_depth >= pass_through_depth:
-        #print(f"do_default {Call_depth=}, {pass_through_depth=}: calling sock_readline")
         line = sock_readline()
-        #print("do_default doing pass-through: got cpp line", repr(line))
         if line.startswith('returned'):
+            print(f"do_default doing pass-through, {Call_depth=}, got cpp 'returned'", repr(line))
             words = line.split()
             if len(words) == 1:
                 print(indent(), '< return', sep='')
-                send_sock(r"return\n")
+                send_sock("return\n")
             else:
                 print(indent(), f'< return {words[1]}', sep='')
                 send_sock(f"return {words[1]}\n")
@@ -824,6 +988,8 @@ def do_default(cpp_command, verbose):
         elif line.startswith('fun_called'):
             cpp_cmd, fname, *params = line.split()
             result = get_action(True)
+            print(f"do_default doing pass-through, {Call_depth=}, got cpp 'fun_called'", repr(line),
+                  "get_action", result)
             if result != 'return_sent':
                 if params:
                     print(indent(), f"< call {fname} {' '.join(params)}", sep='')
@@ -831,12 +997,12 @@ def do_default(cpp_command, verbose):
                 else:
                     print(indent(), f'< call {fname}', sep='')
                     send_sock(f"call {fname}\n")
-            Call_depth += 1
+                Call_depth += 1
         else:
             print(f"ERROR: unrecognized cpp_command={line!r} during pass-through",
                   file=sys.stderr)
             sys.exit(1)
-    print(f"do_default finished pass-through for {starting_fname} -> True")
+    print(f"do_default finished pass-through for {starting_fname}, {Call_depth=} -> True")
     return True
 
 def interactive(verbose):
@@ -844,6 +1010,7 @@ def interactive(verbose):
     print("client ready!")
     Call_depth = 0
     while True:
+        #print(f"interactive loop, {Call_depth=}")
         request = input(f"{indent()}< ")
         do_icommand(request.strip(), verbose)
 

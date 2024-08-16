@@ -455,7 +455,9 @@ functions:   # optional 'gen_caller: False', 'return: <type>' and
   # events.h
   run_event:
     params:
-      - event_num: byte
+      - event_num:
+          type: byte
+          lookup: events
       - param: byte
   encoder_changed:
     params:

@@ -35,7 +35,7 @@ defaults:
   update_displays: pass-through
   update_channel_memory: pass-through
   update_harmonic_memory: pass-through
-  load_functions: pass_through
+  load_functions: pass-through
   run_event: pass-through
   encoder_changed: pass-through
   switch_closed: pass-through
@@ -61,36 +61,30 @@ setup:
   script: |
     < call setup
       > fun_called millis
-      < return 100
-    > returned
+        < return 100
+      > returned
+    < report encoders
+      > FN: D FUNCTION_CHANGED UPDATE_CHOICES -
+      > P1: N FUN_PARAM_CHANGED - -
+      > P2: N FUN_PARAM_CHANGED - -
+      > P3: N FUN_PARAM_CHANGED - -
+      > P4: N FUN_PARAM_CHANGED - -
 
 ch_switch_on:
   defaults:
     turn_off_choices_leds: null
     clear_numeric_display: null
+    getResponse: 2
 
   script: |
+    < set Response_data 0 = 0   # Errno from LED controller
+      > set_global . 0
+    < set Response_data 1 = 0   # Err_data from LED controller
+      > set_global . 0
     < set Switches 56 current = 1   # turn on CH-2 switch
-    > set_global . 0
+      > set_global . 0
     < call switch_closed 56
-      > fun_called run_event 31 56
-        < call run_event 31 56          # channel_on
-          > fun_called channel_on 56
-            < call channel_on 56
-              > fun_called run_event 35 4     # update choices
-                < call run_event 35 4
-                  > fun_called select_led 4
-                    < get Encoders 4 var var_type flags
-                      > get_global . ENCODER_FLAGS_CHOICE_LEDS
-                    < get Encoders 4 var value
-                      > get_global . ENCODER_FLAGS_CHOICE_LEDS
-                    < return     # from fun_called select_led
-                  > returned   # from call run_event
-                < return     # from fun_called run_event
-              > fun_called load_encoders      # called from channel_on
-                < call load_encoders
-                  > fun_called clear_displays
-                    < call clear_displays
+      > returned
 
 
   # interesting things in loop:
