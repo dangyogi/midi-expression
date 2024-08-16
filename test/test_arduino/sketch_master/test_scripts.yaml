@@ -62,7 +62,7 @@ setup:
     < call setup
       > fun_called millis
         < return 100
-      > returned
+      > setup returned
     < report encoders
       > FN: D FUNCTION_CHANGED UPDATE_CHOICES -
       > P1: N FUN_PARAM_CHANGED - -
@@ -84,7 +84,7 @@ ch_switch_on:
     < set Switches 56 current = 1   # turn on CH-2 switch
       > set_global . 0
     < call switch_closed 56
-      > returned
+      > switch_closed returned
 
 
   # interesting things in loop:

@@ -707,7 +707,7 @@ def cpp_adj_depth(cpp_command):
     global Call_depth
     if cpp_command.startswith('fun_called'):
         Call_depth += 1
-    elif cpp_command.startswith('returned') \
+    elif 'returned' in cpp_command \
        or cpp_command.startswith('get_global') \
        or cpp_command.startswith('set_global'):
         Call_depth -= 1
@@ -754,6 +754,7 @@ def from_cpp(verbose):
             print(f"top of from_cpp loop, {Call_depth=}, {Pass_through_depth=}")
         dec_call_depth = False
         default_return = None
+        ret_pass_through_cmd = None
         do_adjust_indent = True
         if Report_lines:
             recvd_cmd = Report_lines.popleft()
@@ -761,6 +762,8 @@ def from_cpp(verbose):
             if not Report_lines:
                 dec_call_depth = True
         else:
+            if Trace:
+                print("from_cpp loop calling sock_readline")
             recvd_cmd = sock_readline()  # no trailing '\n'
             if Trace:
                 print("from_cpp loop received:", repr(recvd_cmd))
@@ -784,17 +787,26 @@ def from_cpp(verbose):
                         if Trace:
                             print(f"from_cpp loop, sending {call_cmd=!r}")
                         send_sock(call_cmd + '\n')
+            else:
+                if Pass_through_depth is not None and Call_depth >= Pass_through_depth:
+                    idx = recvd_cmd.find('returned')
+                    assert idx >= 0, f"ERROR: from_cpp expected 'returned', got {recvd_cmd}"
+                    ret_pass_through_cmd = 'return' + recvd_cmd[idx + 8:]
+                    send_sock(ret_pass_through_cmd + '\n')
         if Pass_through_depth is None and default_return is None or verbose:
-            print(indent(), '> ', format_command(recvd_cmd), sep='')
-            if default_return is not None:
-                print(indent(1), '< ', default_return, sep='')
+            if ret_pass_through_cmd:
+                print(indent(), '< ', ret_pass_through_cmd, sep='')
+            else:
+                print(indent(), '> ', format_command(recvd_cmd), sep='')
+                if default_return is not None:
+                    print(indent(1), '< ', default_return, sep='')
         if do_adjust_indent:
             cpp_adj_depth(recvd_cmd)
         if dec_call_depth:
             Call_depth -= 1
         if Pass_through_depth is not None and Call_depth < Pass_through_depth:
             if Trace:
-                print(f"from_cpp loop, setting {Pass_through_depth=} to None {Call_depth=}")
+                print(f"from_cpp loop, setting {Pass_through_depth=} to None, {Call_depth=}")
             Pass_through_depth = None
         if Pass_through_depth is None and default_return is None:
             if Trace:
@@ -838,9 +850,10 @@ def do_icommand(request, verbose):
 def get_action(command):
     # returns None, 'pass-through', or 'return X' (no trailing '\n')
     if not command.startswith('call') and not command.startswith('fun_called'):
-        assert command.startswith('returned')
+        idx = command.find('returned')
+        assert idx != -1, f"get_action: expected 'returned', got {command!r}"
         assert Pass_through_depth is not None  # I think this will always be the case... ??
-        return command[:6] + command[8:]   # change 'returned' to 'return'
+        return 'return' + command[idx + 8:]   # change 'returned' to 'return'
     cmd, fname, *params = command.split()
     if Current_script and fname in Current_script.get('defaults', {}):
         action = Current_script['defaults'][fname]

@@ -62,7 +62,7 @@ C++ Requests
       - Issued by first type of stub, above.
       - C++ program now accepts any test driver requests, until "return" request received.
       - return value returned from stub
-    - "returned" [value]
+    - fun_name "returned" [value]
       - issued in response to "call" test driver request.
 
 

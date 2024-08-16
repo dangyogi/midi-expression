@@ -241,12 +241,12 @@ def gen_caller_stub(name, info, source_file):
         gen_code(f'{ret_type} ret;')
         head = 'ret = '
         if unsigned(ret_type):
-            send_return = r'sendf("returned %lu\n", (unsigned long)ret);'
+            send_return = fr'sendf("{name} returned %lu\n", (unsigned long)ret);'
         else:
-            send_return = r'sendf("returned %ld\n", (long)ret);'
+            send_return = fr'sendf("{name} returned %ld\n", (long)ret);'
     else:
         head = ''
-        send_return = r'sendf("returned\n");'
+        send_return = fr'sendf("{name} returned\n");'
     cpp_args = []
     if info and 'params' in info:
         check_len = None

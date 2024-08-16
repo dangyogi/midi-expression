@@ -3,7 +3,7 @@
 ---
 
 program:
-  compile: g++ -Iteensy4 -I{dir} -m32 -Wno-invalid-offsetof -o {source_dir}/test {source_dir}/test.cpp
+  compile: g++ -Iteensy4 -I{dir} -m32 -Wno-invalid-offsetof -g -o {source_dir}/test {source_dir}/test.cpp
   dir: ../../exp_console/sketch_master
   arch_defs: teensy4/teensy4.yaml
   files_start:

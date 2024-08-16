@@ -52,7 +52,12 @@ int main(int argc, char *argv[]) {
 
     sendf("ready\n");
 
-    int ret = atoi(run_to_return());
+    const char *ret_s = run_to_return();
 
-    return ret;
+    if (ret_s) {
+        int ret = atoi(ret_s);
+        return ret;
+    }
+    fprintf(stderr, "ERROR main got final 'return' without a value\n");
+    exit(2);
 }
