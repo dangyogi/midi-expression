@@ -345,11 +345,49 @@ class Function:
     def __init__(self, name, expects_return, params):
         self.name = name
         self.ret = expects_return
-        self.params = params
+        self.params = []
+        self.lookups = {}
+        for i, param in enumerate(params, 2):
+            if '|' in param:
+                pname, lookup = param.split('|')
+                self.params.append(pname)
+                self.lookups[pname] = lookup
+            else:
+                self.params.append(param)
+
+    def format_params(self, params):
+        # params should not be empty
+        assert len(params) == len(self.params)
+        plist = []
+        for pname, value in zip(self.params, params):
+            if pname in self.lookups:
+                vnames = Lookups[self.lookups[pname]]
+                #print(f"Function.format {pname=} in lookups: {vnames=}, {value=!r}")
+                if value in vnames:
+                    plist.append(vnames[value])
+                else:
+                    plist.append(value)
+            else:
+                plist.append(value)
+        return ' '.join(plist)
+
+def format_command(command):
+    if not command.startswith('call ') and not command.startswith('fun_called '):
+        return command
+    cmd, fname, *params = command.split()
+    fun = Functions[fname]
+    head = f"{cmd} {fname}"
+    if not params:
+        return head
+    return f"{head} {fun.format_params(params)}"
 
 def add_function(name, expects_return, params):
     assert name not in Functions, f"{name=!r} already in Functions"
     Functions[name] = Function(name, expects_return, params)
+    if False and Functions[name].lookups:
+        call = f"call {name} {' '.join(str(i) for i in range(35, 35 + len(params)))}"
+        fcall = format_command(call)
+        print(f"format_command({call=!r}) gives {fcall!r}")
 
 def load():
     # loads all of the initial "#define", "sub_classes", "field", "global", "array" and "function"
@@ -364,7 +402,7 @@ def load():
         elif words[0] == '#define':
             add_define(words[1], int(words[2]))
         elif words[0] == 'lookup':
-            add_lookup(words[1], int(words[2]), words[3])
+            add_lookup(words[1], words[2], words[3])
         elif words[0] == 'sub_classes':
             add_subclasses(words[1], words[2:])
         elif words[0] == 'field':
@@ -635,7 +673,7 @@ def run_script(script_name, verbose):
                 continue
             if line[0] == '<':
                 line_rest = line[1:].lstrip()
-                print(indent(), '< ', line_rest, sep='')
+                print(indent(), '< ', format_command(line_rest), sep='')
                 to_cpp(line_rest)
             elif line[0] == '>':
                 if Trace:
@@ -747,7 +785,7 @@ def from_cpp(verbose):
                             print(f"from_cpp loop, sending {call_cmd=!r}")
                         send_sock(call_cmd + '\n')
         if Pass_through_depth is None and default_return is None or verbose:
-            print(indent(), '> ', recvd_cmd, sep='')
+            print(indent(), '> ', format_command(recvd_cmd), sep='')
             if default_return is not None:
                 print(indent(1), '< ', default_return, sep='')
         if do_adjust_indent:
@@ -788,7 +826,7 @@ def do_icommand(request, verbose):
         run_script(words[1], verbose)
         Call_depth -= 1
     else:
-        to_cpp(request)
+        to_cpp(format_command(request))
         starting_depth = Call_depth
         try:
             while Call_depth >= starting_depth:

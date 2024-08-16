@@ -51,6 +51,7 @@ C++ Requests
       - issued at program startup
       - no response expected
     - "function" name expects_return param_names
+      - param_name may have |lookup appended, e.g., p2|events
       - issued at program startup
       - no response expected
     - "ready"

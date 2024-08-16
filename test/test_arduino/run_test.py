@@ -431,7 +431,12 @@ def gen_send_functions(functions):
                     ret = 1
                 for param in info.get('params', ()):
                     pname, pinfo = param.copy().popitem()
-                    pnames.append(' ' + pname)
+                    if isinstance(pinfo, str):
+                        pinfo = dict(type=pinfo)
+                    if 'lookup' in pinfo:
+                        pnames.append(f" {pname}|{pinfo['lookup']}")
+                    else:
+                        pnames.append(' ' + pname)
             pnames_str = ''.join(pnames)
             print(fr'  sendf("function {name} {ret}{pnames_str}\n");', file=source_file)
         print('}', file=source_file)

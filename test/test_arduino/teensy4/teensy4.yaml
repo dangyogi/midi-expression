@@ -27,7 +27,22 @@ defines:
   - OCT
   - BIN
 
-lookups: {}
+lookups:
+  pin_out:
+    - HIGH
+    - LOW
+  mode:
+    - INPUT
+    - OUTPUT
+    - INPUT_PULLUP
+    - INPUT_PULLDOWN
+    - OUTPUT_OPENDRAIN
+    - INPUT_DISABLE
+  base:
+    - DEC
+    - HEX
+    - OCT
+    - BIN
 
 classes: {}
 
@@ -50,12 +65,16 @@ functions:   # optional 'gen_caller: False', 'return: <type>' and
     gen_caller: False
     params:
       - pin: uint8_t
-      - mode: uint8_t
+      - mode:
+          type: uint8_t
+          lookup: mode
   digitalWrite:
     gen_caller: False
     params:
       - pin: uint8_t
-      - val: uint8_t
+      - val:
+          type: uint8_t
+          lookup: pin_out
   digitalRead:
     gen_caller: False
     return: uint8_t
@@ -125,25 +144,33 @@ functions:   # optional 'gen_caller: False', 'return: <type>' and
     return: size_t
     params:
       - l: unsigned long
-      - base: int
+      - base:
+          type: int
+          lookup: base
   serial_println_ulong:
     gen_caller: False
     return: size_t
     params:
       - l: unsigned long
-      - base: int
+      - base:
+          type: int
+          lookup: base
   serial_print_long:
     gen_caller: False
     return: size_t
     params:
       - l: long
-      - base: int
+      - base:
+          type: int
+          lookup: base
   serial_println_long:
     gen_caller: False
     return: size_t
     params:
       - l: long
-      - base: int
+      - base:
+          type: int
+          lookup: base
   serial_putchar:
     gen_caller: False
     return: size_t
