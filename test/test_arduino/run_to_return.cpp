@@ -132,16 +132,22 @@ set_global(void *addr, char *type) {
 #define MAX_TYPE_LEN    10
 
 const char *
-run_to_return(void) {
+run_to_return(const char *fname) {
     for (;;) {
         char *line = sock_readline();
         char *command = next_word();
         char type[MAX_TYPE_LEN];
 
-        if (strcmp(command, "return") == 0) {
-            // return [value]
-            if (!Word_ptr) return NULL;
-            return next_word();
+        if (strcmp(command, fname) == 0) {
+            command = next_word();
+            if (strcmp(command, "return") == 0) {
+                // {fname} return [value]
+                if (!Word_ptr) return NULL;
+                return next_word();
+            } else {
+                fprintf(stderr, "ERROR: expected 'return' after '%s', got '%s'\n", fname, command);
+                exit(2);
+            }
         }
         if (strcmp(command, "call") == 0) {
             // call name arguments

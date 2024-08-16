@@ -391,7 +391,7 @@ def gen_called_stub(name, info, source_file):
     # finish sending "fun_called" line
     do_send(r'\n')
 
-    print(f"  ret_value = run_to_return();", file=source_file)
+    print(f'  ret_value = run_to_return("{name}");', file=source_file)
     if ret == 'void':
         print('  if (ret_value) {', file=source_file)
         print(f'    fprintf(stderr, "ERROR on call {name} return: '

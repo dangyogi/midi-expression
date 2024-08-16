@@ -89,7 +89,7 @@ Test Driver Requests
       - Test driver validates the returned value.
       - Test driver issues whatever other requests it wants to do (e.g., "get global" to validate
         global variables have been set correctly).
-    - "return" [value]
+    - {fun_name} "return" [value]
       - issued in response to "fun called" C++ request.
     - "exit" exit_status
       - causes the C++ program to immediately terminate.

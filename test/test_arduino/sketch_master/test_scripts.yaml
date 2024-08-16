@@ -61,7 +61,7 @@ setup:
   script: |
     < call setup
       > fun_called millis
-        < return 100
+        < millis return 100
       > setup returned
     < report encoders
       > FN: D FUNCTION_CHANGED UPDATE_CHOICES -

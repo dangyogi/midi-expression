@@ -699,7 +699,7 @@ def test_driver_adj_depth(test_driver_command):
        or test_driver_command.startswith('get_global') \
        or test_driver_command.startswith('set_global'):
         Call_depth += 1
-    elif test_driver_command.startswith('return'):
+    elif 'return' in test_driver_command:
         Call_depth -= 1
 
 def cpp_adj_depth(cpp_command):
@@ -740,7 +740,7 @@ def to_cpp(command):
             Pass_through_depth = Call_depth
     else:
         send_sock(tcmd)
-        if tcmd.startswith('return'):
+        if 'return' in tcmd:
             Call_depth -= 1
 
 def from_cpp(verbose):
@@ -769,7 +769,7 @@ def from_cpp(verbose):
                 print("from_cpp loop received:", repr(recvd_cmd))
             if recvd_cmd.startswith('fun_called '):
                 action = get_action(recvd_cmd)
-                if action is not None and action.startswith('return'):
+                if action is not None and 'return' in action:
                     default_return = action
                     if Trace:
                         print("from_cpp loop, fun_called with default return:", repr(default_return))
@@ -791,7 +791,7 @@ def from_cpp(verbose):
                 if Pass_through_depth is not None and Call_depth >= Pass_through_depth:
                     idx = recvd_cmd.find('returned')
                     assert idx >= 0, f"ERROR: from_cpp expected 'returned', got {recvd_cmd}"
-                    ret_pass_through_cmd = 'return' + recvd_cmd[idx + 8:]
+                    ret_pass_through_cmd = recvd_cmd.replace('returned', 'return', 1)
                     send_sock(ret_pass_through_cmd + '\n')
         if Pass_through_depth is None and default_return is None or verbose:
             if ret_pass_through_cmd:
@@ -848,12 +848,12 @@ def do_icommand(request, verbose):
     #print(f"do_icommand done, {Call_depth=}")
 
 def get_action(command):
-    # returns None, 'pass-through', or 'return X' (no trailing '\n')
+    # returns None, 'pass-through', or 'fun_name return X' (no trailing '\n')
     if not command.startswith('call') and not command.startswith('fun_called'):
         idx = command.find('returned')
         assert idx != -1, f"get_action: expected 'returned', got {command!r}"
         assert Pass_through_depth is not None  # I think this will always be the case... ??
-        return 'return' + command[idx + 8:]   # change 'returned' to 'return'
+        return command.replace('returned', 'return', 1)   # change 'returned' to 'return'
     cmd, fname, *params = command.split()
     if Current_script and fname in Current_script.get('defaults', {}):
         action = Current_script['defaults'][fname]
@@ -882,9 +882,9 @@ def get_action(command):
     if cmd == 'call':
         return None
     if action is None:
-        return 'return'
+        return f"{fname} return"
     else:
-        return f"return {action}"
+        return f"{fname} return {action}"
 
 def interactive(verbose):
     global Call_depth

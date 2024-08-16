@@ -8,7 +8,7 @@
 #include <sys/socket.h>
 
 
-extern const char *run_to_return(void);
+extern const char *run_to_return(const char *fname);
 
 int
 calc_dim(int array_size, int element_size) {

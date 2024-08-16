@@ -52,7 +52,7 @@ int main(int argc, char *argv[]) {
 
     sendf("ready\n");
 
-    const char *ret_s = run_to_return();
+    const char *ret_s = run_to_return("main");
 
     if (ret_s) {
         int ret = atoi(ret_s);
