@@ -315,9 +315,9 @@ void channel_off(byte sw) {
       }
     } // end for (i)
     if (Lowest_channel == 0xFF) {
-      Encoders[FUNCTION_ENCODER].var = 0;   // disable FUNCTION_ENCODER
       turn_off_choices_leds(FUNCTION_ENCODER);
       clear_displays();
+      Encoders[FUNCTION_ENCODER].var = 0;   // disable FUNCTION_ENCODER
       for (byte enc = 0; enc < NUM_FUNCTION_ENCODERS; enc++) {
         Encoders[enc].var = 0; // disable function parameter encoders
       }

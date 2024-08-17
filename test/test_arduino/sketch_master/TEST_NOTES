@@ -1,0 +1,33 @@
+Things that can be done:
+
+Configuring encoder settings:
+
+  - Ch 2 on
+  - Ch 2 off
+  - Ch 4 on
+  - Ch 4 off
+
+    Tests:
+      - does first Ch on wake up everything?
+      - does second Ch on screw up anything?
+      - does transition from only first to only second screw up anything?
+      - FN max lower with no Hm
+      - does FN change cause change in param encoder settings?
+      - are param encoder values remembered when FN changes, then changes back?
+      - are FN/param values remembered when CH, no CH, CH?
+      - is FN value remembered when high CH, low CH? 
+      - do param values change when high CH, low CH? 
+      - are the displays (choices, numeric) turned on/off properly in each of the above cases?
+
+  - Hm 2 on
+  - Hm 2 off
+  - Hm 4 on
+  - Hm 4 off
+
+    Tests:
+      - same as CH tests
+      - does first Hm on wake up anything?
+      - does Hm on, Ch on result in FN having full range?
+      - does last Hm off truncate FN value?
+
+Sending MIDI commands:

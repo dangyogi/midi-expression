@@ -56,7 +56,7 @@ def sock_readline(sock_only=False, recv_flags=0):
         print("sock_readline returning:", repr(ans))
     return ans
 
-Defines = {}   # name: value
+Defines = {}   # name: value (as int)
 Lookups = defaultdict(dict)   # type: {value: name}
 Classes = {}   # name: (subclasses)
 Structs = {}   # struct_name: Struct()
@@ -374,6 +374,33 @@ class Function:
                 plist.append(value)
         return ' '.join(plist)
 
+I2C_LED_commands = {
+    14: "led_on led",
+    15: "led_off led",
+    18: "load_digit disp digit# value dp",
+    21: "load_sharp_flat disp sharp_flat",
+    19: "load_numeric disp value_s16 dec_place",
+    20: "load_note disp note sharp_flat",
+    31: "clear_display disp",
+    29: "clear_choices choices_num",
+    30: "select_choice choices_num choice",
+}
+
+LED_history = defaultdict(lambda: defaultdict(list))
+
+def sendRequest_notes(params):
+    assert int(params[0]) == Defines['I2C_LED_CONTROLLER']
+    digits = [int(params[1][2*i:2*i+2], 16) for i in range(len(params[1])//2)]
+    if digits[0] in I2C_LED_commands:
+        cmd, unit, *params = I2C_LED_commands[digits[0]].split()
+        param_decode = (f"{name}={value}" for name, value in zip(params, digits[2:]))
+        history_line = f"{cmd}: {' '.join(param_decode)}"
+        LED_history[unit][digits[1]].append(history_line)
+
+Fun_notes = {
+    'sendRequest': sendRequest_notes,
+}
+
 def format_command(command):
     if not command.startswith('call ') and not command.startswith('fun_called '):
         return command
@@ -663,9 +690,24 @@ def dump_events():
     for value, name in sorted(Lookups['events'].items(), key=lambda item: int(item[0])):
         Report_lines.append(f"{value}: {name}")
 
+def clear_led_history():
+    global LED_history
+    LED_history = defaultdict(lambda: defaultdict(list))
+    Report_lines.append("LED_history cleared")
+
+def dump_led_history():
+    for type, history in sorted(LED_history.items()):
+        for unit, lines in sorted(history.items()):
+            for line in lines:
+                Report_lines.append(f"{type} {unit} {line}")
+    if not Report_lines:
+        Report_lines.append("no LED history")
+
 Reports = {
     'encoders': dump_encoders,
     'events': dump_events,
+    'clear_led_history': clear_led_history,
+    'led_history': dump_led_history,
 }
 
 def indent(added_call_depth=0):
@@ -783,6 +825,9 @@ def from_cpp(verbose):
             if Trace:
                 print("from_cpp loop received:", repr(recvd_cmd))
             if recvd_cmd.startswith('fun_called '):
+                cmd, fname, *params = recvd_cmd.split()
+                if fname in Fun_notes:
+                    Fun_notes[fname](params)
                 action = get_action(recvd_cmd)
                 if action is not None and 'return' in action:
                     default_return = action
