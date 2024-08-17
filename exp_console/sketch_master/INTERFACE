@@ -51,6 +51,12 @@ Encoders:
     4         18-20     Function
     5          5-7      Filename
 
+Choice LEDs:
+    0   Functions
+    1   Major/Minor
+    2   Meantone
+    3   Just Intonation
+
 Button bounce:
   Can hit and release button in 80 mSec.
   Can hit, release and rehit button in 68 mSec.

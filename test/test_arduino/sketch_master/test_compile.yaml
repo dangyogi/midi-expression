@@ -180,6 +180,16 @@ lookups:
     - CHECK_FUNCTIONS
     - FUN_PARAM_CHANGED
     - NEXT_AVAIL_EVENT
+  i2c_addrs:
+    - I2C_POT_CONTROLLER
+    - I2C_LED_CONTROLLER
+  periodics:
+    - PULSE_NOTES_ON
+    - PULSE_NOTES_OFF
+    - UPDATE_LEDS
+    - GET_POTS
+    - SEND_MIDI
+    - SWITCH_REPORT
 
 classes:
   # encoders.h
@@ -420,35 +430,45 @@ functions:   # optional 'gen_caller: False', 'return: <type>' and
              # null if none of these are included.
   # encoders.h
   led_on:
+    display: show
     params:
       - led: byte
   led_off:
+    display: show
     params:
       - led: byte
   select_led:
+    display: show
     params:
       - enc: byte
   turn_off_choices_leds:
+    display: show
     params:
       - enc: byte
   display_number:
+    display: show
     params:
       - display_num: byte
       - num: short
       - dp: byte
   clear_numeric_display:
+    display: show
     params:
       - display_num: byte
   display_linear_number:
+    display: show
     params:
       - enc: byte
   display_geometric_number:
+    display: show
     params:
       - enc: byte
   display_note:
+    display: show
     params:
       - enc: byte
   display_sharps_flats:
+    display: show
     params:
       - enc: byte
 
@@ -530,14 +550,16 @@ functions:   # optional 'gen_caller: False', 'return: <type>' and
   notes_on: null
   notes_off: null
 
-    # These take internal channel numbers (starting at 0 rather than 1)
+  # These take internal channel numbers (starting at 0 rather than 1)
   control_change:
+    display: show
     params:
       - channel: byte
       - control: byte
       - value: byte
       - cable: byte
   nrpn_change:
+    display: show
     params:
       - channel: byte
       - param_num: unsigned short
@@ -575,20 +597,28 @@ functions:   # optional 'gen_caller: False', 'return: <type>' and
       - EEPROM_addr: byte
   turn_off_periodic_fun:
     params:
-      - fun: byte
+      - fun:
+          type: byte
+          lookup: periodics
   turn_on_periodic_fun:
     params:
-      - fun: byte
+      - fun:
+          type: byte
+          lookup: periodics
       - period: unsigned short
   toggle_periodic_fun:
     params:
-      - fun: byte
+      - fun:
+          type: byte
+          lookup: periodics
       - period: unsigned short
   setup: null
   turn_off_test_pin: null
   sendRequest:
     params:
-      - i2c_addr: byte
+      - i2c_addr:
+          type: byte
+          lookup: i2c_addrs 
       - data: 
           type: byte*
           len: data_len
@@ -597,7 +627,9 @@ functions:   # optional 'gen_caller: False', 'return: <type>' and
   getResponse:
     return: byte
     params:
-      - i2c_addr: byte
+      - i2c_addr:
+          type: byte
+          lookup: i2c_addrs 
       - data_len: byte
       - check_errno: byte
   loop: null

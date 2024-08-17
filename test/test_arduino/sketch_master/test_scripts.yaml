@@ -64,11 +64,12 @@ setup:
         < millis return 100
       > setup returned
     < report encoders
-      > FN: D FUNCTION_CHANGED UPDATE_CHOICES -
-      > P1: N FUN_PARAM_CHANGED - -
-      > P2: N FUN_PARAM_CHANGED - -
-      > P3: N FUN_PARAM_CHANGED - -
-      > P4: N FUN_PARAM_CHANGED - -
+      > ENC F encoder_event display_value value min max
+      > FN: D FUNCTION_CHANGED UPDATE_CHOICES - - -
+      > P1: N FUN_PARAM_CHANGED - - - -
+      > P2: N FUN_PARAM_CHANGED - - - -
+      > P3: N FUN_PARAM_CHANGED - - - -
+      > P4: N FUN_PARAM_CHANGED - - - -
 
 ch_switch_on:
   defaults:
@@ -85,6 +86,36 @@ ch_switch_on:
       > set_global . 0
     < call switch_closed 56
       > switch_closed returned
+    < report encoders
+      > ENC F encoder_event display_value value min max
+      > FN: E FUNCTION_CHANGED UPDATE_CHOICES 0 0 7
+      > P1: E FUN_PARAM_CHANGED UPDATE_SHARPS_FLATS 7 0 14
+      > P2: D FUN_PARAM_CHANGED 0xFF - - -
+      > P3: D FUN_PARAM_CHANGED 0xFF - - -
+      > P4: E FUN_PARAM_CHANGED UPDATE_CHOICES 0 0 1
+
+ch_switch_off:
+  defaults:
+    turn_off_choices_leds: null
+    clear_numeric_display: null
+    getResponse: 2
+
+  script: |
+    < set Response_data 0 = 0   # Errno from LED controller
+      > set_global . 0
+    < set Response_data 1 = 0   # Err_data from LED controller
+      > set_global . 0
+    < set Switches 56 current = 0   # turn off CH-2 switch
+      > set_global . .
+    < call switch_opened 56
+      > switch_opened returned
+    < report encoders
+      > ENC F encoder_event display_value value min max
+      > FN: N FUNCTION_CHANGED - - - -
+      > P1: N FUN_PARAM_CHANGED - - - -
+      > P2: N FUN_PARAM_CHANGED - - - -
+      > P3: N FUN_PARAM_CHANGED - - - -
+      > P4: N FUN_PARAM_CHANGED - - - -
 
 
   # interesting things in loop:

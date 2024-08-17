@@ -71,10 +71,12 @@ Script = None
 Current_script = None
 Call_depth = 0
 Pass_through_depth = None   # pass-through until Call_depth < Pass_through_depth
+Pass_through_start = None   # 'call' or 'fun_called'
 
 def init():
     global Sock_buffer, Report_lines, Defines, Lookups, Classes, Structs, Globals, Arrays
     global Functions, Seq_numbers, Sketch_dir, Script, Current_script, Call_depth, Pass_through_depth
+    global Pass_through_start
     Sock_buffer = ''
     Report_lines = deque()
     Defines = {}   # name: int(value)
@@ -90,6 +92,7 @@ def init():
     Current_script = None
     Call_depth = 0
     Pass_through_depth = None
+    Pass_through_start = None   # 'call' or 'fun_called'
 
 def add_define(name, value):
     assert name not in Defines, f"{name} already #defined"
@@ -440,7 +443,8 @@ def completer(text, state):
             got_Q = True
         if not prior_words:
             choices = ['? ', 'trace ', 'readline', 'run ', 'display ', 'get ', 'call ',
-                       'report ', 'return ', 'exit ']
+                       'report ', 'exit ']
+            choices.extend(f"{fn} return" for fn in Functions.keys())
             if got_Q:
                 choices.remove('? ')
         elif prior_words[0] == 'trace':
@@ -472,8 +476,10 @@ def completer(text, state):
                 choices = list(Functions.keys())
             else:
                 choices = list(Defines.keys())
-        elif prior_words[0] == 'return':
+        elif prior_words[0] in Functions:
             if len(prior_words) == 1:
+                choices = ['return']
+            elif prior_words[1] == 'return':
                 choices = list(Defines.keys())
         if Completer_trace and state == 0:
             print("completer choices", choices)
@@ -618,6 +624,7 @@ def get(*words_in):
     return data  # as str
 
 def dump_encoders():
+    Report_lines.append("ENC F encoder_event display_value value min max")
     Report_lines.append(dump_encoder('FUNCTION_ENCODER'))
     for enc in range(4):
         Report_lines.append(dump_encoder(str(enc)))
@@ -627,31 +634,38 @@ def dump_encoder(enc):
         enc_name = f"P{int(enc) + 1}"
     else:
         enc_name = "FN"
-    encoder_event = decode_event(int(get('Encoders', enc, 'encoder_event')))
+    encoder_event = decode_event(get('Encoders', enc, 'encoder_event'))
     var = get('Encoders', enc, 'var')
     if var == '0':
         # NULL var
-        return f"{enc_name}: N {encoder_event} - -"
-    display_value = decode_event(int(get('Encoders', enc, 'var', 'var_type', 'display_value')))
+        return f"{enc_name}: N {encoder_event} - - - -"
+    display_value = decode_event(get('Encoders', enc, 'var', 'var_type', 'display_value'))
     flags = int(get('Encoders', enc, 'var', 'var_type', 'flags'))
     if flags & Defines['ENCODER_FLAGS_DISABLED']:
         # Disabled
-        return f"{enc_name}: D {encoder_event} {display_value} -"
+        return f"{enc_name}: D {encoder_event} {display_value} - - -"
     value = get('Encoders', enc, 'var', 'value')
+    min = get('Encoders', enc, 'var', 'var_type', 'min')
+    max = get('Encoders', enc, 'var', 'var_type', 'max')
     # Enabled
-    return f"{enc_name}: E {encoder_event} {display_value} {value}"
+    return f"{enc_name}: E {encoder_event} {display_value} {value} {min} {max}"
 
 def decode_event(n):
     # n must be an int
     # return may str or int
     if n in Lookups['events']:
         return Lookups['events'][n]
-    if n == 0xFF:
+    if n == '255':
         return '0xFF'
     return n
 
+def dump_events():
+    for value, name in sorted(Lookups['events'].items(), key=lambda item: int(item[0])):
+        Report_lines.append(f"{value}: {name}")
+
 Reports = {
     'encoders': dump_encoders,
+    'events': dump_events,
 }
 
 def indent(added_call_depth=0):
@@ -718,7 +732,7 @@ def cpp_adj_depth(cpp_command):
 def to_cpp(command):
     # caller must print command to stdout before calling
     # does not return anything
-    global Call_depth, Pass_through_depth
+    global Call_depth, Pass_through_depth, Pass_through_start
     assert not Report_lines, f"to_cpp called with {len(Report_lines)} Report_lines remaining"
     tcmd = translate(command)  # runs report and returns '', if "report" command given
     if command.startswith('get ') or command.startswith('set '):
@@ -738,6 +752,7 @@ def to_cpp(command):
             if Trace:
                 print("to_cpp: setting Pass_through_depth to", Call_depth)
             Pass_through_depth = Call_depth
+            Pass_through_start = 'call'
     else:
         send_sock(tcmd)
         if 'return' in tcmd:
@@ -748,7 +763,7 @@ def from_cpp(verbose):
     # though they are printed if verbose is True.
     # Prints recvd_cmd before returning it (no trailing '\n').
     # Caller does validation (if any) on recvd_cmd.
-    global Call_depth, Pass_through_depth
+    global Call_depth, Pass_through_depth, Pass_through_start
     while True:
         if Trace:
             print(f"top of from_cpp loop, {Call_depth=}, {Pass_through_depth=}")
@@ -779,6 +794,7 @@ def from_cpp(verbose):
                     if action is not None and action == 'pass-through':
                         if Pass_through_depth is None:
                             Pass_through_depth = Call_depth + 1
+                            Pass_through_start = 'fun_called'
                             if Trace:
                                 print(f"from_cpp loop, fun_called with pass-through {Call_depth=} "
                                       f"{Pass_through_depth=}")
@@ -788,11 +804,13 @@ def from_cpp(verbose):
                             print(f"from_cpp loop, sending {call_cmd=!r}")
                         send_sock(call_cmd + '\n')
             else:
-                if Pass_through_depth is not None and Call_depth >= Pass_through_depth:
-                    idx = recvd_cmd.find('returned')
-                    assert idx >= 0, f"ERROR: from_cpp expected 'returned', got {recvd_cmd}"
-                    ret_pass_through_cmd = recvd_cmd.replace('returned', 'return', 1)
-                    send_sock(ret_pass_through_cmd + '\n')
+                if Pass_through_depth is not None:
+                    if Call_depth > Pass_through_depth or \
+                       Call_depth == Pass_through_depth and Pass_through_start == 'fun_called':
+                        assert 'returned' in recvd_cmd, \
+                               f"ERROR: from_cpp expected 'returned', got {recvd_cmd}"
+                        ret_pass_through_cmd = recvd_cmd.replace('returned', 'return', 1)
+                        send_sock(ret_pass_through_cmd + '\n')
         if Pass_through_depth is None and default_return is None or verbose:
             if ret_pass_through_cmd:
                 print(indent(), '< ', ret_pass_through_cmd, sep='')
@@ -808,6 +826,7 @@ def from_cpp(verbose):
             if Trace:
                 print(f"from_cpp loop, setting {Pass_through_depth=} to None, {Call_depth=}")
             Pass_through_depth = None
+            Pass_through_start = None
         if Pass_through_depth is None and default_return is None:
             if Trace:
                 print(f"from_cpp no pass-through or default_return, returning {recvd_cmd=!r}")
@@ -850,8 +869,7 @@ def do_icommand(request, verbose):
 def get_action(command):
     # returns None, 'pass-through', or 'fun_name return X' (no trailing '\n')
     if not command.startswith('call') and not command.startswith('fun_called'):
-        idx = command.find('returned')
-        assert idx != -1, f"get_action: expected 'returned', got {command!r}"
+        assert 'returned' in command, f"get_action: expected 'returned', got {command!r}"
         assert Pass_through_depth is not None  # I think this will always be the case... ??
         return command.replace('returned', 'return', 1)   # change 'returned' to 'return'
     cmd, fname, *params = command.split()

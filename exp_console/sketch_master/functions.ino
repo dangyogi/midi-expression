@@ -192,7 +192,7 @@ void load_functions(byte skip_ch_functions) {
 }
 
 void load_encoders(void) {
-  // Loads Encoders from Functions.
+  // Loads Parameter Encoders from Functions.
   // Called when the FUNCTION changes.
   // Does not reset Functions.changed.
   // Clears displays prior to update.
@@ -290,6 +290,7 @@ void channel_on(byte sw) {
       // turn function encoder back on
       Encoders[FUNCTION_ENCODER].var = &Function_var;
       variable_t *var = Encoders[FUNCTION_ENCODER].var;
+      var->var_type->flags &= ~ENCODER_FLAGS_DISABLED;
       if (Lowest_harmonic == 0xFF) {
         var->var_type->max = NUM_CH_FUNCTIONS - 1;
         if (var->value > var->var_type->max) var->value = var->var_type->max;
