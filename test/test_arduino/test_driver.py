@@ -827,6 +827,8 @@ def from_cpp(verbose):
                 print(f"from_cpp loop, setting {Pass_through_depth=} to None, {Call_depth=}")
             Pass_through_depth = None
             Pass_through_start = None
+            if not verbose and 'returned' in recvd_cmd:
+                print(indent(1), '> ', format_command(recvd_cmd), sep='')
         if Pass_through_depth is None and default_return is None:
             if Trace:
                 print(f"from_cpp no pass-through or default_return, returning {recvd_cmd=!r}")
