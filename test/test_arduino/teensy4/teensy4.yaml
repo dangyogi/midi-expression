@@ -245,6 +245,17 @@ functions:   # optional 'gen_caller: False', 'return: <type>' and
       - address: uint8_t
       - quantity: uint8_t
       - sendStop: uint8_t
-
+  
+  # usb_midi.h
+  usb_midi_flush_output:
+    gen_caller: False
+  usb_midi_send:
+    gen_caller: False
+    params:
+      - type: uint8_t
+      - data1: uint8_t
+      - data2: uint8_t
+      - channel: uint8_t
+      - cable: uint8_t
 
 # vim: sw=2 ic

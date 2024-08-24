@@ -29,6 +29,8 @@ defaults:
   TwoWire_end: null
   TwoWire_setClock: null
   TwoWire_beginTransmission: null
+  usb_midi_flush_output: null
+  usb_midi_send: null
 
   load_encoders: pass-through
   clear_displays: pass-through
@@ -65,6 +67,46 @@ setup:
       > P2: N FUN_PARAM_CHANGED - - - -
       > P3: N FUN_PARAM_CHANGED - - - -
       > P4: N FUN_PARAM_CHANGED - - - -
+    < set Current_pot_value 0 = 5
+      > set_global . 0
+    < set Current_pot_value 1 = 10
+      > set_global . 0
+    < set Current_pot_value 2 = 15
+      > set_global . 0
+    < set Current_pot_value 3 = 20
+      > set_global . 0
+    < set Current_pot_value 4 = 25
+      > set_global . 0
+    < set Current_pot_value 5 = 30
+      > set_global . 0
+    < set Current_pot_value 6 = 35
+      > set_global . 0
+    < set Current_pot_value 7 = 40
+      > set_global . 0
+    < set Current_pot_value 8 = 45
+      > set_global . 0
+    < set Current_pot_value 9 = 50
+      > set_global . 0
+    < set Current_pot_value 10 = 55
+      > set_global . 0
+    < set Current_pot_value 11 = 60
+      > set_global . 0
+    < set Current_pot_value 12 = 65
+      > set_global . 0
+    < set Current_pot_value 13 = 70
+      > set_global . 0
+    < set Current_pot_value 14 = 75
+      > set_global . 0
+    < set Current_pot_value 15 = 80
+      > set_global . 0
+    < set Current_pot_value 16 = 85
+      > set_global . 0
+    < set Current_pot_value 17 = 90
+      > set_global . 0
+    < set Current_pot_value 18 = 95
+      > set_global . 0
+    < set Current_pot_value 19 = 100
+      > set_global . 0
 
 ch2_switch_on:
   defaults:
@@ -168,9 +210,13 @@ ch4_switch_off:
   #
   # call notes_on
   # call notes_off
+  #
   # call pot_changed pot (calls send_pot if trigger set: Pot_trigger pot == 0xFF
   #                                                      or Triggers[Pot_trigger[pot]].continuous)
   # call send_pot pot
+  #
+  # set Current_pot_value pot = X
+  # set Synced_pot_value pot = X    # last pot_value sent, initially 0
 
   # get Encoders FUNCTION_ENCODER (0-3 are fn args) encoder_event (when encoder changes)
   #                                                 var (is var set?)

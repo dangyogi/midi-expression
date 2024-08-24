@@ -386,6 +386,9 @@ arrays:
   Pots:
     element_type: byte
     dims: [NUM_POT_TRIGGERS, MAX_TRIGGER_POTS]
+  Pot_trigger:
+    element_type: byte
+    dims: [NUM_POTS]
 
   # sketch_master.ino
   Remote_Errno:

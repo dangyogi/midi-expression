@@ -397,8 +397,26 @@ def sendRequest_notes(params):
         history_line = f"{cmd}: {' '.join(param_decode)}"
         LED_history[unit][digits[1]].append(history_line)
 
+Midi_types = {
+    0x80: "NoteOff",
+    0x90: "NoteOn",
+    0xA0: "AfterTouchPoly",
+    0xB0: "ControlChange",
+    0xC0: "ProgramChange",
+    0xD0: "AfterTouchChannel",
+    0xE0: "PitchBend",
+    # omitting 0xF? types
+}
+
+Midi_send_history = []
+
+def midi_send_notes(params):
+    type, data1, data2, channel, cable = [int(p) for p in params]
+    Midi_send_history.append(f"{cable} {channel}: {Midi_types.get(type, hex(type))} {data1} {data2}")
+
 Fun_notes = {
     'sendRequest': sendRequest_notes,
+    'usb_midi_send': midi_send_notes,
 }
 
 def format_command(command):
@@ -703,11 +721,24 @@ def dump_led_history():
     if not Report_lines:
         Report_lines.append("no LED history")
 
+def clear_midi_send_history():
+    global Midi_send_history
+    Midi_send_history = []
+    Report_lines.append("Midi_send_history cleared")
+
+def dump_midi_send_history():
+    if not Midi_send_history:
+        Report_lines.append("no Midi_send history")
+    else:
+        Report_lines.extend(Midi_send_history)
+
 Reports = {
     'encoders': dump_encoders,
     'events': dump_events,
     'clear_led_history': clear_led_history,
     'led_history': dump_led_history,
+    'clear_midi_history': clear_midi_send_history,
+    'midi_history': dump_midi_send_history,
 }
 
 def indent(added_call_depth=0):

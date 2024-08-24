@@ -15,7 +15,7 @@
 #include "triggers.h"
 #include "midi_control.h"
 
-#define PROGRAM_ID    "Master V59"
+#define PROGRAM_ID    "Master V60"
 
 // These are set to INPUT_PULLDOWN to prevent flickering on unused ports
 #define FIRST_PORT    0
