@@ -117,10 +117,10 @@ variable_t Functions[NUM_FUNCTIONS][NUM_FUNCTION_ENCODERS] = {
   },
 };
 
-byte Lowest_harmonic = 0xFF;  // 0-9, 0xFF when all switches off
+byte Lowest_harmonic = 0xFF;   // 0-9, 0xFF when all switches off
 unsigned short Harmonic_bitmap;
-byte Lowest_channel = 0xFF;   // 0-15, 0xFF when all switches off
-unsigned short Channel_bitmap;
+byte Lowest_channel = 0xFF;    // 0-15, 0xFF when all switches off
+unsigned short Channel_bitmap; // least significant bit is midi ch 0
 byte Buffer[NUM_FUNCTION_ENCODERS];
 
 void update_channel_memory(byte ch) { 

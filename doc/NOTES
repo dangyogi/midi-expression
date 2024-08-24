@@ -8,7 +8,7 @@ MIDI:
         they haven't changed.
         - command bytes are split in half.  The most significant hex digit (minus the
           command bit) is the command code (0-7), the least significant hex digit is
-          the MIDI channel (0-15).
+          the MIDI channel - 1 (0-15).
           - command codes and parameters (all commands, except SysEx, have 1 or 2 params):
             - 0x80 Note Off: key, velocity
             - 0x90 Note On: key, velocity  # also serves as Note Off when velocity == 0!!

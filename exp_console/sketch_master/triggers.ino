@@ -15,12 +15,12 @@ trigger_t Triggers[NUM_TRIGGERS] = {  // pot triggers share same array index as 
 
 byte Num_pots[NUM_POT_TRIGGERS] = {3, 3, 3, 3, 3, 3};
 byte Pots[NUM_POT_TRIGGERS][MAX_TRIGGER_POTS] = {
-  { 1,  2,  3},  // 1st Note
-  { 4,  5,  6},  // 2nd Note
-  { 7,  8,  9},  // 3rd Note
-  {10, 11, 12},  // 4th Note
-  {13, 14, 15},  // 5th Note
-  {18, 19, 20},  // vol note_on/off
+  { 0,  1,  2},  // 1st Note
+  { 3,  4,  5},  // 2nd Note
+  { 6,  7,  8},  // 3rd Note
+  { 9, 10, 11},  // 4th Note
+  {12, 13, 14},  // 5th Note
+  {17, 18, 19},  // vol note_on/off
 };
 
 // 0xFF means no trigger == always continuous!

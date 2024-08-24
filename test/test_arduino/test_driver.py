@@ -393,8 +393,11 @@ def sendRequest_notes(params):
     digits = [int(params[1][2*i:2*i+2], 16) for i in range(len(params[1])//2)]
     if digits[0] in I2C_LED_commands:
         cmd, unit, *params = I2C_LED_commands[digits[0]].split()
-        param_decode = (f"{name}={value}" for name, value in zip(params, digits[2:]))
-        history_line = f"{cmd}: {' '.join(param_decode)}"
+        param_decode = [f"{name}={value}" for name, value in zip(params, digits[2:])]
+        if param_decode:
+            history_line = f"{cmd}: {' '.join(param_decode)}"
+        else:
+            history_line = cmd
         LED_history[unit][digits[1]].append(history_line)
 
 Midi_types = {
@@ -408,11 +411,41 @@ Midi_types = {
     # omitting 0xF? types
 }
 
+Control_codes = {
+    0x01: "modulation",
+    0x06: "msb parameter value",
+    0x26: "lsb parameter value",
+    0x07: "channel volume",
+    0x0A: "pan",
+    0x0B: "expression controller",
+    0x40: "sustain pedal on/off, <=63 off; >=64 on",
+    0x62: "NRPN lsb",
+    0x63: "NRPN msb",
+    0x64: "RPN lsb",
+    0x65: "RPN msb",
+    0x79: "Reset all controllers",
+    0x7B: "All notes off",
+}
+
 Midi_send_history = []
 
+Cables = ("Synth", "Player")
+
+Notes = "C C# D Eb E F F# G Ab A Bb B".split()
+
 def midi_send_notes(params):
+    # channel numbers here are midi channels (1-16)
     type, data1, data2, channel, cable = [int(p) for p in params]
-    Midi_send_history.append(f"{cable} {channel}: {Midi_types.get(type, hex(type))} {data1} {data2}")
+    if type in (0x80, 0x90):  # NoteOff, NoteOn
+        octave, note = divmod(data1 - 12, 12)
+        Midi_send_history.append(f"{Cables[cable]} {channel}: {Midi_types.get(type, hex(type))} "
+                                 f"{Notes[note]}{octave} {data2}")
+    elif type == 0xB0:
+        Midi_send_history.append(f"{Cables[cable]} {channel}: {Midi_types.get(type, hex(type))} "
+                                 f"{Control_codes.get(data1, hex(data1))} {data2}")
+    else:
+        Midi_send_history.append(f"{Cables[cable]} {channel}: {Midi_types.get(type, hex(type))} "
+                                 f"{data1} {data2}")
 
 Fun_notes = {
     'sendRequest': sendRequest_notes,
@@ -628,7 +661,7 @@ def make_get_global(words_in):
     elif words_in[0] in Arrays:
         type, offsets = Arrays[words_in[0]].global_args(words_in[1:])
     else:
-        printf(f"ERROR: Unrecognized Global/Array {words_in[0]!r}", file=sys.stderr)
+        print(f"ERROR: Unrecognized Global/Array {words_in[0]!r}", file=sys.stderr)
         sys.exit(2)
     return type, offsets
 
@@ -724,11 +757,11 @@ def dump_led_history():
 def clear_midi_send_history():
     global Midi_send_history
     Midi_send_history = []
-    Report_lines.append("Midi_send_history cleared")
+    Report_lines.append("midi_history cleared")
 
 def dump_midi_send_history():
     if not Midi_send_history:
-        Report_lines.append("no Midi_send history")
+        Report_lines.append("no midi history")
     else:
         Report_lines.extend(Midi_send_history)
 
@@ -774,7 +807,11 @@ def run_script(script_name, verbose):
                 print(f"ERROR: {script_name}[{line_no}]: Unknown line prefix {line=!r}", file=sys.stderr)
                 sys.exit(2)
     finally:
-        assert not Report_lines, f"run_script: extra report_lines not matched at end of script"
+        if Report_lines:
+            print("run_script: extra report_lines not matched at end of script", file=sys.stderr)
+            for line in Report_lines:
+                print(" >", line, file=sys.stderr)
+            exit(2)
         Current_script = None
         if Trace:
             print(f"run_script done, {Call_depth=}")
