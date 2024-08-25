@@ -373,6 +373,483 @@ send_pots_1:
     < report clear_midi_history
       > midi_history cleared
 
+note_buttons:
+  # notes: A3, C4, E4, G4, Bb4, C5
+  # buttons: 72-77
+  # Continuous/Pulse Switch: 35
+  script: |
+    < get Periodic_period 0     # Notes On
+      > get_global . 0
+    < get Periodic_period 1     # Notes Off
+      > get_global . 0
+    < report clear_midi_history
+      > midi_history cleared
+    < set Switches 72 current = 1   # press A3
+      > set_global . .
+    < call switch_closed 72
+      > switch_closed returned
+    < report midi_history
+      > Synth 1: NoteOn A3 50
+    < set Switches 72 current = 0   # release A3
+      > set_global . .
+    < call switch_opened 72
+      > switch_opened returned
+    < report midi_history
+      > Synth 1: NoteOn A3 50
+      > Synth 1: NoteOff A3 0
+    < report clear_midi_history
+      > midi_history cleared
+    < set Switches 73 current = 1   # press C4
+      > set_global . .
+    < call switch_closed 73
+      > switch_closed returned
+    < report midi_history
+      > Synth 1: NoteOn C4 50
+    < set Switches 73 current = 0   # release C4
+      > set_global . .
+    < call switch_opened 73
+      > switch_opened returned
+    < report midi_history
+      > Synth 1: NoteOn C4 50
+      > Synth 1: NoteOff C4 0
+    < report clear_midi_history
+      > midi_history cleared
+    < set Switches 74 current = 1   # press E4
+      > set_global . .
+    < call switch_closed 74
+      > switch_closed returned
+    < report midi_history
+      > Synth 1: NoteOn E4 50
+    < set Switches 74 current = 0   # release E4
+      > set_global . .
+    < call switch_opened 74
+      > switch_opened returned
+    < report midi_history
+      > Synth 1: NoteOn E4 50
+      > Synth 1: NoteOff E4 0
+    < report clear_midi_history
+      > midi_history cleared
+    < set Switches 75 current = 1   # press G4
+      > set_global . .
+    < call switch_closed 75
+      > switch_closed returned
+    < report midi_history
+      > Synth 1: NoteOn G4 50
+    < set Switches 75 current = 0   # release G4
+      > set_global . .
+    < call switch_opened 75
+      > switch_opened returned
+    < report midi_history
+      > Synth 1: NoteOn G4 50
+      > Synth 1: NoteOff G4 0
+    < report clear_midi_history
+      > midi_history cleared
+    < set Switches 76 current = 1   # press Bb4
+      > set_global . .
+    < call switch_closed 76
+      > switch_closed returned
+    < report midi_history
+      > Synth 1: NoteOn Bb4 50
+    < set Switches 76 current = 0   # release Bb4
+      > set_global . .
+    < call switch_opened 76
+      > switch_opened returned
+    < report midi_history
+      > Synth 1: NoteOn Bb4 50
+      > Synth 1: NoteOff Bb4 0
+    < report clear_midi_history
+      > midi_history cleared
+    < set Switches 77 current = 1   # press C5
+      > set_global . .
+    < call switch_closed 77
+      > switch_closed returned
+    < report midi_history
+      > Synth 1: NoteOn C5 50
+    < set Switches 77 current = 0   # release C5
+      > set_global . .
+    < call switch_opened 77
+      > switch_opened returned
+    < report midi_history
+      > Synth 1: NoteOn C5 50
+      > Synth 1: NoteOff C5 0
+    < report clear_midi_history
+      > midi_history cleared
+    < set Switches 35 current = 1   # Notes Continuous
+      > set_global . .
+    < call switch_closed 35
+      > switch_closed returned
+    < get Periodic_period 0     # Notes On
+      > get_global . 0
+    < get Periodic_period 1     # Notes Off
+      > get_global . 0
+    < set Switches 73 current = 1   # press C4
+      > set_global . .
+    < call switch_closed 73
+      > switch_closed returned
+    < report midi_history
+      > Synth 1: NoteOn C4 50
+    < set Switches 75 current = 1   # press G4
+      > set_global . .
+    < call switch_closed 75
+      > switch_closed returned
+    < report midi_history
+      > Synth 1: NoteOn C4 50
+      > Synth 1: NoteOn G4 50
+    < set Switches 35 current = 0   # Notes Pulse
+      > set_global . .
+    < call switch_opened 35
+      > switch_opened returned
+    < get Periodic_period 0     # Notes On
+      > get_global . 0
+    < get Periodic_period 1     # Notes Off
+      > get_global . 0
+    < set Switches 75 current = 0   # release G4
+      > set_global . .
+    < call switch_opened 75
+      > switch_opened returned
+    < report midi_history
+      > Synth 1: NoteOn C4 50
+      > Synth 1: NoteOn G4 50
+      > Synth 1: NoteOff G4 0
+    < set Switches 73 current = 0   # release C4
+      > set_global . .
+    < call switch_opened 73
+      > switch_opened returned
+    < report midi_history
+      > Synth 1: NoteOn C4 50
+      > Synth 1: NoteOn G4 50
+      > Synth 1: NoteOff G4 0
+      > Synth 1: NoteOff C4 0
+
+note_switches:
+  # notes: A3, C4, E4, G4, Bb4, C5
+  # switches: 48-53
+  # Continuous/Pulse Switch: 35
+  defaults:
+    millis: 100
+    notes_on: pass-through
+    notes_off: pass-through
+
+  script: |
+    < report clear_midi_history
+      > midi_history cleared
+    < set Switches 35 current = 1   # Notes Continuous
+      > set_global . .
+    < call switch_closed 35
+      > switch_closed returned
+    < get Periodic_period 0     # Notes On
+      > get_global . 0
+    < get Periodic_period 1     # Notes Off
+      > get_global . 0
+    < set Switches 48 current = 1   # A3 on
+      > set_global . .
+    < call switch_closed 48
+      > switch_closed returned
+    < report midi_history
+      > Synth 1: NoteOn A3 50
+    < set Switches 49 current = 1   # C4 on
+      > set_global . .
+    < call switch_closed 49
+      > switch_closed returned
+    < report midi_history
+      > Synth 1: NoteOn A3 50
+      > Synth 1: NoteOn C4 50
+    < set Switches 50 current = 1   # E4 on
+      > set_global . .
+    < call switch_closed 50
+      > switch_closed returned
+    < report midi_history
+      > Synth 1: NoteOn A3 50
+      > Synth 1: NoteOn C4 50
+      > Synth 1: NoteOn E4 50
+    < set Switches 51 current = 1   # G4 on
+      > set_global . .
+    < call switch_closed 51
+      > switch_closed returned
+    < report midi_history
+      > Synth 1: NoteOn A3 50
+      > Synth 1: NoteOn C4 50
+      > Synth 1: NoteOn E4 50
+      > Synth 1: NoteOn G4 50
+    < set Switches 52 current = 1   # Bb4 on
+      > set_global . .
+    < call switch_closed 52
+      > switch_closed returned
+    < report midi_history
+      > Synth 1: NoteOn A3 50
+      > Synth 1: NoteOn C4 50
+      > Synth 1: NoteOn E4 50
+      > Synth 1: NoteOn G4 50
+      > Synth 1: NoteOn Bb4 50
+    < set Switches 53 current = 1   # C5 on
+      > set_global . .
+    < call switch_closed 53
+      > switch_closed returned
+    < report midi_history
+      > Synth 1: NoteOn A3 50
+      > Synth 1: NoteOn C4 50
+      > Synth 1: NoteOn E4 50
+      > Synth 1: NoteOn G4 50
+      > Synth 1: NoteOn Bb4 50
+      > Synth 1: NoteOn C5 50
+    < get Periodic_period 0     # Notes On
+      > get_global . 0
+    < get Periodic_period 1     # Notes Off
+      > get_global . 0
+    < set Switches 52 current = 0   # Bb4 off
+      > set_global . .
+    < call switch_opened 52
+      > switch_opened returned
+    < report midi_history
+      > Synth 1: NoteOn A3 50
+      > Synth 1: NoteOn C4 50
+      > Synth 1: NoteOn E4 50
+      > Synth 1: NoteOn G4 50
+      > Synth 1: NoteOn Bb4 50
+      > Synth 1: NoteOn C5 50
+      > Synth 1: NoteOff Bb4 0
+    < set Switches 48 current = 0   # A3 off
+      > set_global . .
+    < call switch_opened 48
+      > switch_opened returned
+    < report midi_history
+      > Synth 1: NoteOn A3 50
+      > Synth 1: NoteOn C4 50
+      > Synth 1: NoteOn E4 50
+      > Synth 1: NoteOn G4 50
+      > Synth 1: NoteOn Bb4 50
+      > Synth 1: NoteOn C5 50
+      > Synth 1: NoteOff Bb4 0
+      > Synth 1: NoteOff A3 0
+    < set Switches 53 current = 0   # C5 off
+      > set_global . .
+    < call switch_opened 53
+      > switch_opened returned
+    < report midi_history
+      > Synth 1: NoteOn A3 50
+      > Synth 1: NoteOn C4 50
+      > Synth 1: NoteOn E4 50
+      > Synth 1: NoteOn G4 50
+      > Synth 1: NoteOn Bb4 50
+      > Synth 1: NoteOn C5 50
+      > Synth 1: NoteOff Bb4 0
+      > Synth 1: NoteOff A3 0
+      > Synth 1: NoteOff C5 0
+    < set Switches 50 current = 0   # E4 off
+      > set_global . .
+    < call switch_opened 50
+      > switch_opened returned
+    < report midi_history
+      > Synth 1: NoteOn A3 50
+      > Synth 1: NoteOn C4 50
+      > Synth 1: NoteOn E4 50
+      > Synth 1: NoteOn G4 50
+      > Synth 1: NoteOn Bb4 50
+      > Synth 1: NoteOn C5 50
+      > Synth 1: NoteOff Bb4 0
+      > Synth 1: NoteOff A3 0
+      > Synth 1: NoteOff C5 0
+      > Synth 1: NoteOff E4 0
+
+    # This leaves C4 and G4 still on, let's play with pulsing...
+    < report clear_midi_history
+      > midi_history cleared
+    < set Switches 35 current = 0   # Notes Pulse
+      > set_global . .
+    < call switch_opened 35
+      > switch_opened returned
+    < get Periodic_period 0     # Notes On
+      > get_global . 500
+    < get Periodic_period 1     # Notes Off
+      > get_global . 500
+    < get Periodic_offset 0     # Notes On
+      > get_global . 6
+    < get Periodic_offset 1     # Notes Off
+      > get_global . 411
+    < get Periodic_next 0       # Notes On
+      > get_global . 506
+    < get Periodic_next 1       # Notes Off
+      > get_global . 411
+    < report midi_history
+      > no midi history         # notes still on
+
+    # run notes_off periodic
+    < report clear_midi_history
+      > midi_history cleared
+    < call notes_off
+      > notes_off returned
+    < report midi_history
+      > Synth 1: NoteOff C4 0
+      > Synth 1: NoteOff G4 0
+
+    # run notes_on periodic
+    < report clear_midi_history
+      > midi_history cleared
+    < call notes_on
+      > notes_on returned
+    < report midi_history
+      > Synth 1: NoteOn C4 50
+      > Synth 1: NoteOn G4 50
+
+    # back to notes_off and then turn on Continuous and see if it turns the notes back on
+    < report clear_midi_history
+      > midi_history cleared
+    < call notes_off
+      > notes_off returned
+    < report midi_history
+      > Synth 1: NoteOff C4 0
+      > Synth 1: NoteOff G4 0
+    < report clear_midi_history
+      > midi_history cleared
+    < set Switches 35 current = 1   # Notes Continuous
+      > set_global . .
+    < call switch_closed 35
+      > switch_closed returned
+    < get Periodic_period 0     # Notes On
+      > get_global . 0
+    < get Periodic_period 1     # Notes Off
+      > get_global . 0
+    < report midi_history
+      > Synth 1: NoteOn C4 50
+      > Synth 1: NoteOn G4 50
+
+    # turn on Pulse while notes are on
+    < report clear_midi_history
+      > midi_history cleared
+    < set Switches 35 current = 0   # Notes Pulse
+      > set_global . .
+    < call switch_opened 35
+      > switch_opened returned
+    < get Periodic_period 0     # Notes On
+      > get_global . 500
+    < get Periodic_period 1     # Notes Off
+      > get_global . 500
+    < report midi_history
+      > no midi history         # notes stay on
+
+    # turn on Continuous while notes are on
+    < report clear_midi_history
+      > midi_history cleared
+    < set Switches 35 current = 1   # Notes Continuous
+      > set_global . .
+    < call switch_closed 35
+      > switch_closed returned
+    < get Periodic_period 0     # Notes On
+      > get_global . 0
+    < get Periodic_period 1     # Notes Off
+      > get_global . 0
+    < report midi_history
+      > no midi history
+
+    # turn off G4 in Continuous
+    < report clear_midi_history
+      > midi_history cleared
+    < set Switches 51 current = 0   # G4 off
+      > set_global . .
+    < call switch_opened 51
+      > switch_opened returned
+    < get Periodic_period 0     # Notes On
+      > get_global . 0
+    < get Periodic_period 1     # Notes Off
+      > get_global . 0
+    < report midi_history
+      > Synth 1: NoteOff G4 0
+
+    # G4 back on, switch to Pulsed, notes_off, then turn G4 off
+    < report clear_midi_history
+      > midi_history cleared
+    < set Switches 51 current = 1   # G4 on
+      > set_global . .
+    < call switch_closed 51
+      > switch_closed returned
+    < report midi_history
+      > Synth 1: NoteOn G4 50
+    < report clear_midi_history
+      > midi_history cleared
+    < set Switches 35 current = 0   # Notes Pulse
+      > set_global . .
+    < call switch_opened 35
+      > switch_opened returned
+    < get Periodic_period 0     # Notes On
+      > get_global . 500
+    < get Periodic_period 1     # Notes Off
+      > get_global . 500
+    < report midi_history
+      > no midi history         # G4 still on
+    < call notes_off
+      > notes_off returned
+    < report midi_history
+      > Synth 1: NoteOff C4 0
+      > Synth 1: NoteOff G4 0
+    < report clear_midi_history
+      > midi_history cleared
+    < set Switches 51 current = 0   # G4 off
+      > set_global . .
+    < call switch_opened 51
+      > switch_opened returned
+    < report midi_history
+      > no midi history         # G4 already off in pulse
+    < get Periodic_period 0     # Notes On
+      > get_global . 500
+    < get Periodic_period 1     # Notes Off
+      > get_global . 500
+
+    # turn C4 off while pulse is off, should turn off pulsing
+    < report clear_midi_history
+      > midi_history cleared
+    < set Switches 49 current = 0   # C4 off
+      > set_global . .
+    < call switch_opened 49
+      > switch_opened returned
+    < report midi_history
+      > no midi history         # C4 already off in pulse
+    < get Periodic_period 0     # Notes On
+      > get_global . 0
+    < get Periodic_period 1     # Notes Off
+      > get_global . 0
+
+    # turn C4 back on, pulse mode still set, re-enables pulse mode
+    < report clear_midi_history
+      > midi_history cleared
+    < get Switches 35 current   # Continuous/Pulse switch still in Pulse
+      > get_global . 0
+    < set Switches 49 current = 1   # C4 on
+      > set_global . .
+    < call switch_closed 49
+      > switch_closed returned
+    < get Periodic_period 0     # Notes On
+      > get_global . 500
+    < get Periodic_period 1     # Notes Off
+      > get_global . 500
+    < report midi_history
+      > no midi history         # C4 still off...
+
+    # notes_off, notes_on, C4 off; check to see if C4 is turned off and pulse mode is disabled
+    < report clear_midi_history
+      > midi_history cleared
+    < call notes_off
+      > notes_off returned
+    < report midi_history
+      > no midi history
+    < report clear_midi_history
+      > midi_history cleared
+    < call notes_on
+      > notes_on returned
+    < report midi_history
+      > Synth 1: NoteOn C4 50
+    < report clear_midi_history
+      > midi_history cleared
+    < set Switches 49 current = 0   # C4 off
+      > set_global . .
+    < call switch_opened 49
+      > switch_opened returned
+    < report midi_history
+      > Synth 1: NoteOff C4 0
+    < get Periodic_period 0     # Notes On
+      > get_global . 0
+    < get Periodic_period 1     # Notes Off
+      > get_global . 0
+
   # interesting things in loop:
   #
   # set Switches sw current = X

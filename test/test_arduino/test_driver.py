@@ -666,16 +666,17 @@ def make_get_global(words_in):
     return type, offsets
 
 
-def compare(response, script_line):
+def compare(response, script_line, script_name, line_no):
     rwords = response.split()
     swords = script_line.split()
     if len(rwords) != len(swords):
-        print(f"ERROR: different number of words in response={response!r} and script={script_line!r}",
+        print(f"ERROR {script_name}[{line_no}]: different number of words in response={response!r} "
+              f"and script={script_line!r}",
               file=sys.stderr)
         sys.exit(1)
     for i, (rword, sword) in enumerate(zip(rwords, swords), 1):
         if sword != '.' and rword != sword and rword != translate_word(sword):
-            print(f"ERROR: in response={response!r}, "
+            print(f"ERROR {script_name}[{line_no}]: in response={response!r}, "
                   f"word {i}={rword!r} does not match script={sword!r}",
                   file=sys.stderr)
             sys.exit(1)
@@ -802,16 +803,17 @@ def run_script(script_name, verbose):
                 if Trace:
                     print("run_script: from_cpp returned", repr(response))
                 expect = line[1:].lstrip()
-                compare(response, expect)
+                compare(response, expect, script_name, line_no)
             else:
                 print(f"ERROR: {script_name}[{line_no}]: Unknown line prefix {line=!r}", file=sys.stderr)
                 sys.exit(2)
     finally:
         if Report_lines:
-            print("run_script: extra report_lines not matched at end of script", file=sys.stderr)
+            print("ERROR: {script_name}[{line_no}]: extra report_lines not matched at end of script",
+                  file=sys.stderr)
             for line in Report_lines:
                 print(" >", line, file=sys.stderr)
-            exit(2)
+            sys.exit(2)
         Current_script = None
         if Trace:
             print(f"run_script done, {Call_depth=}")
@@ -837,7 +839,7 @@ def cpp_adj_depth(cpp_command):
         Call_depth -= 1
     else:
         print("Unexpected cpp_command:", repr(cpp_command), file=sys.stderr)
-        exit(2)
+        sys.exit(2)
 
 def to_cpp(command):
     # caller must print command to stdout before calling
