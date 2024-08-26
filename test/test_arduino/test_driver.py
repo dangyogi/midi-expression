@@ -694,7 +694,7 @@ def strip_comment(line):
         line = line[: comment_start]
     return line.strip()
 
-def get(*words_in):
+def get(*words_in, ret_addr=False):
     # returns data as str
     # not intended to be called from command line
     assert Sock_buffer.find('\n') == -1, f"get: Sock_buffer not empty"
@@ -702,6 +702,8 @@ def get(*words_in):
     send_sock(f"get_global {type} {' '.join(offsets)}\n")
     command, final_addr, data = sock_readline(sock_only=True).split()
     assert command == 'get_global'
+    if ret_addr:
+        return final_addr  # as str
     return data  # as str
 
 def dump_encoders():
@@ -768,6 +770,24 @@ def dump_midi_send_history():
     else:
         Report_lines.extend(Midi_send_history)
 
+def check_encoders():
+    if get('Encoders', 'FUNCTION_ENCODER', 'var') == '0':
+        Report_lines.append('Function Encoder var not set')
+        return
+    if int(get('Encoders', 'FUNCTION_ENCODER', 'var', 'var_type', 'flags')) \
+       & Defines['ENCODER_FLAGS_DISABLED']:
+        Report_lines.append('Function Encoder DISABLED')
+        return
+    fun = get('Encoders', 'FUNCTION_ENCODER', 'var', 'value')
+    Report_lines.append(f'Function set to {fun}')
+    for enc in range(4):
+        var1 = get('Encoders', str(enc), 'var')
+        var2 = get('Functions', fun, str(enc), 'var_type', ret_addr=True)
+        if var1 == var2:
+            Report_lines.append(f"{enc}: set properly")
+        else:
+            Report_lines.append(f"{enc}: not set properly")
+
 Reports = {
     'encoders': dump_encoders,
     'events': dump_events,
@@ -775,6 +795,7 @@ Reports = {
     'led_history': dump_led_history,
     'clear_midi_history': clear_midi_send_history,
     'midi_history': dump_midi_send_history,
+    'check_encoders': check_encoders,
 }
 
 def indent(added_call_depth=0):
