@@ -45,7 +45,7 @@ fun_control_t Function_controls[NUM_FUN_CONTROLS] = {
   {0x14,   0, {{4, 0}, {}, {}, {1, 4}}, 0, 1}, // Key Signature
   {0x0007, 1, {{}, {4, 10}, {3, 7}, {7, 0}}, 0, 1}, // Tune Absolute
   {0x000A, 1, {{}, {4, 4}, {4, 0}, {}}}, // Match Tuning
-  {0x0002, 1, {{}, {}, {}, {5, 0}}}, // Equal Temperament
+  {0x0002, 1, {{}, {}, {5, 0}, {}}}, // Equal Temperament
   {0x0003, 1, {{4, 4}, {4, 0}, {}, {}}}, // Well Tempered
   {0x0005, 1, {{4, 10}, {2, 8}, {7, 0}, {1, 7}}}, // Meantone
   {0x0004, 1, {{4, 4}, {4, 0}, {}, {4, 8}}}, // Just Intonation

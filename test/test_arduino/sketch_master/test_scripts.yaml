@@ -850,6 +850,478 @@ note_switches:
     < get Periodic_period 1     # Notes Off
       > get_global . 0
 
+fun_ch_codes:
+  # Send button: 46
+  defaults: {}
+
+  script: |
+    # Turn on CH-2 and CH-4
+    < set Switches 56 current = 1   # turn on CH-2 switch
+      > set_global . .
+    < call switch_closed 56
+      > switch_closed returned
+    < set Switches 58 current = 1   # turn on CH-4 switch
+      > set_global . .
+    < call switch_closed 58
+      > switch_closed returned
+
+    # Key Signature
+    < get Encoders FUNCTION_ENCODER var var_type flags
+      > get_global . ENCODER_FLAGS_CHOICE_LEDS
+    < set Encoders FUNCTION_ENCODER var value = 0       # Key Signature
+      > set_global . .
+    < call encoder_changed FUNCTION_ENCODER
+      > encoder_changed returned
+    < get Encoders 0 var var_type flags
+      > get_global . 0
+    < set Encoders 0 var value = 6
+      > set_global . .
+    < set Function_changed = 1
+      > set_global . .
+    < call encoder_changed 0
+      > encoder_changed returned
+    < get Encoders 1 var var_type flags
+      > get_global . ENCODER_FLAGS_DISABLED
+    < get Encoders 2 var var_type flags
+      > get_global . ENCODER_FLAGS_DISABLED
+    < get Encoders 3 var var_type flags
+      > get_global . 6
+    < set Encoders 3 var value = 1
+      > set_global . .
+    < set Function_changed = 1
+      > set_global . .
+    < call encoder_changed 3
+      > encoder_changed returned
+    < report clear_midi_history
+      > midi_history cleared
+    < set Switches 46 current = 1   # press Send
+      > set_global . .
+    < call switch_closed 46
+      > switch_closed returned
+    < report midi_history
+      > Synth 16: ControlChange 0x14 22
+    < report clear_midi_history
+      > midi_history cleared
+    < set Switches 46 current = 0   # release Send
+      > set_global . .
+    < call switch_opened 46
+      > switch_opened returned
+    < report midi_history
+      > no midi history
+
+    # Tune Absolute
+    < get Encoders FUNCTION_ENCODER var var_type flags
+      > get_global . ENCODER_FLAGS_CHOICE_LEDS
+    < set Encoders FUNCTION_ENCODER var value = 1       # Tune Absolute
+      > set_global . .
+    < call encoder_changed FUNCTION_ENCODER
+      > encoder_changed returned
+
+    < get Encoders 0 var var_type flags
+      > get_global . ENCODER_FLAGS_DISABLED
+
+    < get Encoders 1 var var_type flags
+      > get_global . 0
+    < set Encoders 1 var value = 6   # 0110 < 10
+      > set_global . .
+    < set Function_changed = 1
+      > set_global . .
+    < call encoder_changed 0
+      > encoder_changed returned
+
+    < get Encoders 2 var var_type flags
+      > get_global . 0
+    < set Encoders 2 var value = 2   # 010 < 7
+      > set_global . .
+    < set Function_changed = 1
+      > set_global . .
+    < call encoder_changed 0
+      > encoder_changed returned
+
+    < get Encoders 3 var var_type flags
+      > get_global . 0
+    < set Encoders 3 var value = 54  # 0110110 < 0
+      > set_global . .
+    < set Function_changed = 1
+      > set_global . .
+    < call encoder_changed 3
+      > encoder_changed returned
+
+    # parameter value: 0110 010 0110110 == 0110010(50) 0110110(54)
+    < report clear_midi_history
+      > midi_history cleared
+    < set Switches 46 current = 1   # press Send
+      > set_global . .
+    < call switch_closed 46
+      > switch_closed returned
+    < report midi_history
+      > Synth 16: ControlChange NRPN msb 0
+      > Synth 16: ControlChange NRPN lsb 7
+      > Synth 16: ControlChange msb parameter value 50
+      > Synth 16: ControlChange lsb parameter value 54
+    < report clear_midi_history
+      > midi_history cleared
+    < set Switches 46 current = 0   # release Send
+      > set_global . .
+    < call switch_opened 46
+      > switch_opened returned
+    < report midi_history
+      > no midi history
+
+    # Match Tuning
+    < get Encoders FUNCTION_ENCODER var var_type flags
+      > get_global . ENCODER_FLAGS_CHOICE_LEDS
+    < set Encoders FUNCTION_ENCODER var value = 2       # Match Tuning
+      > set_global . .
+    < call encoder_changed FUNCTION_ENCODER
+      > encoder_changed returned
+
+    < get Encoders 0 var var_type flags
+      > get_global . ENCODER_FLAGS_DISABLED
+
+    < get Encoders 1 var var_type flags
+      > get_global . 0
+    < set Encoders 1 var value = 6   # 0110 < 4
+      > set_global . .
+    < set Function_changed = 1
+      > set_global . .
+    < call encoder_changed 0
+      > encoder_changed returned
+
+    < get Encoders 2 var var_type flags
+      > get_global . 0
+    < set Encoders 2 var value = 5   # 0101 < 0
+      > set_global . .
+    < set Function_changed = 1
+      > set_global . .
+    < call encoder_changed 0
+      > encoder_changed returned
+
+    < get Encoders 3 var var_type flags
+      > get_global . ENCODER_FLAGS_DISABLED
+
+    # parameter value: 0110 0101 == 0 1100101(101)
+    < report clear_midi_history
+      > midi_history cleared
+    < set Switches 46 current = 1   # press Send
+      > set_global . .
+    < call switch_closed 46
+      > switch_closed returned
+    < report midi_history
+      > Synth 2: ControlChange NRPN msb 0
+      > Synth 2: ControlChange NRPN lsb 10
+      > Synth 2: ControlChange msb parameter value 0
+      > Synth 2: ControlChange lsb parameter value 101
+      > Synth 4: ControlChange NRPN msb 0
+      > Synth 4: ControlChange NRPN lsb 10
+      > Synth 4: ControlChange msb parameter value 0
+      > Synth 4: ControlChange lsb parameter value 101
+    < report clear_midi_history
+      > midi_history cleared
+    < set Switches 46 current = 0   # release Send
+      > set_global . .
+    < call switch_opened 46
+      > switch_opened returned
+    < report midi_history
+      > no midi history
+
+    # Equal Temperament
+    < get Encoders FUNCTION_ENCODER var var_type flags
+      > get_global . ENCODER_FLAGS_CHOICE_LEDS
+    < set Encoders FUNCTION_ENCODER var value = 3       # Equal Temperament
+      > set_global . .
+    < call encoder_changed FUNCTION_ENCODER
+      > encoder_changed returned
+
+    < get Encoders 0 var var_type flags
+      > get_global . ENCODER_FLAGS_DISABLED
+
+    < get Encoders 1 var var_type flags
+      > get_global . ENCODER_FLAGS_DISABLED
+
+    < get Encoders 2 var var_type flags
+      > get_global . 0
+    < set Encoders 2 var value = 10   # 01010 < 0
+      > set_global . .
+    < set Function_changed = 1
+      > set_global . .
+    < call encoder_changed 0
+      > encoder_changed returned
+
+    < get Encoders 3 var var_type flags
+      > get_global . ENCODER_FLAGS_DISABLED
+
+    # parameter value: 01010(10)
+    < report clear_midi_history
+      > midi_history cleared
+    < set Switches 46 current = 1   # press Send
+      > set_global . .
+    < call switch_closed 46
+      > switch_closed returned
+    < report midi_history
+      > Synth 2: ControlChange NRPN msb 0
+      > Synth 2: ControlChange NRPN lsb 2
+      > Synth 2: ControlChange msb parameter value 0
+      > Synth 2: ControlChange lsb parameter value 10
+      > Synth 4: ControlChange NRPN msb 0
+      > Synth 4: ControlChange NRPN lsb 2
+      > Synth 4: ControlChange msb parameter value 0
+      > Synth 4: ControlChange lsb parameter value 10
+    < report clear_midi_history
+      > midi_history cleared
+    < set Switches 46 current = 0   # release Send
+      > set_global . .
+    < call switch_opened 46
+      > switch_opened returned
+    < report midi_history
+      > no midi history
+
+    # Well Tempered
+    < get Encoders FUNCTION_ENCODER var var_type flags
+      > get_global . ENCODER_FLAGS_CHOICE_LEDS
+    < set Encoders FUNCTION_ENCODER var value = 4       # Well Tempered
+      > set_global . .
+    < call encoder_changed FUNCTION_ENCODER
+      > encoder_changed returned
+
+    < get Encoders 0 var var_type flags
+      > get_global . 0
+    < set Encoders 0 var value = 10   # 1010 < 4
+      > set_global . .
+    < set Function_changed = 1
+      > set_global . .
+    < call encoder_changed 0
+      > encoder_changed returned
+
+    < get Encoders 1 var var_type flags
+      > get_global . 0
+    < set Encoders 1 var value = 6    # 0110 < 0
+      > set_global . .
+    < set Function_changed = 1
+      > set_global . .
+    < call encoder_changed 0
+      > encoder_changed returned
+
+    < get Encoders 2 var var_type flags
+      > get_global . ENCODER_FLAGS_DISABLED
+
+    < get Encoders 3 var var_type flags
+      > get_global . ENCODER_FLAGS_DISABLED
+
+    # parameter value: 1010 0110 == 1 0100110(38)
+    < report clear_midi_history
+      > midi_history cleared
+    < set Switches 46 current = 1   # press Send
+      > set_global . .
+    < call switch_closed 46
+      > switch_closed returned
+    < report midi_history
+      > Synth 2: ControlChange NRPN msb 0
+      > Synth 2: ControlChange NRPN lsb 3
+      > Synth 2: ControlChange msb parameter value 1
+      > Synth 2: ControlChange lsb parameter value 38
+      > Synth 4: ControlChange NRPN msb 0
+      > Synth 4: ControlChange NRPN lsb 3
+      > Synth 4: ControlChange msb parameter value 1
+      > Synth 4: ControlChange lsb parameter value 38
+    < report clear_midi_history
+      > midi_history cleared
+    < set Switches 46 current = 0   # release Send
+      > set_global . .
+    < call switch_opened 46
+      > switch_opened returned
+    < report midi_history
+      > no midi history
+
+    # Meantone
+    < get Encoders FUNCTION_ENCODER var var_type flags
+      > get_global . ENCODER_FLAGS_CHOICE_LEDS
+    < set Encoders FUNCTION_ENCODER var value = 5       # Meantone
+      > set_global . .
+    < call encoder_changed FUNCTION_ENCODER
+      > encoder_changed returned
+
+    < get Encoders 0 var var_type flags
+      > get_global . 0
+    < set Encoders 0 var value = 6    # 0110 < 10
+      > set_global . .
+    < set Function_changed = 1
+      > set_global . .
+    < call encoder_changed 0
+      > encoder_changed returned
+
+    < get Encoders 1 var var_type flags
+      > get_global . ENCODER_FLAGS_CYCLE
+    < set Encoders 1 var value = 1    # 01 < 8
+      > set_global . .
+    < set Function_changed = 1
+      > set_global . .
+    < call encoder_changed 0
+      > encoder_changed returned
+
+    < get Encoders 2 var var_type flags
+      > get_global . 0
+    < set Encoders 2 var value = 54   # 0110110 < 0
+      > set_global . .
+    < set Function_changed = 1
+      > set_global . .
+    < call encoder_changed 0
+      > encoder_changed returned
+
+    < get Encoders 3 var var_type flags
+      > get_global . 6
+    < set Encoders 3 var value = 1    # 1 < 7
+      > set_global . .
+    < set Function_changed = 1
+      > set_global . .
+    < call encoder_changed 0
+      > encoder_changed returned
+
+    # parameter value: 0110 01 1 0110110 == 0110011(51) 0110110(54)
+    < report clear_midi_history
+      > midi_history cleared
+    < set Switches 46 current = 1   # press Send
+      > set_global . .
+    < call switch_closed 46
+      > switch_closed returned
+    < report midi_history
+      > Synth 2: ControlChange NRPN msb 0
+      > Synth 2: ControlChange NRPN lsb 5
+      > Synth 2: ControlChange msb parameter value 51
+      > Synth 2: ControlChange lsb parameter value 54
+      > Synth 4: ControlChange NRPN msb 0
+      > Synth 4: ControlChange NRPN lsb 5
+      > Synth 4: ControlChange msb parameter value 51
+      > Synth 4: ControlChange lsb parameter value 54
+    < report clear_midi_history
+      > midi_history cleared
+    < set Switches 46 current = 0   # release Send
+      > set_global . .
+    < call switch_opened 46
+      > switch_opened returned
+    < report midi_history
+      > no midi history
+
+    # Just Intonation
+    < get Encoders FUNCTION_ENCODER var var_type flags
+      > get_global . ENCODER_FLAGS_CHOICE_LEDS
+    < set Encoders FUNCTION_ENCODER var value = 6       # Just Intonation
+      > set_global . .
+    < call encoder_changed FUNCTION_ENCODER
+      > encoder_changed returned
+
+    < get Encoders 0 var var_type flags
+      > get_global . 0
+    < set Encoders 0 var value = 6    # 0110 < 4
+      > set_global . .
+    < set Function_changed = 1
+      > set_global . .
+    < call encoder_changed 0
+      > encoder_changed returned
+
+    < get Encoders 1 var var_type flags
+      > get_global . 0
+    < set Encoders 1 var value = 5    # 0101 < 0
+      > set_global . .
+    < set Function_changed = 1
+      > set_global . .
+    < call encoder_changed 0
+      > encoder_changed returned
+
+    < get Encoders 2 var var_type flags
+      > get_global . ENCODER_FLAGS_DISABLED
+
+    < get Encoders 3 var var_type flags
+      > get_global . ENCODER_FLAGS_CHOICE_LEDS
+    < set Encoders 3 var value = 13   # 1101 < 8
+      > set_global . .
+    < set Function_changed = 1
+      > set_global . .
+    < call encoder_changed 0
+      > encoder_changed returned
+
+    # parameter value: 1101 0110 0101 == 11010(26) 1100101(101)
+    < report clear_midi_history
+      > midi_history cleared
+    < set Switches 46 current = 1   # press Send
+      > set_global . .
+    < call switch_closed 46
+      > switch_closed returned
+    < report midi_history
+      > Synth 2: ControlChange NRPN msb 0
+      > Synth 2: ControlChange NRPN lsb 4
+      > Synth 2: ControlChange msb parameter value 26
+      > Synth 2: ControlChange lsb parameter value 101
+      > Synth 4: ControlChange NRPN msb 0
+      > Synth 4: ControlChange NRPN lsb 4
+      > Synth 4: ControlChange msb parameter value 26
+      > Synth 4: ControlChange lsb parameter value 101
+    < report clear_midi_history
+      > midi_history cleared
+    < set Switches 46 current = 0   # release Send
+      > set_global . .
+    < call switch_opened 46
+      > switch_opened returned
+    < report midi_history
+      > no midi history
+
+    # Pythagorean
+    < get Encoders FUNCTION_ENCODER var var_type flags
+      > get_global . ENCODER_FLAGS_CHOICE_LEDS
+    < set Encoders FUNCTION_ENCODER var value = 7       # Pythagorean
+      > set_global . .
+    < call encoder_changed FUNCTION_ENCODER
+      > encoder_changed returned
+
+    < get Encoders 0 var var_type flags
+      > get_global . 0
+    < set Encoders 0 var value = 6    # 0110 < 7
+      > set_global . .
+    < set Function_changed = 1
+      > set_global . .
+    < call encoder_changed 0
+      > encoder_changed returned
+
+    < get Encoders 1 var var_type flags
+      > get_global . ENCODER_FLAGS_DISABLED
+
+    < get Encoders 2 var var_type flags
+      > get_global . 0
+    < set Encoders 2 var value = 53   # 0110101 < 0
+      > set_global . .
+    < set Function_changed = 1
+      > set_global . .
+    < call encoder_changed 0
+      > encoder_changed returned
+
+    < get Encoders 3 var var_type flags
+      > get_global . ENCODER_FLAGS_DISABLED
+
+    # parameter value: 0110 0110101 == 0110(6) 0110101(53)
+    < report clear_midi_history
+      > midi_history cleared
+    < set Switches 46 current = 1   # press Send
+      > set_global . .
+    < call switch_closed 46
+      > switch_closed returned
+    < report midi_history
+      > Synth 2: ControlChange NRPN msb 0
+      > Synth 2: ControlChange NRPN lsb 6
+      > Synth 2: ControlChange msb parameter value 6
+      > Synth 2: ControlChange lsb parameter value 53
+      > Synth 4: ControlChange NRPN msb 0
+      > Synth 4: ControlChange NRPN lsb 6
+      > Synth 4: ControlChange msb parameter value 6
+      > Synth 4: ControlChange lsb parameter value 53
+    < report clear_midi_history
+      > midi_history cleared
+    < set Switches 46 current = 0   # release Send
+      > set_global . .
+    < call switch_opened 46
+      > switch_opened returned
+    < report midi_history
+      > no midi history
+
   # interesting things in loop:
   #
   # set Switches sw current = X

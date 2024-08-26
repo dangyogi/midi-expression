@@ -436,6 +436,8 @@ Notes = "C C# D Eb E F F# G Ab A Bb B".split()
 def midi_send_notes(params):
     # channel numbers here are midi channels (1-16)
     type, data1, data2, channel, cable = [int(p) for p in params]
+    data1 &= 0x7F
+    data2 &= 0x7F
     if type in (0x80, 0x90):  # NoteOff, NoteOn
         octave, note = divmod(data1 - 12, 12)
         Midi_send_history.append(f"{Cables[cable]} {channel}: {Midi_types.get(type, hex(type))} "
@@ -809,7 +811,7 @@ def run_script(script_name, verbose):
                 sys.exit(2)
     finally:
         if Report_lines:
-            print("ERROR: {script_name}[{line_no}]: extra report_lines not matched at end of script",
+            print(f"ERROR: {script_name}[{line_no}]: extra report_lines not matched at end of script",
                   file=sys.stderr)
             for line in Report_lines:
                 print(" >", line, file=sys.stderr)
