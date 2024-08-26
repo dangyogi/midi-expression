@@ -608,7 +608,7 @@ def run(port, script_file, verbose):
             try:
                 load()
                 interactive(verbose)
-            except Sock_closed:
+            except (Sock_closed, EOFError):
                 pass
             Sock.close()
             Sock = None
@@ -1051,6 +1051,8 @@ def interactive(verbose):
     while True:
         #print(f"interactive loop, {Call_depth=}")
         request = input(f"{indent()}< ")
+        if not sys.stdin.isatty():
+            print(request)
         do_icommand(request.strip(), verbose)
 
 

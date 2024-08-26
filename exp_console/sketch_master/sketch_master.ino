@@ -82,24 +82,34 @@ void turn_off_periodic_fun(byte fun) {
   Periodic_period[fun] = 0;
 }
 
+byte Trace_periodic_fun;
+
 void turn_on_periodic_fun(byte fun, unsigned short period) {
   if (Periodic_period[fun] == 0) {
     unsigned long now = millis();
     Periodic_period[fun] = period;
     Periodic_next[fun] = now - now % period + Periodic_offset[fun];
-    Serial.print("turn_on_periodic_fun "); Serial.print(fun);
-    Serial.print(", now "); Serial.print(now);
-    Serial.print(", period "); Serial.print(period);
-    Serial.print(", first attempt at next "); Serial.println(Periodic_next[fun]);
+    if (Trace_periodic_fun) {
+      Serial.print("turn_on_periodic_fun "); Serial.print(fun);
+      Serial.print(", now "); Serial.print(now);
+      Serial.print(", period "); Serial.print(period);
+      Serial.print(", first attempt at next "); Serial.println(Periodic_next[fun]);
+    }
     if (TIME_A_GEQ_B(now, Periodic_next[fun])) {
-      Serial.print("next < now, adding period "); Serial.println(period);
+      if (Trace_periodic_fun) {
+        Serial.print("next < now, adding period "); Serial.println(period);
+      }
       Periodic_next[fun] += period;
     }
     if (TIME_A_MINUS_B(Periodic_next[fun], now) <= 20) {
-      Serial.print("Small start interval, adding period "); Serial.println(period);
+      if (Trace_periodic_fun) {
+        Serial.print("Small start interval, adding period "); Serial.println(period);
+      }
       Periodic_next[fun] += period;  // a little extra won't hurt here...
     }
-    Serial.print("Final Periodic_next: "); Serial.println(Periodic_next[fun]);
+    if (Trace_periodic_fun) {
+      Serial.print("Final Periodic_next: "); Serial.println(Periodic_next[fun]);
+    }
   }
 }
 

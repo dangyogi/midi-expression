@@ -1,0 +1,14 @@
+#!/bin/sh
+
+python3 test_driver.py -v sketch_master/test_scripts.yaml > snapshot.out <<!
+run setup
+run ch2_switch_on
+run ch2_switch_off
+run ch4_switch_on
+run ch4_switch_off
+run send_pots_1
+run note_buttons
+run note_switches
+run fun_ch_codes
+run fun_hm_codes
+!
